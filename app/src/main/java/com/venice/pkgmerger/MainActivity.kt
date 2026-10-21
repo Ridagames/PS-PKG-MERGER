@@ -14,7 +14,6 @@ import android.os.Looper
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.text.Html
-import android.view.Gravity
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.view.WindowManager
@@ -80,7 +79,6 @@ class MainActivity : Activity() {
             setBackgroundColor(bgMain)
         }
 
-        // En-tête stylé
         val headerLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(4), 0, dp(12))
@@ -232,6 +230,8 @@ class MainActivity : Activity() {
             addView(col) 
         })
     }
+
+    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
     private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
         topMargin = dp(4)
@@ -470,7 +470,6 @@ class MainActivity : Activity() {
         bar.progress = 0
         statusView.text = "Fusion en cours…"
 
-        // Démarrage du service de notification en arrière-plan
         try {
             val serviceIntent = Intent(this, MergeService::class.java)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -575,7 +574,6 @@ class MainActivity : Activity() {
                 }
             }
 
-            // Arrêt de la notification de service
             stopService(Intent(this@MainActivity, MergeService::class.java))
 
             val secs = (System.currentTimeMillis() - t0) / 1000
@@ -675,13 +673,15 @@ class MainActivity : Activity() {
     private val pkgPart = Regex("(?i)^.+\\.pkg(\\.(\\d+|part\\d+))?$")
 
     private fun isPkgPart(n: String) = pkgPart.matches(n)
-    private val naturalCompare: (String, String) -> Int = { a, b ->
+
+    private fun naturalCompare(a: String, b: String): Int {
         val ca = chunk.findAll(a).map { it.value }.toList()
         val cb = chunk.findAll(b).map { it.value }.toList()
-        var result = 0
         for (i in 0 until minOf(ca.size, cb.size)) {
-            val x = ca[i]; val y = cb[i]
-            val dx = x[0].isDigit(); val dy = y[0].isDigit()
+            val x = ca[i]
+            val y = cb[i]
+            val dx = x[0].isDigit()
+            val dy = y[0].isDigit()
             val c = when {
                 dx && dy -> {
                     val xs = x.trimStart('0').ifEmpty { "0" }
@@ -691,12 +691,9 @@ class MainActivity : Activity() {
                 dx != dy -> if (dx) 1 else -1
                 else -> x.compareTo(y, ignoreCase = true)
             }
-            if (c != 0) {
-                result = c
-                break
-            }
+            if (c != 0) return c
         }
-        if (result != 0) result else ca.size - cb.size
+        return ca.size - cb.size
     }
 
     private fun suggestName(): String {
