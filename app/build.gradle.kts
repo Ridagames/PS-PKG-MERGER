@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace = "com.venice.pkgmerger"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.venice.pkgmerger"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 9
-        versionName = "1.8"
+        targetSdk = 34
+        versionCode = 11
+        versionName = "2.0"
     }
 
     compileOptions {
