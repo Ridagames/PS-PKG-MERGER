@@ -330,7 +330,7 @@ jobs:
 
               private fun merge() {
                   if (uris.size < 2) { toast("Sélectionne au moins 2 parties."); return }
-                  val out = output ?<｜begin▁of▁sentence｜>
+                  val out = output
                   if (out == null) { toast("Choisis d'abord le fichier de sortie."); return }
 
                   val list = order().map { uris[it] }
@@ -473,6 +473,9 @@ jobs:
               }
           }
           EOF
+
+      - name: Vérifier les sources générées
+        run: find . -path ./build -prune -o \( -name '*.kt' -o -name '*.kts' -o -name '*.xml' \) -print | sort
 
       - name: Build APK
         run: gradle assembleDebug --no-daemon --stacktrace
