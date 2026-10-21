@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: JDK 17
         uses: actions/setup-java@v4
@@ -588,7 +590,6 @@ jobs:
                       val h1 = hex(sha1.digest())
                       val h256 = hex(sha256.digest())
 
-                      // --- Vérifications ---
                       val disk = size(out)
                       if (total > 0 && disk != done) {
                           problems.add("Taille sur disque (${fmt(disk)}) différente de l'écrit (${fmt(done)})")
@@ -781,16 +782,31 @@ jobs:
           EOF
 
       - name: Committer les sources (1re fois)
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           git add -A
           if git diff --staged --quiet; then
             echo "Rien à committer."
-          else
-            git commit -m "chore: sources du projet [skip ci]"
-            git push
+            exit 0
           fi
+
+          git commit -m "chore: sources du projet [skip ci]"
+
+          for i in 1 2 3; do
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/$GITHUB_REF_NAME" || git rebase --abort || true
+            if git push origin "HEAD:$GITHUB_REF_NAME"; then
+              echo "OK: sources poussées."
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "Push impossible — le build continue quand même."
+          exit 0
 
       - name: Build APK
         run: gradle assembleDebug --no-daemon --stacktrace
