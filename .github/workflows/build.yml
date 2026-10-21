@@ -1,0 +1,488 @@
+name: Build APK
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Générer le projet
+        run: |
+          set -e
+          mkdir -p app/src/main/java/com/venice/pkgmerger
+
+          cat > settings.gradle.kts <<'EOF'
+          pluginManagement {
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "PS5PkgMerger"
+          include(":app")
+          EOF
+
+          cat > build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application") version "8.7.3" apply false
+              id("org.jetbrains.kotlin.android") version "2.0.21" apply false
+          }
+          EOF
+
+          cat > gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          org.gradle.parallel=true
+          android.useAndroidX=true
+          android.nonTransitiveRClass=true
+          kotlin.code.style=official
+          EOF
+
+          cat > app/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+
+          android {
+              namespace = "com.venice.pkgmerger"
+              compileSdk = 35
+
+              defaultConfig {
+                  applicationId = "com.venice.pkgmerger"
+                  minSdk = 26
+                  targetSdk = 35
+                  versionCode = 1
+                  versionName = "1.0"
+              }
+
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+
+              kotlinOptions { jvmTarget = "17" }
+
+              buildTypes {
+                  release { isMinifyEnabled = false }
+              }
+          }
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:label="PS5 PKG Merger"
+                  android:icon="@android:drawable/ic_menu_save"
+                  android:largeHeap="true"
+                  android:theme="@android:style/Theme.Material.NoActionBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:label="PS5 PKG Merger">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/com/venice/pkgmerger/MainActivity.kt <<'EOF'
+          package com.venice.pkgmerger
+
+          import android.app.Activity
+          import android.content.Intent
+          import android.graphics.Color
+          import android.graphics.Typeface
+          import android.net.Uri
+          import android.os.Bundle
+          import android.os.Handler
+          import android.os.Looper
+          import android.provider.OpenableColumns
+          import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+          import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+          import android.view.WindowManager
+          import android.widget.Button
+          import android.widget.LinearLayout
+          import android.widget.ProgressBar
+          import android.widget.ScrollView
+          import android.widget.TextView
+          import android.widget.Toast
+          import java.io.BufferedOutputStream
+          import java.io.FileOutputStream
+          import java.util.Locale
+
+          class MainActivity : Activity() {
+
+              private val uris = ArrayList<Uri>()
+              private val names = ArrayList<String>()
+              private val sizes = ArrayList<Long>()
+
+              private var output: Uri? = null
+              private var reversed = false
+              private val ui = Handler(Looper.getMainLooper())
+
+              private lateinit var listView: TextView
+              private lateinit var outView: TextView
+              private lateinit var statusView: TextView
+              private lateinit var bar: ProgressBar
+              private lateinit var pickBtn: Button
+              private lateinit var outBtn: Button
+              private lateinit var goBtn: Button
+              private lateinit var revBtn: Button
+
+              private val accent = Color.parseColor("#8AB4FF")
+              private val dim = Color.parseColor("#9AA6B4")
+
+              override fun onCreate(state: Bundle?) {
+                  super.onCreate(state)
+                  val pad = dp(16)
+
+                  val col = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(pad, pad, pad, pad)
+                      setBackgroundColor(Color.parseColor("#0C1016"))
+                  }
+
+                  col.addView(text("PS5 PKG Merger", 22f, Color.WHITE, true))
+                  col.addView(text("Réassemble les parties d'un PKG en un seul fichier.", 13f, dim))
+
+                  pickBtn = Button(this).apply {
+                      text = "1. Choisir les parties (.pkg / .pkg.0 …)"
+                      setOnClickListener { pick() }
+                  }
+                  col.addView(pickBtn, lp())
+
+                  revBtn = Button(this).apply {
+                      text = "Inverser l'ordre"
+                      setOnClickListener { reversed = !reversed; refresh() }
+                  }
+                  col.addView(revBtn, lp())
+
+                  listView = text("Aucune partie sélectionnée.", 12f, dim).apply {
+                      typeface = Typeface.MONOSPACE
+                  }
+                  col.addView(listView, lp())
+
+                  outBtn = Button(this).apply {
+                      text = "2. Choisir le fichier de sortie"
+                      setOnClickListener { pickOutput() }
+                  }
+                  col.addView(outBtn, lp())
+
+                  outView = text("Sortie : —", 12f, dim).apply { typeface = Typeface.MONOSPACE }
+                  col.addView(outView, lp())
+
+                  goBtn = Button(this).apply {
+                      text = "3. Fusionner"
+                      setOnClickListener { merge() }
+                  }
+                  col.addView(goBtn, lp())
+
+                  bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+                      max = 1000
+                      progress = 0
+                  }
+                  col.addView(bar, lp())
+
+                  statusView = text("Prêt.", 13f, accent)
+                  col.addView(statusView, lp())
+
+                  col.addView(
+                      text(
+                          "Destination conseillée : stockage interne ou exFAT. Évite le FAT32 (limite 4 Go).",
+                          11f, dim
+                      )
+                  )
+
+                  setContentView(ScrollView(this).apply { addView(col) })
+              }
+
+              private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+
+              private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
+                  topMargin = dp(6)
+              }
+
+              private fun text(t: String, size: Float, color: Int, bold: Boolean = false) =
+                  TextView(this).apply {
+                      text = t
+                      textSize = size
+                      setTextColor(color)
+                      if (bold) setTypeface(typeface, Typeface.BOLD)
+                      setPadding(0, dp(4), 0, dp(4))
+                  }
+
+              private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
+
+              // ---------- Sélection ----------
+
+              private fun pick() {
+                  startActivityForResult(
+                      Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                          addCategory(Intent.CATEGORY_OPENABLE)
+                          type = "*/*"
+                          putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                      }, 1
+                  )
+              }
+
+              private fun pickOutput() {
+                  startActivityForResult(
+                      Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                          addCategory(Intent.CATEGORY_OPENABLE)
+                          type = "application/octet-stream"
+                          putExtra(Intent.EXTRA_TITLE, suggestName())
+                      }, 2
+                  )
+              }
+
+              @Deprecated("Deprecated in Java")
+              override fun onActivityResult(req: Int, res: Int, data: Intent?) {
+                  super.onActivityResult(req, res, data)
+                  if (res != RESULT_OK) return
+
+                  if (req == 1) {
+                      uris.clear(); names.clear(); sizes.clear()
+                      val clip = data?.clipData
+                      if (clip != null) {
+                          for (i in 0 until clip.itemCount) add(clip.getItemAt(i).uri)
+                      } else {
+                          data?.data?.let { add(it) }
+                      }
+                      reversed = false
+                      refresh()
+                  } else if (req == 2) {
+                      val u = data?.data ?: return
+                      persist(u, true)
+                      output = u
+                      outView.text = "Sortie : ${u.lastPathSegment}"
+                  }
+              }
+
+              private fun persist(u: Uri, write: Boolean = false) {
+                  try {
+                      var f = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                      if (write) f = f or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                      contentResolver.takePersistableUriPermission(u, f)
+                  } catch (_: Exception) {
+                  }
+              }
+
+              private fun add(u: Uri) {
+                  persist(u)
+                  var n = u.lastPathSegment ?: "part"
+                  var s = 0L
+                  try {
+                      contentResolver.query(u, null, null, null, null)?.use { c ->
+                          if (c.moveToFirst()) {
+                              val ni = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                              if (ni >= 0 && !c.isNull(ni)) c.getString(ni)?.let { n = it }
+                              val si = c.getColumnIndex(OpenableColumns.SIZE)
+                              if (si >= 0 && !c.isNull(si)) s = c.getLong(si)
+                          }
+                      }
+                  } catch (_: Exception) {
+                  }
+                  uris.add(u); names.add(n); sizes.add(s)
+              }
+
+              private fun refresh() {
+                  if (uris.isEmpty()) {
+                      listView.text = "Aucune partie sélectionnée."
+                      return
+                  }
+                  val order = order()
+                  val total = order.sumOf { sizes[it] }
+                  listView.text = buildString {
+                      append(order.size).append(" partie(s)")
+                      if (total > 0) append(" • ").append(fmt(total))
+                      append(" • ordre ").append(if (reversed) "inversé" else "croissant").append("\n")
+                      order.forEachIndexed { i, idx ->
+                          append(i + 1).append(". ").append(names[idx])
+                          if (sizes[idx] > 0) append("  (").append(fmt(sizes[idx])).append(")")
+                          append("\n")
+                      }
+                  }
+              }
+
+              // ---------- Fusion ----------
+
+              private fun order(): List<Int> {
+                  val o = uris.indices.sortedWith { a, b -> naturalCompare(names[a], names[b]) }
+                  return if (reversed) o.reversed() else o
+              }
+
+              private fun merge() {
+                  if (uris.size < 2) { toast("Sélectionne au moins 2 parties."); return }
+                  val out = output ?<｜begin▁of▁sentence｜>
+                  if (out == null) { toast("Choisis d'abord le fichier de sortie."); return }
+
+                  val list = order().map { uris[it] }
+
+                  pickBtn.isEnabled = false
+                  revBtn.isEnabled = false
+                  outBtn.isEnabled = false
+                  goBtn.isEnabled = false
+                  window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                  bar.progress = 0
+                  statusView.text = "Fusion en cours…"
+
+                  Thread {
+                      val total = list.sumOf { size(it) }
+                      var done = 0L
+                      var lastPush = 0L
+                      val t0 = System.currentTimeMillis()
+                      try {
+                          val pfd = contentResolver.openFileDescriptor(out, "wt")
+                              ?: throw IllegalStateException("Ouverture de la sortie impossible")
+                          try {
+                              val os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
+                              val buf = ByteArray(1 shl 20)
+                              for (u in list) {
+                                  val ins = contentResolver.openInputStream(u)
+                                      ?: throw IllegalStateException("Lecture impossible : ${u.lastPathSegment}")
+                                  ins.use { input ->
+                                      while (true) {
+                                          val r = input.read(buf)
+                                          if (r <= 0) break
+                                          os.write(buf, 0, r)
+                                          done += r
+                                          val now = System.currentTimeMillis()
+                                          if (now - lastPush > 250) {
+                                              lastPush = now
+                                              push(done, total, t0)
+                                          }
+                                      }
+                                  }
+                              }
+                              os.flush()
+                              try { pfd.fileDescriptor.sync() } catch (_: Exception) {}
+                          } finally {
+                              try { pfd.close() } catch (_: Exception) {}
+                          }
+
+                          val secs = (System.currentTimeMillis() - t0) / 1000
+                          ui.post {
+                              bar.progress = 1000
+                              statusView.text = "Terminé : ${fmt(done)} en ${secs} s"
+                              doneUi()
+                          }
+                      } catch (e: Throwable) {
+                          ui.post {
+                              statusView.text = "Erreur : ${e.message ?: e.javaClass.simpleName}"
+                              doneUi()
+                          }
+                      }
+                  }.start()
+              }
+
+              private fun push(done: Long, total: Long, t0: Long) {
+                  val elapsed = (System.currentTimeMillis() - t0) / 1000.0
+                  val speed = if (elapsed > 0.5) done / elapsed else 0.0
+                  val pct = if (total > 0) (done * 1000 / total).toInt() else 0
+                  val eta = if (speed > 0 && total > done) ((total - done) / speed).toLong() else -1L
+                  ui.post {
+                      bar.progress = pct
+                      statusView.text = buildString {
+                          append(fmt(done))
+                          if (total > 0) { append(" / "); append(fmt(total)) }
+                          append(" • ").append(fmt(speed.toLong())).append("/s")
+                          if (eta > 0) append(" • reste ").append(eta).append("s")
+                      }
+                  }
+              }
+
+              private fun doneUi() {
+                  pickBtn.isEnabled = true
+                  revBtn.isEnabled = true
+                  outBtn.isEnabled = true
+                  goBtn.isEnabled = true
+                  window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+              }
+
+              // ---------- Utilitaires ----------
+
+              private fun size(u: Uri): Long {
+                  return try {
+                      contentResolver.query(u, null, null, null, null)?.use { c ->
+                          val i = c.getColumnIndex(OpenableColumns.SIZE)
+                          if (c.moveToFirst() && i >= 0 && !c.isNull(i)) c.getLong(i) else 0L
+                      } ?: 0L
+                  } catch (_: Exception) {
+                      0L
+                  }
+              }
+
+              private fun fmt(b: Long): String {
+                  if (b <= 0) return "0 o"
+                  val u = arrayOf("o", "Ko", "Mo", "Go", "To")
+                  var v = b.toDouble()
+                  var i = 0
+                  while (v >= 1024 && i < u.size - 1) { v /= 1024; i++ }
+                  return if (i == 0) "$b o" else String.format(Locale.US, "%.2f %s", v, u[i])
+              }
+
+              private val chunk = Regex("(\\d+|\\D+)")
+
+              private fun naturalCompare(a: String, b: String): Int {
+                  val ca = chunk.findAll(a).map { it.value }.toList()
+                  val cb = chunk.findAll(b).map { it.value }.toList()
+                  for (i in 0 until minOf(ca.size, cb.size)) {
+                      val x = ca[i]
+                      val y = cb[i]
+                      val dx = x[0].isDigit()
+                      val dy = y[0].isDigit()
+                      val c = when {
+                          dx && dy -> {
+                              val xs = x.trimStart('0').ifEmpty { "0" }
+                              val ys = y.trimStart('0').ifEmpty { "0" }
+                              if (xs.length != ys.length) xs.length - ys.length else xs.compareTo(ys)
+                          }
+                          dx != dy -> if (dx) 1 else -1
+                          else -> x.compareTo(y, ignoreCase = true)
+                      }
+                      if (c != 0) return c
+                  }
+                  return ca.size - cb.size
+              }
+
+              private fun suggestName(): String {
+                  if (names.isEmpty()) return "merged.pkg"
+                  val first = names.minWithOrNull { a, b -> naturalCompare(a, b) } ?: return "merged.pkg"
+                  val m = Regex("^(.*?)[._\\- ]?(?:part)?[._\\- ]?(\\d+)$", RegexOption.IGNORE_CASE)
+                      .find(first)
+                  var base = m?.groupValues?.get(1)?.trimEnd('.', '_', '-', ' ') ?: first
+                  if (base.isBlank()) base = "merged"
+                  return if (base.lowercase().endsWith(".pkg")) base else "$base.pkg"
+              }
+          }
+          EOF
+
+      - name: Build APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Renommer l'APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk PS5PkgMerger.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps5-pkg-merger-apk
+          path: PS5PkgMerger.apk
+          if-no-files-found: error
