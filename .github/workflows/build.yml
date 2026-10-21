@@ -29,7 +29,7 @@ jobs:
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '8.4'
 
       - name: Générer le projet
         env:
@@ -71,8 +71,8 @@ jobs:
 
           write build.gradle.kts <<'EOF'
           plugins {
-              id("com.android.application") version "8.7.3" apply false
-              id("org.jetbrains.kotlin.android") version "2.0.21" apply false
+              id("com.android.application") version "8.1.1" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.0" apply false
           }
           EOF
 
@@ -98,8 +98,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 13
-                  versionName = "2.2"
+                  versionCode = 14
+                  versionName = "2.3"
               }
 
               compileOptions {
