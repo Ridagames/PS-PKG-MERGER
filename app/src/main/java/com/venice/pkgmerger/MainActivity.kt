@@ -131,7 +131,6 @@ class MainActivity : Activity() {
         })
         col.addView(headerLayout)
 
-        // Carte 1 : Sélection
         val card1 = createCard()
         card1.addView(text("1. Sélection des parties (.pkg / .pkg.0 ...)", 14f, accent, true))
         
@@ -163,7 +162,6 @@ class MainActivity : Activity() {
         card1.addView(checkView, lp())
         col.addView(card1, lpCard())
 
-        // Carte 2 : Sortie & Fusion
         val card2 = createCard()
         card2.addView(text("2. Fichier de sortie & Fusion", 14f, accent, true))
 
@@ -207,7 +205,6 @@ class MainActivity : Activity() {
         card2.addView(statusView, lp())
         col.addView(card2, lpCard())
 
-        // Carte 3 : Options & Hash
         val card3 = createCard()
         card3.addView(text("3. Options de sécurité & Hash", 14f, accent, true))
 
