@@ -37,6 +37,9 @@ jobs:
         run: |
           set -e
           mkdir -p app/src/main/java/com/venice/pkgmerger
+          
+          # Nettoyage de l'ancien fichier obsolète MergeService.kt s'il existe
+          rm -f app/src/main/java/com/venice/pkgmerger/MergeService.kt
 
           write() {
             f="$1"
@@ -98,8 +101,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 18
-                  versionName = "2.7"
+                  versionCode = 19
+                  versionName = "2.8"
               }
 
               compileOptions {
