@@ -37,6 +37,8 @@ jobs:
         run: |
           set -e
           mkdir -p app/src/main/java/com/venice/pkgmerger
+          mkdir -p app/src/main/res/mipmap-anydpi-v26
+          mkdir -p app/src/main/res/drawable
 
           write() {
             f="$1"
@@ -92,14 +94,14 @@ jobs:
 
           android {
               namespace = "com.venice.pkgmerger"
-              compileSdk = 35
+              compileSdk = 34
 
               defaultConfig {
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
-                  targetSdk = 35
-                  versionCode = 9
-                  versionName = "1.8"
+                  targetSdk = 34
+                  versionCode = 11
+                  versionName = "2.0"
               }
 
               compileOptions {
@@ -118,13 +120,12 @@ jobs:
           write app/src/main/AndroidManifest.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_PROCESSING" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
               <application
                   android:label="PS5 PKG Merger"
-                  android:icon="@android:drawable/ic_menu_save"
+                  android:icon="@mipmap/ic_launcher"
+                  android:roundIcon="@mipmap/ic_launcher"
                   android:largeHeap="true"
                   android:theme="@android:style/Theme.Material.NoActionBar">
                   
@@ -137,100 +138,52 @@ jobs:
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
                   </activity>
-
-                  <service
-                      android:name=".MergeService"
-                      android:exported="false"
-                      android:foregroundServiceType="dataProcessing" />
               </application>
           </manifest>
           EOF
 
-          write app/src/main/java/com/venice/pkgmerger/MergeService.kt <<'EOF'
-          package com.venice.pkgmerger
+          write app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/ic_launcher_background" />
+              <foreground android:drawable="@drawable/ic_launcher_foreground" />
+          </adaptive-icon>
+          EOF
 
-          import android.app.Notification
-          import android.app.NotificationChannel
-          import android.app.NotificationManager
-          import android.app.Service
-          import android.content.Intent
-          import android.content.pm.ServiceInfo
-          import android.os.IBinder
-          import android.os.Build
+          write app/src/main/res/drawable/ic_launcher_background.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android"
+              android:shape="rectangle">
+              <solid android:color="#0F172A" />
+          </shape>
+          EOF
 
-          class MergeService : Service() {
-
-              companion object {
-                  var currentProgress: String = "Fusion en cours..."
-                  var instance: MergeService? = null
-                  const val CHANNEL_ID = "pkg_merge_channel"
-                  const val NOTIF_ID = 101
-              }
-
-              override fun onCreate() {
-                  super.onCreate()
-                  instance = this
-                  createChannel()
-                  val notification = buildNotification("Préparation de la fusion...")
-                  if (Build.VERSION.SDK_INT >= 34) {
-                      startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_PROCESSING)
-                  } else {
-                      startForeground(NOTIF_ID, notification)
-                  }
-              }
-
-              override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-                  return START_NOT_STICKY
-              }
-
-              override fun onBind(intent: Intent?): IBinder? = null
-
-              private fun createChannel() {
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                      val channel = NotificationChannel(
-                          CHANNEL_ID,
-                          "Fusion de PKG en arrière-plan",
-                          NotificationManager.IMPORTANCE_LOW
-                      ).apply {
-                          description = "Affiche la progression du fusionneur PKG"
-                      }
-                      getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-                  }
-              }
-
-              fun updateNotification(text: String) {
-                  currentProgress = text
-                  val notification = buildNotification(text)
-                  val manager = getSystemService(NotificationManager::class.java)
-                  manager.notify(NOTIF_ID, notification)
-              }
-
-              private fun buildNotification(text: String): Notification {
-                  val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                      Notification.Builder(this, CHANNEL_ID)
-                  } else {
-                      @Suppress("DEPRECATION")
-                      Notification.Builder(this)
-                  }
-                  return builder
-                      .setContentTitle("PS5 PKG Merger")
-                      .setContentText(text)
-                      .setSmallIcon(android.R.drawable.ic_menu_save)
-                      .setOngoing(true)
-                      .build()
-              }
-
-              override fun onDestroy() {
-                  instance = null
-                  super.onDestroy()
-              }
-          }
+          write app/src/main/res/drawable/ic_launcher_foreground.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="24"
+              android:viewportHeight="24">
+              <!-- Éclair / Symbole Tech Neon Stylé -->
+              <path
+                  android:fillColor="#38BDF8"
+                  android:pathData="M13,2.05V7H17L11,15V10H7L13,2.05Z"/>
+              <!-- Cercle / Anneau extérieur épuré -->
+              <path
+                  android:strokeColor="#C084FC"
+                  android:strokeWidth="1.5"
+                  android:fillColor="#00000000"
+                  android:pathData="M12,3A9,9 0 0,1 21,12A9,9 0 0,1 12,21A9,9 0 0,1 3,12A9,9 0 0,1 12,3Z"/>
+          </vector>
           EOF
 
           write app/src/main/java/com/venice/pkgmerger/MainActivity.kt <<'EOF'
           package com.venice.pkgmerger
 
           import android.app.Activity
+          import android.app.NotificationChannel
+          import android.app.NotificationManager
           import android.content.ClipData
           import android.content.ClipboardManager
           import android.content.Intent
@@ -238,6 +191,7 @@ jobs:
           import android.graphics.Typeface
           import android.graphics.drawable.GradientDrawable
           import android.net.Uri
+          import android.os.Build
           import android.os.Bundle
           import android.os.Handler
           import android.os.Looper
@@ -296,10 +250,41 @@ jobs:
 
               override fun onCreate(state: Bundle?) {
                   super.onCreate(state)
+                  createNotificationChannel()
                   showMergerScreen()
               }
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+
+              private fun createNotificationChannel() {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      val channel = NotificationChannel(
+                          "pkg_channel",
+                          "PS5 PKG Merger Notifications",
+                          NotificationManager.IMPORTANCE_DEFAULT
+                      ).apply {
+                          description = "Notifications de fin de fusion"
+                      }
+                      getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+                  }
+              }
+
+              private fun showNotification(title: String, message: String) {
+                  try {
+                      val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                          android.app.Notification.Builder(this, "pkg_channel")
+                      } else {
+                          @Suppress("DEPRECATION")
+                          android.app.Notification.Builder(this)
+                      }.setContentTitle(title)
+                       .setContentText(message)
+                       .setSmallIcon(android.R.drawable.ic_menu_save)
+                       .setAutoCancel(true)
+                       .build()
+
+                      getSystemService(NotificationManager::class.java).notify(202, notification)
+                  } catch (_: Exception) {}
+              }
 
               private fun showMergerScreen() {
                   val pad = dp(16)
@@ -448,7 +433,7 @@ jobs:
 
                   col.addView(
                       text(
-                          "💡 Astuce : Une notification s'affichera dans la barre d'état si tu quittes l'application pendant la fusion.",
+                          "💡 Astuce : Une notification s'affichera dès que la fusion et la vérification seront terminées.",
                           11f, dim
                       ).apply { setPadding(dp(4), dp(8), dp(4), dp(16)) }
                   )
@@ -700,15 +685,6 @@ jobs:
                   bar.progress = 0
                   statusView.text = "Fusion en cours…"
 
-                  try {
-                      val serviceIntent = Intent(this, MergeService::class.java)
-                      if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                          startForegroundService(serviceIntent)
-                      } else {
-                          startService(serviceIntent)
-                      }
-                  } catch (_: Exception) {}
-
                   Thread {
                       val total = list.sumOf { size(it) }
                       val md5 = MessageDigest.getInstance("MD5")
@@ -755,18 +731,15 @@ jobs:
                           }
                           success = true
                       } catch (e: Throwable) {
-                          stopService(Intent(this@MainActivity, MergeService::class.java))
                           ui.post {
                               statusView.text = if (cancelled) "Fusion annulée." else "Erreur : ${e.message}"
+                              showNotification("PS5 PKG Merger", "Échec de la fusion : ${e.message}")
                               doneUi()
                           }
                           return@Thread
                       }
 
-                      if (!success) {
-                          stopService(Intent(this@MainActivity, MergeService::class.java))
-                          return@Thread
-                      }
+                      if (!success) return@Thread
 
                       val h256 = hex(sha256.digest())
                       val h1 = hex(sha1.digest())
@@ -779,7 +752,6 @@ jobs:
 
                       if (wantReread) {
                           ui.post { statusView.text = "Vérification en cours..." }
-                          MergeService.instance?.updateNotification("Vérification du fichier...")
                           try {
                               val re = MessageDigest.getInstance("SHA-256")
                               contentResolver.openInputStream(out)?.use { ins ->
@@ -804,15 +776,15 @@ jobs:
                           }
                       }
 
-                      stopService(Intent(this@MainActivity, MergeService::class.java))
-
                       val secs = (System.currentTimeMillis() - t0) / 1000
                       val report = StringBuilder()
                       report.append("<font color=\"#94A3B8\">SHA-256 :</font> ").append(h256).append("<br>")
                       if (problems.isEmpty()) {
                           report.append("<font color=\"#34D399\">✓ Fusion réussie et vérifiée (${fmt(done)})</font>")
+                          showNotification("PS5 PKG Merger", "Fusion et vérification terminées avec succès en ${secs}s !")
                       } else {
                           problems.forEach { report.append("<font color=\"#FBBF24\">⚠ ").append(it).append("</font><br>") }
+                          showNotification("PS5 PKG Merger", "Fusion terminée avec des anomalies.")
                       }
 
                       ui.post {
@@ -837,7 +809,6 @@ jobs:
                       append(" • ").append(fmt(speed.toLong())).append("/s")
                       if (eta > 0) append(" • reste ").append(eta).append("s")
                   }
-                  MergeService.instance?.updateNotification(msg)
                   ui.post {
                       bar.progress = pct
                       statusView.text = msg
