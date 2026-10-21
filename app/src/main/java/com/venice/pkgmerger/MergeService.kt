@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.Build
 
@@ -22,7 +23,11 @@ class MergeService : Service() {
         instance = this
         createChannel()
         val notification = buildNotification("Préparation de la fusion...")
-        startForeground(NOTIF_ID, notification)
+        if (Build.VERSION.SDK_INT >= 34) {
+            startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_PROCESSING)
+        } else {
+            startForeground(NOTIF_ID, notification)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
