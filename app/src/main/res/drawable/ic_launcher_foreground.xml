@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Éclair / Symbole Tech Neon Stylé -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M13,2.05V7H17L11,15V10H7L13,2.05Z"/>
+    <!-- Cercle / Anneau extérieur épuré -->
+    <path
+        android:strokeColor="#C084FC"
+        android:strokeWidth="1.5"
+        android:fillColor="#00000000"
+        android:pathData="M12,3A9,9 0 0,1 21,12A9,9 0 0,1 12,21A9,9 0 0,1 3,12A9,9 0 0,1 12,3Z"/>
+</vector>
