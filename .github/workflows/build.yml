@@ -98,8 +98,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 16
-                  versionName = "2.5"
+                  versionCode = 18
+                  versionName = "2.7"
               }
 
               compileOptions {
@@ -404,8 +404,6 @@ jobs:
                       addView(col) 
                   })
               }
-
-              private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
               private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
                   topMargin = dp(4)
