@@ -77,7 +77,7 @@ jobs:
           EOF
 
           write gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx3072m -Dfile.encoding=UTF-8 -XX:+HeapDumpOnOutOfMemoryError
+          org.gradle.jvmargs=-Xmx3072m -Dfile.encoding=UTF-8
           org.gradle.parallel=false
           android.useAndroidX=true
           android.nonTransitiveRClass=true
@@ -98,8 +98,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 15
-                  versionName = "2.4"
+                  versionCode = 16
+                  versionName = "2.5"
               }
 
               compileOptions {
@@ -895,7 +895,7 @@ jobs:
           exit 0
 
       - name: Build APK
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: gradle clean assembleDebug --no-daemon --stacktrace
 
       - name: Renommer l'APK
         run: cp app/build/outputs/apk/debug/app-debug.apk PS5PkgMerger.apk
