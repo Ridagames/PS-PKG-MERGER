@@ -1,4 +1,4 @@
-name: Build APK
+Name: Build APK
 
 on:
   push:
@@ -98,8 +98,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 35
-                  versionCode = 2
-                  versionName = "1.1"
+                  versionCode = 3
+                  versionName = "1.2"
               }
 
               compileOptions {
@@ -177,6 +177,7 @@ jobs:
               private var output: Uri? = null
               private var reversed = false
               private var lastHash: String? = null
+              @Volatile private var cancelled = false
               private val ui = Handler(Looper.getMainLooper())
 
               private lateinit var listView: TextView
@@ -186,11 +187,13 @@ jobs:
               private lateinit var hashView: TextView
               private lateinit var hashField: EditText
               private lateinit var verifyBox: CheckBox
+              private lateinit var deleteBox: CheckBox
               private lateinit var bar: ProgressBar
               private lateinit var pickBtn: Button
               private lateinit var dirBtn: Button
               private lateinit var outBtn: Button
               private lateinit var goBtn: Button
+              private lateinit var cancelBtn: Button
               private lateinit var revBtn: Button
               private lateinit var copyBtn: Button
 
@@ -245,11 +248,22 @@ jobs:
                   outView = text("Sortie : —", 12f, dim).apply { typeface = Typeface.MONOSPACE }
                   col.addView(outView, lp())
 
+                  val mergeLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                  }
                   goBtn = Button(this).apply {
                       text = "3. Fusionner"
                       setOnClickListener { merge() }
                   }
-                  col.addView(goBtn, lp())
+                  mergeLayout.addView(goBtn, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+
+                  cancelBtn = Button(this).apply {
+                      text = "Annuler"
+                      isEnabled = false
+                      setOnClickListener { cancelled = true }
+                  }
+                  mergeLayout.addView(cancelBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
+                  col.addView(mergeLayout, lp())
 
                   bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
                       max = 1000
@@ -260,15 +274,23 @@ jobs:
                   statusView = text("Prêt.", 13f, accent)
                   col.addView(statusView, lp())
 
-                  col.addView(text("Vérifications", 13f, Color.WHITE, true))
+                  col.addView(text("Options et Vérifications", 13f, Color.WHITE, true))
 
                   verifyBox = CheckBox(this).apply {
-                      text = "Relire le fichier après écriture (recalcule le hash et compare)"
+                      text = "Relire le fichier après écriture (recalcule le hash)"
                       isChecked = true
                       setTextColor(dim)
                       textSize = 12f
                   }
                   col.addView(verifyBox, lp())
+
+                  deleteBox = CheckBox(this).apply {
+                      text = "Supprimer les parties sources après fusion réussie"
+                      isChecked = false
+                      setTextColor(dim)
+                      textSize = 12f
+                  }
+                  col.addView(deleteBox, lp())
 
                   col.addView(text("Hash attendu — optionnel (MD5 32 / SHA-1 40 / SHA-256 64)", 12f, dim))
                   hashField = EditText(this).apply {
@@ -524,14 +546,17 @@ jobs:
 
                   val list = order().map { uris[it] }
                   val wantReread = verifyBox.isChecked
+                  val wantDelete = deleteBox.isChecked
                   val expected = hashField.text.toString().trim().lowercase().replace(" ", "")
 
+                  cancelled = false
                   pickBtn.isEnabled = false
                   dirBtn.isEnabled = false
                   revBtn.isEnabled = false
                   outBtn.isEnabled = false
                   goBtn.isEnabled = false
                   copyBtn.isEnabled = false
+                  cancelBtn.isEnabled = true
                   hashView.text = ""
                   window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                   bar.progress = 0
@@ -545,6 +570,7 @@ jobs:
                       val problems = ArrayList<String>()
                       var done = 0L
                       var lastPush = 0L
+                      var success = false
                       val t0 = System.currentTimeMillis()
 
                       try {
@@ -554,10 +580,12 @@ jobs:
                               val os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
                               val buf = ByteArray(1 shl 20)
                               for (u in list) {
+                                  if (cancelled) throw InterruptedException("Fusion annulée par l'utilisateur")
                                   val ins = contentResolver.openInputStream(u)
                                       ?: throw IllegalStateException("Lecture impossible : ${u.lastPathSegment}")
                                   ins.use { input ->
                                       while (true) {
+                                          if (cancelled) throw InterruptedException("Fusion annulée par l'utilisateur")
                                           val r = input.read(buf)
                                           if (r <= 0) break
                                           os.write(buf, 0, r)
@@ -578,13 +606,20 @@ jobs:
                           } finally {
                               try { pfd.close() } catch (_: Exception) {}
                           }
+                          success = true
                       } catch (e: Throwable) {
                           ui.post {
-                              statusView.text = "Erreur : ${e.message ?: e.javaClass.simpleName}"
+                              if (cancelled) {
+                                  statusView.text = "Fusion annulée."
+                              } else {
+                                  statusView.text = "Erreur : ${e.message ?: e.javaClass.simpleName}"
+                              }
                               doneUi()
                           }
                           return@Thread
                       }
+
+                      if (!success) return@Thread
 
                       val h5 = hex(md5.digest())
                       val h1 = hex(sha1.digest())
@@ -633,6 +668,19 @@ jobs:
                               problems.add("Hash attendu : longueur invalide (${expected.length})")
                           } else if (actual != expected) {
                               problems.add("Le hash attendu ne correspond pas")
+                          }
+                      }
+
+                      // Suppression des fichiers sources si demandé et sans problème critique majeur
+                      if (wantDelete && problems.isEmpty()) {
+                          for (u in list) {
+                              try {
+                                  DocumentsContract.deleteDocument(contentResolver, u)
+                              } catch (_: Exception) {
+                                  try {
+                                      contentResolver.delete(u, null, null)
+                                  } catch (_: Exception) {}
+                              }
                           }
                       }
 
@@ -687,6 +735,7 @@ jobs:
                   revBtn.isEnabled = true
                   outBtn.isEnabled = true
                   goBtn.isEnabled = true
+                  cancelBtn.isEnabled = false
                   window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
               }
 
