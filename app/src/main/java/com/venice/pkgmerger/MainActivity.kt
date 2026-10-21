@@ -1,11 +1,14 @@
 package com.venice.pkgmerger
 
+import android.Manifest
 import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -14,8 +17,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import android.provider.Settings
 import android.text.Html
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
@@ -67,9 +72,13 @@ class MainActivity : Activity() {
     private val cardBg = Color.parseColor("#1E293B")
     private val bgMain = Color.parseColor("#0F172A")
 
+    private val NOTIF_ID_PROGRESS = 101
+    private val NOTIF_ID_RESULT = 102
+
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         createNotificationChannel()
+        checkPermissions()
         showMergerScreen()
     }
 
@@ -80,28 +89,73 @@ class MainActivity : Activity() {
             val channel = NotificationChannel(
                 "pkg_channel",
                 "PS5 PKG Merger Notifications",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Notifications de fin de fusion"
+                description = "Progression et alertes de fusion"
             }
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
     }
 
-    private fun showNotification(title: String, message: String) {
+    private fun checkPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 100)
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                try {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                    startActivity(intent)
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    private fun updateProgressNotif(msg: String, pct: Int) {
         try {
-            val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 android.app.Notification.Builder(this, "pkg_channel")
             } else {
                 @Suppress("DEPRECATION")
                 android.app.Notification.Builder(this)
-            }.setContentTitle(title)
-             .setContentText(message)
-             .setSmallIcon(android.R.drawable.ic_menu_save)
-             .setAutoCancel(true)
-             .build()
+            }
+            val notification = builder
+                .setContentTitle("⚡ PS5 PKG Merger")
+                .setContentText(msg)
+                .setSmallIcon(android.R.drawable.ic_menu_save)
+                .setProgress(100, pct, false)
+                .setOngoing(true)
+                .build()
 
-            getSystemService(NotificationManager::class.java).notify(202, notification)
+            getSystemService(NotificationManager::class.java).notify(NOTIF_ID_PROGRESS, notification)
+        } catch (_: Exception) {}
+    }
+
+    private fun showResultNotif(title: String, message: String) {
+        try {
+            val nm = getSystemService(NotificationManager::class.java)
+            nm.cancel(NOTIF_ID_PROGRESS)
+
+            val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                android.app.Notification.Builder(this, "pkg_channel")
+            } else {
+                @Suppress("DEPRECATION")
+                android.app.Notification.Builder(this)
+            }
+            val notification = builder
+                .setContentTitle(title)
+                .setContentText(message)
+                .setSmallIcon(android.R.drawable.ic_menu_save)
+                .setAutoCancel(true)
+                .build()
+
+            nm.notify(NOTIF_ID_RESULT, notification)
         } catch (_: Exception) {}
     }
 
@@ -249,7 +303,7 @@ class MainActivity : Activity() {
 
         col.addView(
             text(
-                "💡 Astuce : Une notification s'affichera dès que la fusion et la vérification seront terminées.",
+                "💡 Astuce : Une notification de suivi s'affiche et restera active même en arrière-plan.",
                 11f, dim
             ).apply { setPadding(dp(4), dp(8), dp(4), dp(16)) }
         )
@@ -499,6 +553,10 @@ class MainActivity : Activity() {
         bar.progress = 0
         statusView.text = "Fusion en cours…"
 
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "PS5PkgMerger::MergeWakeLock")
+        wakeLock.acquire(10800000L) // 3h max
+
         Thread {
             val total = list.sumOf { size(it) }
             val md5 = MessageDigest.getInstance("MD5")
@@ -547,13 +605,17 @@ class MainActivity : Activity() {
             } catch (e: Throwable) {
                 ui.post {
                     statusView.text = if (cancelled) "Fusion annulée." else "Erreur : ${e.message}"
-                    showNotification("PS5 PKG Merger", "Échec de la fusion : ${e.message}")
+                    showResultNotif("PS5 PKG Merger", "Échec de la fusion : ${e.message}")
+                    if (wakeLock.isHeld) wakeLock.release()
                     doneUi()
                 }
                 return@Thread
             }
 
-            if (!success) return@Thread
+            if (!success) {
+                if (wakeLock.isHeld) wakeLock.release()
+                return@Thread
+            }
 
             val h256 = hex(sha256.digest())
             val h1 = hex(sha1.digest())
@@ -565,7 +627,10 @@ class MainActivity : Activity() {
             }
 
             if (wantReread) {
-                ui.post { statusView.text = "Vérification en cours..." }
+                ui.post { 
+                    statusView.text = "Vérification en cours..." 
+                    updateProgressNotif("Vérification de l'intégrité...", 100)
+                }
                 try {
                     val re = MessageDigest.getInstance("SHA-256")
                     contentResolver.openInputStream(out)?.use { ins ->
@@ -595,10 +660,10 @@ class MainActivity : Activity() {
             report.append("<font color=\"#94A3B8\">SHA-256 :</font> ").append(h256).append("<br>")
             if (problems.isEmpty()) {
                 report.append("<font color=\"#34D399\">✓ Fusion réussie et vérifiée (${fmt(done)})</font>")
-                showNotification("PS5 PKG Merger", "Fusion et vérification terminées avec succès en ${secs}s !")
+                showResultNotif("PS5 PKG Merger", "Fusion et vérification terminées avec succès en ${secs}s !")
             } else {
                 problems.forEach { report.append("<font color=\"#FBBF24\">⚠ ").append(it).append("</font><br>") }
-                showNotification("PS5 PKG Merger", "Fusion terminée avec des anomalies.")
+                showResultNotif("PS5 PKG Merger", "Fusion terminée avec des anomalies.")
             }
 
             ui.post {
@@ -607,6 +672,7 @@ class MainActivity : Activity() {
                 copyBtn.isEnabled = true
                 hashView.text = Html.fromHtml(report.toString(), Html.FROM_HTML_MODE_LEGACY)
                 statusView.text = "Terminé avec succès en ${secs}s"
+                if (wakeLock.isHeld) wakeLock.release()
                 doneUi()
             }
         }.start()
@@ -615,7 +681,7 @@ class MainActivity : Activity() {
     private fun push(done: Long, total: Long, t0: Long) {
         val elapsed = (System.currentTimeMillis() - t0) / 1000.0
         val speed = if (elapsed > 0.5) done / elapsed else 0.0
-        val pct = if (total > 0) (done * 1000 / total).toInt() else 0
+        val pct = if (total > 0) (done * 100 / total).toInt() else 0
         val eta = if (speed > 0 && total > done) ((total - done) / speed).toLong() else -1L
         val msg = buildString {
             append(fmt(done))
@@ -624,8 +690,9 @@ class MainActivity : Activity() {
             if (eta > 0) append(" • reste ").append(eta).append("s")
         }
         ui.post {
-            bar.progress = pct
+            bar.progress = pct * 10
             statusView.text = msg
+            updateProgressNotif(msg, pct)
         }
     }
 
