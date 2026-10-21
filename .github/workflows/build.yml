@@ -98,8 +98,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 35
-                  versionCode = 8
-                  versionName = "1.7"
+                  versionCode = 9
+                  versionName = "1.8"
               }
 
               compileOptions {
@@ -154,6 +154,7 @@ jobs:
           import android.app.NotificationManager
           import android.app.Service
           import android.content.Intent
+          import android.content.pm.ServiceInfo
           import android.os.IBinder
           import android.os.Build
 
@@ -171,7 +172,11 @@ jobs:
                   instance = this
                   createChannel()
                   val notification = buildNotification("Préparation de la fusion...")
-                  startForeground(NOTIF_ID, notification)
+                  if (Build.VERSION.SDK_INT >= 34) {
+                      startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_PROCESSING)
+                  } else {
+                      startForeground(NOTIF_ID, notification)
+                  }
               }
 
               override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
