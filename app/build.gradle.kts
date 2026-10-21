@@ -11,8 +11,8 @@ android {
         applicationId = "com.venice.pkgmerger"
         minSdk = 26
         targetSdk = 34
-        versionCode = 16
-        versionName = "2.5"
+        versionCode = 18
+        versionName = "2.7"
     }
 
     compileOptions {

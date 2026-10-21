@@ -262,8 +262,6 @@ class MainActivity : Activity() {
         })
     }
 
-    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-
     private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
         topMargin = dp(4)
     }
