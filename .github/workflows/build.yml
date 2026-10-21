@@ -100,8 +100,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 11
-                  versionName = "2.0"
+                  versionCode = 12
+                  versionName = "2.1"
               }
 
               compileOptions {
@@ -165,11 +165,9 @@ jobs:
               android:height="108dp"
               android:viewportWidth="24"
               android:viewportHeight="24">
-              <!-- Éclair / Symbole Tech Neon Stylé -->
               <path
                   android:fillColor="#38BDF8"
                   android:pathData="M13,2.05V7H17L11,15V10H7L13,2.05Z"/>
-              <!-- Cercle / Anneau extérieur épuré -->
               <path
                   android:strokeColor="#C084FC"
                   android:strokeWidth="1.5"
