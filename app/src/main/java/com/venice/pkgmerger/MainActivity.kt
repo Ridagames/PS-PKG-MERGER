@@ -33,7 +33,6 @@ import java.util.Locale
 
 class MainActivity : Activity() {
 
-    // Données du fusionneur
     private val uris = ArrayList<Uri>()
     private val names = ArrayList<String>()
     private val sizes = ArrayList<Long>()
@@ -44,10 +43,6 @@ class MainActivity : Activity() {
     @Volatile private var cancelled = false
     private val ui = Handler(Looper.getMainLooper())
 
-    // Vues UI dynamiques
-    private lateinit var rootContainer: LinearLayout
-
-    // Vues Fusionneur
     private lateinit var listView: TextView
     private lateinit var checkView: TextView
     private lateinit var outView: TextView
@@ -65,103 +60,18 @@ class MainActivity : Activity() {
     private lateinit var revBtn: Button
     private lateinit var copyBtn: Button
 
-    // Thème couleurs Cyber / Moderne
-    private val accent = Color.parseColor("#38BDF8") // Sky Blue lumineux
-    private val accentPurple = Color.parseColor("#C084FC")
+    private val accent = Color.parseColor("#38BDF8")
     private val dim = Color.parseColor("#94A3B8")
-    private val cardBg = Color.parseColor("#1E293B")  // Slate sombre élégant
-    private val bgMain = Color.parseColor("#0F172A")  // Fond très sombre bleuté
+    private val cardBg = Color.parseColor("#1E293B")
+    private val bgMain = Color.parseColor("#0F172A")
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
-        showMenuScreen()
+        showMergerScreen()
     }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
-    // ==========================================
-    // 1. ÉCRAN DU MENU PRINCIPAL (Moderne & Stylé)
-    // ==========================================
-    private fun showMenuScreen() {
-        val pad = dp(16)
-        val col = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(pad, pad * 2, pad, pad)
-            setBackgroundColor(bgMain)
-            gravity = Gravity.CENTER_HORIZONTAL
-        }
-
-        // En-tête stylé avec icône textuelle
-        col.addView(TextView(this).apply {
-            text = "🚀 PS5 PKG STUDIO"
-            textSize = 26f
-            setTextColor(Color.WHITE)
-            setTypeface(null, Typeface.BOLD)
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, dp(4))
-        })
-        col.addView(TextView(this).apply {
-            text = "Boîte à outils tout-en-un pour vos fichiers PS5"
-            textSize = 13f
-            setTextColor(dim)
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, dp(32))
-        })
-
-        // Carte 1 : Option Fusionneur
-        val cardMerger = createCard().apply {
-            setOnClickListener { showMergerScreen() }
-        }
-        cardMerger.addView(TextView(this).apply {
-            text = "🔗 Fusionneur de PKG"
-            textSize = 18f
-            setTextColor(accent)
-            setTypeface(null, Typeface.BOLD)
-        })
-        cardMerger.addView(TextView(this).apply {
-            text = "Assemblez les parties multiples (.pkg.0, .pkg.1...), vérifiez l'intégrité et calculez le SHA-256."
-            textSize = 12f
-            setTextColor(dim)
-            setPadding(0, dp(6), 0, 0)
-        })
-        col.addView(cardMerger, lpCardMenu())
-
-        // Carte 2 : Option Convertisseur (Demandé par l'utilisateur)
-        val cardConverter = createCard().apply {
-            setOnClickListener { showConverterScreen() }
-        }
-        cardConverter.addView(TextView(this).apply {
-            text = "🔄 Convertisseur de PKG"
-            textSize = 18f
-            setTextColor(accentPurple)
-            setTypeface(null, Typeface.BOLD)
-        })
-        cardConverter.addView(TextView(this).apply {
-            text = "Convertissez vos fichiers vers ffpfsc, exfat ou extrayez en dossier de jeux (dump)."
-            textSize = 12f
-            setTextColor(dim)
-            setPadding(0, dp(6), 0, 0)
-        })
-        col.addView(cardConverter, lpCardMenu())
-
-        // Footer info
-        col.addView(TextView(this).apply {
-            text = "Interface moderne v1.4 • Propulsé pour Android"
-            textSize = 11f
-            setTextColor(Color.parseColor("#475569"))
-            gravity = Gravity.CENTER
-            setPadding(0, dp(48), 0, 0)
-        })
-
-        setContentView(ScrollView(this).apply { 
-            setBackgroundColor(bgMain)
-            addView(col) 
-        })
-    }
-
-    // ==========================================
-    // 2. ÉCRAN DU FUSIONNEUR DE PKG
-    // ==========================================
     private fun showMergerScreen() {
         val pad = dp(16)
         val col = LinearLayout(this).apply {
@@ -170,46 +80,43 @@ class MainActivity : Activity() {
             setBackgroundColor(bgMain)
         }
 
-        // Barre de retour en haut
-        val topBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+        // En-tête stylé
+        val headerLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(4), 0, dp(12))
         }
-        val backBtn = Button(this).apply {
-            text = "← Menu"
-            setTextColor(Color.WHITE)
-            setBackgroundColor(Color.parseColor("#334155"))
-            setOnClickListener { showMenuScreen() }
-        }
-        topBar.addView(backBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
-
-        val titleView = TextView(this).apply {
-            text = "  Fusionneur de PKG"
-            textSize = 20f
+        headerLayout.addView(TextView(this).apply {
+            text = "⚡ PS5 PKG MERGER"
+            textSize = 24f
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
-        }
-        topBar.addView(titleView, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-        col.addView(topBar, lp())
+        })
+        headerLayout.addView(TextView(this).apply {
+            text = "Réassemble tes parties de jeux et vérifie l'intégrité en toute sécurité."
+            textSize = 12f
+            setTextColor(dim)
+            setPadding(0, dp(2), 0, 0)
+        })
+        col.addView(headerLayout)
 
-        // Carte Sélection
+        // Carte 1 : Sélection
         val card1 = createCard()
-        card1.addView(text("1. Sélection des parties", 15f, accent, true))
+        card1.addView(text("1. Sélection des parties (.pkg / .pkg.0 ...)", 14f, accent, true))
         
         pickBtn = Button(this).apply {
-            text = "📁 Choisir les fichiers (.pkg / .pkg.0 …)"
+            text = "📁 Choisir les fichiers"
             setOnClickListener { pick() }
         }
         card1.addView(pickBtn, lp())
 
         dirBtn = Button(this).apply {
-            text = "📂 Choisir un dossier entier"
+            text = "📂 Choisir un dossier complet"
             setOnClickListener { pickFolder() }
         }
         card1.addView(dirBtn, lp())
 
         revBtn = Button(this).apply {
-            text = "🔀 Inverser l'ordre"
+            text = "🔀 Inverser l'ordre des parties"
             setOnClickListener { reversed = !reversed; refresh() }
         }
         card1.addView(revBtn, lp())
@@ -224,9 +131,9 @@ class MainActivity : Activity() {
         card1.addView(checkView, lp())
         col.addView(card1, lpCard())
 
-        // Carte Sortie & Action
+        // Carte 2 : Sortie & Fusion
         val card2 = createCard()
-        card2.addView(text("2. Sortie & Fusion", 15f, accent, true))
+        card2.addView(text("2. Fichier de sortie & Fusion", 14f, accent, true))
 
         outBtn = Button(this).apply {
             text = "💾 Définir l'emplacement de sortie"
@@ -264,16 +171,16 @@ class MainActivity : Activity() {
         }
         card2.addView(bar, lp())
 
-        statusView = text("Prêt.", 13f, accent).apply { setTypeface(null, Typeface.BOLD) }
+        statusView = text("Prêt à fusionner.", 13f, accent).apply { setTypeface(null, Typeface.BOLD) }
         card2.addView(statusView, lp())
         col.addView(card2, lpCard())
 
-        // Carte Options & Vérification
+        // Carte 3 : Options & Hash
         val card3 = createCard()
-        card3.addView(text("3. Options & Hash", 15f, accent, true))
+        card3.addView(text("3. Options de sécurité & Hash", 14f, accent, true))
 
         verifyBox = CheckBox(this).apply {
-            text = "Relire le fichier après écriture (contrôle hash)"
+            text = "Relire le fichier après écriture (contrôle intégrité)"
             isChecked = true
             setTextColor(dim)
             textSize = 12f
@@ -311,7 +218,13 @@ class MainActivity : Activity() {
         card3.addView(copyBtn, lp())
         col.addView(card3, lpCard())
 
-        // Actualiser l'affichage si des fichiers étaient déjà en mémoire
+        col.addView(
+            text(
+                "💡 Astuce : Une notification s'affichera dans la barre d'état si tu quittes l'application pendant la fusion.",
+                11f, dim
+            ).apply { setPadding(dp(4), dp(8), dp(4), dp(16)) }
+        )
+
         refresh()
 
         setContentView(ScrollView(this).apply { 
@@ -320,85 +233,13 @@ class MainActivity : Activity() {
         })
     }
 
-    // ==========================================
-    // 3. ÉCRAN DU CONVERTISSEUR (Interface demandée)
-    // ==========================================
-    private fun showConverterScreen() {
-        val pad = dp(16)
-        val col = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(pad, pad, pad, pad)
-            setBackgroundColor(bgMain)
-        }
-
-        // Barre de retour
-        val topBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val backBtn = Button(this).apply {
-            text = "← Menu"
-            setTextColor(Color.WHITE)
-            setBackgroundColor(Color.parseColor("#334155"))
-            setOnClickListener { showMenuScreen() }
-        }
-        topBar.addView(backBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
-
-        val titleView = TextView(this).apply {
-            text = "  Convertisseur de PKG"
-            textSize = 20f
-            setTextColor(Color.WHITE)
-            setTypeface(null, Typeface.BOLD)
-        }
-        topBar.addView(titleView, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-        col.addView(topBar, lp())
-
-        // Carte Configuration du convertisseur
-        val cardConv = createCard()
-        cardConv.addView(text("Options de conversion", 16f, accentPurple, true))
-        cardConv.addView(text("Sélectionnez le format cible pour votre fichier PKG :", 12f, dim).apply {
-            setPadding(0, dp(4), 0, dp(8))
-        })
-
-        val btnFfpfsc = Button(this).apply { text = "📦 Convertir vers FFPFSC" }
-        val btnExfat = Button(this).apply { text = "💾 Convertir vers EXFAT / Split" }
-        val btnDump = Button(this).apply { text = "📂 Extraire en Dossier de jeux (Dump)" }
-
-        cardConv.addView(btnFfpfsc, lp())
-        cardConv.addView(btnExfat, lp())
-        cardConv.addView(btnDump, lp())
-
-        val btnConvertAction = Button(this).apply {
-            text = "🚀 Démarrer la conversion"
-            setBackgroundColor(Color.parseColor("#7C3AED"))
-            setOnClickListener {
-                Toast.makeText(this@MainActivity, "Module de conversion en cours de développement...", Toast.LENGTH_SHORT).show()
-            }
-        }
-        cardConv.addView(btnConvertAction, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(16) })
-
-        col.addView(cardConv, lpCard())
-
-        setContentView(ScrollView(this).apply { 
-            setBackgroundColor(bgMain)
-            addView(col) 
-        })
-    }
-
-    // ==========================================
-    // Utilitaires de mise en page UI
-    // ==========================================
     private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-        topMargin = dp(6)
+        topMargin = dp(4)
     }
 
     private fun lpCard() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
         topMargin = dp(12)
         bottomMargin = dp(4)
-    }
-
-    private fun lpCardMenu() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-        topMargin = dp(14)
     }
 
     private fun createCard(): LinearLayout {
@@ -423,9 +264,6 @@ class MainActivity : Activity() {
 
     private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
 
-    // ==========================================
-    // Logique de Sélection et Fichiers
-    // ==========================================
     private fun pick() {
         startActivityForResult(
             Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
@@ -609,9 +447,6 @@ class MainActivity : Activity() {
         return if (reversed) o.reversed() else o
     }
 
-    // ==========================================
-    // Logique de Fusion avec Thread séparé
-    // ==========================================
     private fun merge() {
         if (uris.size < 2) { toast("Sélectionne au moins 2 parties."); return }
         val out = output
@@ -634,6 +469,16 @@ class MainActivity : Activity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         bar.progress = 0
         statusView.text = "Fusion en cours…"
+
+        // Démarrage du service de notification en arrière-plan
+        try {
+            val serviceIntent = Intent(this, MergeService::class.java)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+        } catch (_: Exception) {}
 
         Thread {
             val total = list.sumOf { size(it) }
@@ -681,6 +526,7 @@ class MainActivity : Activity() {
                 }
                 success = true
             } catch (e: Throwable) {
+                stopService(Intent(this@MainActivity, MergeService::class.java))
                 ui.post {
                     statusView.text = if (cancelled) "Fusion annulée." else "Erreur : ${e.message}"
                     doneUi()
@@ -688,7 +534,10 @@ class MainActivity : Activity() {
                 return@Thread
             }
 
-            if (!success) return@Thread
+            if (!success) {
+                stopService(Intent(this@MainActivity, MergeService::class.java))
+                return@Thread
+            }
 
             val h256 = hex(sha256.digest())
             val h1 = hex(sha1.digest())
@@ -701,6 +550,7 @@ class MainActivity : Activity() {
 
             if (wantReread) {
                 ui.post { statusView.text = "Vérification en cours..." }
+                MergeService.instance?.updateNotification("Vérification du fichier...")
                 try {
                     val re = MessageDigest.getInstance("SHA-256")
                     contentResolver.openInputStream(out)?.use { ins ->
@@ -725,6 +575,9 @@ class MainActivity : Activity() {
                 }
             }
 
+            // Arrêt de la notification de service
+            stopService(Intent(this@MainActivity, MergeService::class.java))
+
             val secs = (System.currentTimeMillis() - t0) / 1000
             val report = StringBuilder()
             report.append("<font color=\"#94A3B8\">SHA-256 :</font> ").append(h256).append("<br>")
@@ -739,7 +592,7 @@ class MainActivity : Activity() {
                 lastHash = h256
                 copyBtn.isEnabled = true
                 hashView.text = Html.fromHtml(report.toString(), Html.FROM_HTML_MODE_LEGACY)
-                statusView.text = "Terminé en ${secs}s"
+                statusView.text = "Terminé avec succès en ${secs}s"
                 doneUi()
             }
         }.start()
@@ -750,14 +603,16 @@ class MainActivity : Activity() {
         val speed = if (elapsed > 0.5) done / elapsed else 0.0
         val pct = if (total > 0) (done * 1000 / total).toInt() else 0
         val eta = if (speed > 0 && total > done) ((total - done) / speed).toLong() else -1L
+        val msg = buildString {
+            append(fmt(done))
+            if (total > 0) { append(" / "); append(fmt(total)) }
+            append(" • ").append(fmt(speed.toLong())).append("/s")
+            if (eta > 0) append(" • reste ").append(eta).append("s")
+        }
+        MergeService.instance?.updateNotification(msg)
         ui.post {
             bar.progress = pct
-            statusView.text = buildString {
-                append(fmt(done))
-                if (total > 0) { append(" / "); append(fmt(total)) }
-                append(" • ").append(fmt(speed.toLong())).append("/s")
-                if (eta > 0) append(" • reste ").append(eta).append("s")
-            }
+            statusView.text = msg
         }
     }
 
@@ -820,9 +675,10 @@ class MainActivity : Activity() {
     private val pkgPart = Regex("(?i)^.+\\.pkg(\\.(\\d+|part\\d+))?$")
 
     private fun isPkgPart(n: String) = pkgPart.matches(n)
-    private fun naturalCompare(a: String, b: String): Int {
+    private val naturalCompare: (String, String) -> Int = { a, b ->
         val ca = chunk.findAll(a).map { it.value }.toList()
         val cb = chunk.findAll(b).map { it.value }.toList()
+        var result = 0
         for (i in 0 until minOf(ca.size, cb.size)) {
             val x = ca[i]; val y = cb[i]
             val dx = x[0].isDigit(); val dy = y[0].isDigit()
@@ -835,9 +691,12 @@ class MainActivity : Activity() {
                 dx != dy -> if (dx) 1 else -1
                 else -> x.compareTo(y, ignoreCase = true)
             }
-            if (c != 0) return c
+            if (c != 0) {
+                result = c
+                break
+            }
         }
-        return ca.size - cb.size
+        if (result != 0) result else ca.size - cb.size
     }
 
     private fun suggestName(): String {
