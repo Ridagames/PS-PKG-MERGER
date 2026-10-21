@@ -98,8 +98,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 35
-                  versionCode = 3
-                  versionName = "1.2"
+                  versionCode = 4
+                  versionName = "1.3"
               }
 
               compileOptions {
@@ -145,6 +145,7 @@ jobs:
           import android.content.Intent
           import android.graphics.Color
           import android.graphics.Typeface
+          import android.graphics.drawable.GradientDrawable
           import android.net.Uri
           import android.os.Bundle
           import android.os.Handler
@@ -199,82 +200,104 @@ jobs:
 
               private val accent = Color.parseColor("#8AB4FF")
               private val dim = Color.parseColor("#9AA6B4")
+              private val cardBg = Color.parseColor("#161B22")
+              private val bgMain = Color.parseColor("#0C1016")
 
               override fun onCreate(state: Bundle?) {
                   super.onCreate(state)
                   val pad = dp(16)
 
-                  val col = LinearLayout(this).apply {
+                  val rootLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
                       setPadding(pad, pad, pad, pad)
-                      setBackgroundColor(Color.parseColor("#0C1016"))
+                      setBackgroundColor(bgMain)
                   }
 
-                  col.addView(text("PS5 PKG Merger", 22f, Color.WHITE, true))
-                  col.addView(text("Réassemble les parties d'un PKG et vérifie l'intégrité.", 13f, dim))
+                  // En-tête
+                  rootLayout.addView(text("PS5 PKG Merger", 24f, Color.WHITE, true))
+                  rootLayout.addView(text("Réassemble les parties d'un PKG et vérifie l'intégrité.", 13f, dim).apply {
+                      setPadding(0, 0, 0, dp(12))
+                  })
 
+                  // --- CARTE 1 : SELECTION ---
+                  val card1 = createCard()
+                  card1.addView(text("1. Sélection des fichiers", 14f, accent, true))
+                  
                   pickBtn = Button(this).apply {
-                      text = "1. Choisir les parties (.pkg / .pkg.0 …)"
+                      text = "📁 Choisir les parties (.pkg / .pkg.0 …)"
                       setOnClickListener { pick() }
                   }
-                  col.addView(pickBtn, lp())
+                  card1.addView(pickBtn, lp())
 
                   dirBtn = Button(this).apply {
-                      text = "…ou choisir un dossier entier"
+                      text = "📂 Choisir un dossier entier"
                       setOnClickListener { pickFolder() }
                   }
-                  col.addView(dirBtn, lp())
+                  card1.addView(dirBtn, lp())
 
                   revBtn = Button(this).apply {
-                      text = "Inverser l'ordre"
+                      text = "🔀 Inverser l'ordre"
                       setOnClickListener { reversed = !reversed; refresh() }
                   }
-                  col.addView(revBtn, lp())
+                  card1.addView(revBtn, lp())
 
                   listView = text("Aucune partie sélectionnée.", 12f, dim).apply {
                       typeface = Typeface.MONOSPACE
+                      setPadding(0, dp(8), 0, dp(4))
                   }
-                  col.addView(listView, lp())
+                  card1.addView(listView, lp())
 
                   checkView = text("", 12f, accent).apply { typeface = Typeface.MONOSPACE }
-                  col.addView(checkView, lp())
+                  card1.addView(checkView, lp())
+                  rootLayout.addView(card1, lpCard())
+
+                  // --- CARTE 2 : SORTIE & FUSION ---
+                  val card2 = createCard()
+                  card2.addView(text("2. Fichier de sortie & Fusion", 14f, accent, true))
 
                   outBtn = Button(this).apply {
-                      text = "2. Choisir le fichier de sortie"
+                      text = "💾 Choisir l'emplacement de sortie"
                       setOnClickListener { pickOutput() }
                   }
-                  col.addView(outBtn, lp())
+                  card2.addView(outBtn, lp())
 
-                  outView = text("Sortie : —", 12f, dim).apply { typeface = Typeface.MONOSPACE }
-                  col.addView(outView, lp())
+                  outView = text("Sortie : —", 12f, dim).apply { 
+                      typeface = Typeface.MONOSPACE
+                      setPadding(0, dp(4), 0, dp(8))
+                  }
+                  card2.addView(outView, lp())
 
                   val mergeLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
                   }
                   goBtn = Button(this).apply {
-                      text = "3. Fusionner"
+                      text = "▶️ Fusionner"
                       setOnClickListener { merge() }
                   }
                   mergeLayout.addView(goBtn, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
                   cancelBtn = Button(this).apply {
-                      text = "Annuler"
+                      text = "❌ Annuler"
                       isEnabled = false
                       setOnClickListener { cancelled = true }
                   }
                   mergeLayout.addView(cancelBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
-                  col.addView(mergeLayout, lp())
+                  card2.addView(mergeLayout, lp())
 
                   bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
                       max = 1000
                       progress = 0
+                      setPadding(0, dp(12), 0, dp(4))
                   }
-                  col.addView(bar, lp())
+                  card2.addView(bar, lp())
 
-                  statusView = text("Prêt.", 13f, accent)
-                  col.addView(statusView, lp())
+                  statusView = text("Prêt.", 13f, accent).apply { setTypeface(null, Typeface.BOLD) }
+                  card2.addView(statusView, lp())
+                  rootLayout.addView(card2, lpCard())
 
-                  col.addView(text("Options et Vérifications", 13f, Color.WHITE, true))
+                  // --- CARTE 3 : OPTIONS & HASH ---
+                  val card3 = createCard()
+                  card3.addView(text("3. Options & Vérification", 14f, accent, true))
 
                   verifyBox = CheckBox(this).apply {
                       text = "Relire le fichier après écriture (recalcule le hash)"
@@ -282,7 +305,7 @@ jobs:
                       setTextColor(dim)
                       textSize = 12f
                   }
-                  col.addView(verifyBox, lp())
+                  card3.addView(verifyBox, lp())
 
                   deleteBox = CheckBox(this).apply {
                       text = "Supprimer les parties sources après fusion réussie"
@@ -290,42 +313,62 @@ jobs:
                       setTextColor(dim)
                       textSize = 12f
                   }
-                  col.addView(deleteBox, lp())
+                  card3.addView(deleteBox, lp())
 
-                  col.addView(text("Hash attendu — optionnel (MD5 32 / SHA-1 40 / SHA-256 64)", 12f, dim))
+                  card3.addView(text("Hash attendu — optionnel (MD5 / SHA-1 / SHA-256)", 12f, dim).apply {
+                      setPadding(0, dp(8), 0, 0)
+                  })
                   hashField = EditText(this).apply {
-                      hint = "colle un hash pour comparer"
+                      hint = "Coller un hash pour comparer"
                       setTextColor(Color.WHITE)
                       setHintTextColor(dim)
                       textSize = 11f
                       typeface = Typeface.MONOSPACE
                   }
-                  col.addView(hashField, lp())
+                  card3.addView(hashField, lp())
 
                   hashView = text("", 11f, accent).apply { typeface = Typeface.MONOSPACE }
-                  col.addView(hashView, lp())
+                  card3.addView(hashView, lp())
 
                   copyBtn = Button(this).apply {
-                      text = "Copier le SHA-256 du fichier produit"
+                      text = "📋 Copier le SHA-256 produit"
                       isEnabled = false
                       setOnClickListener { copyHash() }
                   }
-                  col.addView(copyBtn, lp())
+                  card3.addView(copyBtn, lp())
+                  rootLayout.addView(card3, lpCard())
 
-                  col.addView(
+                  // Avertissement bas de page
+                  rootLayout.addView(
                       text(
-                          "Destination conseillée : stockage interne ou exFAT. Évite le FAT32 (limite 4 Go).",
+                          "💡 Conseil : Stockage interne ou exFAT recommandé. Évitez le FAT32 (limite 4 Go).",
                           11f, dim
-                      )
+                      ).apply { setPadding(dp(4), dp(8), dp(4), dp(16)) }
                   )
 
-                  setContentView(ScrollView(this).apply { addView(col) })
+                  setContentView(ScrollView(this).apply { addView(rootLayout) })
               }
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
               private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                  topMargin = dp(6)
+                  topMargin = dp(4)
+              }
+
+              private fun lpCard() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
+                  topMargin = dp(12)
+                  bottomMargin = dp(4)
+              }
+
+              private fun createCard(): LinearLayout {
+                  return LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(14), dp(14), dp(14), dp(14))
+                      background = GradientDrawable().apply {
+                          setColor(cardBg)
+                          cornerRadius = dp(12).toFloat()
+                      }
+                  }
               }
 
               private fun text(t: String, size: Float, color: Int, bold: Boolean = false) =
@@ -334,12 +377,10 @@ jobs:
                       textSize = size
                       setTextColor(color)
                       if (bold) setTypeface(typeface, Typeface.BOLD)
-                      setPadding(0, dp(4), 0, dp(4))
+                      setPadding(0, dp(2), 0, dp(2))
                   }
 
               private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
-
-              // ---------- Sélection ----------
 
               private fun pick() {
                   startActivityForResult(
@@ -532,8 +573,6 @@ jobs:
                   return sb.toString()
               }
 
-              // ---------- Fusion ----------
-
               private fun order(): List<Int> {
                   val o = uris.indices.sortedWith { a, b -> naturalCompare(names[a], names[b]) }
                   return if (reversed) o.reversed() else o
@@ -671,7 +710,6 @@ jobs:
                           }
                       }
 
-                      // Suppression des fichiers sources si demandé et sans problème critique majeur
                       if (wantDelete && problems.isEmpty()) {
                           for (u in list) {
                               try {
@@ -707,7 +745,7 @@ jobs:
                           statusView.text = if (problems.isEmpty())
                               "✓ Fusion terminée et vérifiée en ${secs} s"
                           else
-                              "⚠ Fusion terminée AVEC ANOMALIES — voir ci-dessus"
+                              "⚠ Fusion terminée AVEC ANOMALIES"
                           doneUi()
                       }
                   }.start()
@@ -745,8 +783,6 @@ jobs:
                       .setPrimaryClip(ClipData.newPlainText("sha256", h))
                   toast("SHA-256 copié")
               }
-
-              // ---------- Utilitaires ----------
 
               private fun size(u: Uri): Long {
                   return try {
