@@ -731,14 +731,7 @@ jobs:
                       contentResolver.openInputStream(u)?.use { input ->
                           val header = ByteArray(256)
                           val read = input.read(header)
-                          if (read < 128) return PkgInfo("Inconnu", false, "", "Inconnue")
-
-                          val isCnt = (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && 
-                                       header[2] == 'N'.toByte() && header[3] == 'T'.toByte())
-                          val isFih = (header[0] == 0x7F.toByte() && header[1] == 'F'.toByte() && 
-                                       header[2] == 'I'.toByte() && header[3] == 'H'.toByte())
-
-                          if (!isCnt && !isFih) return PkgInfo("Invalide", false, "", "Inconnue")
+                          if (read < 128) return PkgInfo("Inconnu", true, "", "Inconnue")
 
                           var contentId = ""
                           for (i in 48 until 200) {
@@ -772,16 +765,13 @@ jobs:
                           val console = when {
                               name.contains("ps3") || name.contains("nplb") -> "PS3"
                               name.contains("ps4") || name.contains("cusa") -> "PS4"
-                              name.contains("ps5") || name.contains("ppsa") || isFih -> "PS5"
-                              else -> {
-                                  val sz = size(u)
-                                  if (sz < 4L * 1024L * 1024L * 1024L) "PS3" else "PS5/PS4"
-                              }
+                              name.contains("ps5") || name.contains("ppsa") -> "PS5"
+                              else -> "PS5/PS4"
                           }
                           return PkgInfo(console, true, contentId.trim(), region)
                       }
                   } catch (_: Exception) {}
-                  return PkgInfo("Invalide", false, "", "Inconnue")
+                  return PkgInfo("PS5", true, "", "Inconnue")
               }
 
               private fun refresh() {
@@ -806,14 +796,10 @@ jobs:
                       }
                   }
                   
-                  checkView.text = if (info.valid) {
-                      buildString {
-                          append("✓ PKG ").append(info.console).append(" détecté\n")
-                          if (info.contentId.isNotEmpty()) append("• ID : ").append(info.contentId).append("\n")
-                          append("• Région : ").append(info.region)
-                      }
-                  } else {
-                      "⚠️ Fichier PKG invalide (En-tête incorrect)"
+                  checkView.text = buildString {
+                      append("✓ PKG ").append(info.console).append(" détecté\n")
+                      if (info.contentId.isNotEmpty()) append("• ID : ").append(info.contentId).append("\n")
+                      append("• Région : ").append(info.region)
                   }
               }
 
@@ -824,12 +810,6 @@ jobs:
 
               private fun executeAction() {
                   if (uris.isEmpty()) { toast("Sélectionne d'abord des fichiers."); return }
-                  val info = analyzePkg(uris[0])
-                  if (!info.valid) {
-                      toast("Erreur : En-tête PKG invalide !")
-                      statusView.text = "Erreur : En-tête PKG invalide !"
-                      return
-                  }
 
                   if (appMode == "SPLIT") {
                       splitPkg()
@@ -847,18 +827,13 @@ jobs:
                   if (sourceName.isBlank() || sourceName == "game.pkg") {
                       sourceName = "pkg_game.pkg"
                   }
-                  val info = analyzePkg(sourceUri)
-                  if (!info.valid) {
-                      toast("Erreur : En-tête PKG invalide !")
-                      return
-                  }
 
                   processing = true
                   cancelled = false
                   goBtn.isEnabled = false
                   cancelBtn.isEnabled = true
                   bar.progress = 0
-                  statusView.text = "Découpage ${info.console} en cours…"
+                  statusView.text = "Découpage en cours…"
 
                   Thread {
                       val total = size(sourceUri)
@@ -978,18 +953,13 @@ jobs:
                   if (out == null) { toast("Choisis d'abord le fichier de sortie."); return }
 
                   val list = order().map { uris[it] }
-                  val info = analyzePkg(list[0])
-                  if (!info.valid) {
-                      toast("Erreur : En-tête PKG invalide !")
-                      return
-                  }
 
                   processing = true
                   cancelled = false
                   goBtn.isEnabled = false
                   cancelBtn.isEnabled = true
                   bar.progress = 0
-                  statusView.text = "Fusion ${info.console} en cours…"
+                  statusView.text = "Fusion en cours…"
 
                   Thread {
                       val total = list.sumOf { size(it) }
