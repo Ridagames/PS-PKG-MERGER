@@ -731,7 +731,14 @@ jobs:
                       contentResolver.openInputStream(u)?.use { input ->
                           val header = ByteArray(256)
                           val read = input.read(header)
-                          if (read < 128) return PkgInfo("Inconnu", true, "", "Inconnue")
+                          if (read < 128) return PkgInfo("Inconnu", false, "", "Inconnue")
+
+                          val isCnt = (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && 
+                                       header[2] == 'N'.toByte() && header[3] == 'T'.toByte())
+                          val isFih = (header[0] == 0x7F.toByte() && header[1] == 'F'.toByte() && 
+                                       header[2] == 'I'.toByte() && header[3] == 'H'.toByte())
+
+                          if (!isCnt && !isFih) return PkgInfo("Invalide", false, "", "Inconnue")
 
                           var contentId = ""
                           for (i in 48 until 200) {
@@ -765,13 +772,13 @@ jobs:
                           val console = when {
                               name.contains("ps3") || name.contains("nplb") -> "PS3"
                               name.contains("ps4") || name.contains("cusa") -> "PS4"
-                              name.contains("ps5") || name.contains("ppsa") -> "PS5"
+                              name.contains("ps5") || name.contains("ppsa") || isFih -> "PS5"
                               else -> "PS5/PS4"
                           }
                           return PkgInfo(console, true, contentId.trim(), region)
                       }
                   } catch (_: Exception) {}
-                  return PkgInfo("PS5", true, "", "Inconnue")
+                  return PkgInfo("Invalide", false, "", "Inconnue")
               }
 
               private fun refresh() {
@@ -796,10 +803,14 @@ jobs:
                       }
                   }
                   
-                  checkView.text = buildString {
-                      append("✓ PKG ").append(info.console).append(" détecté\n")
-                      if (info.contentId.isNotEmpty()) append("• ID : ").append(info.contentId).append("\n")
-                      append("• Région : ").append(info.region)
+                  checkView.text = if (info.valid) {
+                      buildString {
+                          append("✓ PKG ").append(info.console).append(" détecté\n")
+                          if (info.contentId.isNotEmpty()) append("• ID : ").append(info.contentId).append("\n")
+                          append("• Région : ").append(info.region)
+                      }
+                  } else {
+                      "⚠️ Fichier PKG invalide (En-tête incorrect)"
                   }
               }
 
@@ -810,6 +821,12 @@ jobs:
 
               private fun executeAction() {
                   if (uris.isEmpty()) { toast("Sélectionne d'abord des fichiers."); return }
+                  val info = analyzePkg(uris[0])
+                  if (!info.valid) {
+                      toast("Erreur : En-tête PKG invalide !")
+                      statusView.text = "Erreur : En-tête PKG invalide !"
+                      return
+                  }
 
                   if (appMode == "SPLIT") {
                       splitPkg()
@@ -827,13 +844,18 @@ jobs:
                   if (sourceName.isBlank() || sourceName == "game.pkg") {
                       sourceName = "pkg_game.pkg"
                   }
+                  val info = analyzePkg(sourceUri)
+                  if (!info.valid) {
+                      toast("Erreur : En-tête PKG invalide !")
+                      return
+                  }
 
                   processing = true
                   cancelled = false
                   goBtn.isEnabled = false
                   cancelBtn.isEnabled = true
                   bar.progress = 0
-                  statusView.text = "Découpage en cours…"
+                  statusView.text = "Découpage ${info.console} en cours…"
 
                   Thread {
                       val total = size(sourceUri)
@@ -848,18 +870,20 @@ jobs:
                           var partIndex = 0
                           val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
                           val baseDirUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocId)
+                          var pfd: android.os.ParcelFileDescriptor? = null
                           var os: BufferedOutputStream? = null
 
                           fun openNextPart() {
-                              os?.flush()
-                              os?.close()
+                              try { os?.flush(); os?.close() } catch (_: Exception) {}
+                              try { pfd?.close() } catch (_: Exception) {}
+
                               val partName = "$sourceName.${String.format(Locale.US, "%02d", partIndex)}"
                               val docUri = DocumentsContract.createDocument(contentResolver, baseDirUri, "application/octet-stream", partName)
                                   ?: throw IllegalStateException("Création de $partName impossible")
                               
-                              val pfd = contentResolver.openFileDescriptor(docUri, "w")
+                              pfd = contentResolver.openFileDescriptor(docUri, "w")
                                   ?: throw IllegalStateException("Ouverture du descripteur impossible")
-                              os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
+                              os = BufferedOutputStream(FileOutputStream(pfd!!.fileDescriptor), 1 shl 20)
                               partIndex++
                           }
 
@@ -911,8 +935,8 @@ jobs:
                                   }
                               }
                           }
-                          os?.flush()
-                          os?.close()
+                          try { os?.flush(); os?.close() } catch (_: Exception) {}
+                          try { pfd?.close() } catch (_: Exception) {}
                           success = true
                       } catch (e: Throwable) {
                           ui.post {
@@ -953,13 +977,18 @@ jobs:
                   if (out == null) { toast("Choisis d'abord le fichier de sortie."); return }
 
                   val list = order().map { uris[it] }
+                  val info = analyzePkg(list[0])
+                  if (!info.valid) {
+                      toast("Erreur : En-tête PKG invalide !")
+                      return
+                  }
 
                   processing = true
                   cancelled = false
                   goBtn.isEnabled = false
                   cancelBtn.isEnabled = true
                   bar.progress = 0
-                  statusView.text = "Fusion en cours…"
+                  statusView.text = "Fusion ${info.console} en cours…"
 
                   Thread {
                       val total = list.sumOf { size(it) }
