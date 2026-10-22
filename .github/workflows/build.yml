@@ -1,4 +1,4 @@
-name: Build Windows App
+name: Build Windows App (.exe)
 
 on:
   push:
@@ -164,7 +164,6 @@ jobs:
                       border = EmptyBorder(16, 16, 16, 16)
                   }
 
-                  // Header
                   val header = JPanel(GridLayout(2, 1)).apply {
                       background = bgMain
                       alignmentX = Component.LEFT_ALIGNMENT
@@ -181,7 +180,6 @@ jobs:
                   root.add(header)
                   root.add(Box.createRigidArea(Dimension(0, 10)))
 
-                  // Card 1: Sources
                   val card1 = createCard("1. Sélection des parties (.pkg / .pkg.0 ...)")
                   val btnPanel1 = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0)).apply {
                       background = cardBg
@@ -203,7 +201,6 @@ jobs:
                   root.add(card1)
                   root.add(Box.createRigidArea(Dimension(0, 10)))
 
-                  // Card 2: Output & Merge
                   val card2 = createCard("2. Fichier de sortie & Fusion")
                   val btnPanel2 = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0)).apply {
                       background = cardBg
@@ -239,7 +236,6 @@ jobs:
                   root.add(card2)
                   root.add(Box.createRigidArea(Dimension(0, 10)))
 
-                  // Card 3: Security & Hash
                   val card3 = createCard("3. Options de sécurité & Hash")
                   verifyBox.foreground = dim
                   verifyBox.background = cardBg
@@ -273,7 +269,6 @@ jobs:
 
                   add(JScrollPane(root).apply { border = null })
 
-                  // Actions
                   pickFilesBtn.addActionListener { pickFiles() }
                   pickDirBtn.addActionListener { pickFolder() }
                   revBtn.addActionListener { reversed = !reversed; refreshList() }
@@ -360,7 +355,7 @@ jobs:
                   sb.append(" • ordre ").append(if (reversed) "inversé" else "croissant").append("<br>")
                   order.forEachIndexed { i, idx ->
                       val f = selectedFiles[idx]
-                      sb.append("${i + 1}. ${f.name}")
+                      sb.append("${i + 1}.${f.name}")
                       if (f.length() > 0) sb.append(" (${fmtSize(f.length())})")
                       sb.append("<br>")
                   }
@@ -600,16 +595,27 @@ jobs:
           }
           '@
 
-      - name: Build JAR Windows
-        run: ./gradlew jar
+      - name: Build JAR
+        run: ./gradlew.bat jar
 
-      - name: Renommer et préparer l'artefact
+      - name: Créer le fichier .exe avec jpackage
         run: |
-          Copy-Item "app/build/libs/app.jar" "PS5PkgMerger-Windows.jar"
+          $javaHome =$env:JAVA_HOME
+          & "$javaHome\bin\jpackage.exe" `
+              --type app-image `
+              --name "PS5PkgMerger" `
+              --input "app/build/libs" `
+              --main-jar "app.jar" `
+              --main-class "com.venice.pkgmerger.MainKt" `
+              --dest "dist"
 
-      - name: Upload Windows JAR
+      - name: Compresser l'application en ZIP
+        run: |
+          Compress-Archive -Path "dist\PS5PkgMerger" -DestinationPath "PS5PkgMerger-Windows.zip" -Force
+
+      - name: Upload Windows EXE Package
         uses: actions/upload-artifact@v4
         with:
-          name: ps5-pkg-merger-windows
-          path: PS5PkgMerger-Windows.jar
+          name: ps5-pkg-merger-windows-exe
+          path: PS5PkgMerger-Windows.zip
           if-no-files-found: error
