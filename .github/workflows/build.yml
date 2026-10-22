@@ -36,6 +36,10 @@ jobs:
           FORCE: ${{ github.event.inputs.regenerate == 'true' && '1' || '0' }}
         run: |
           set -e
+          
+          # Nettoyage des anciens dossiers si besoin
+          rm -rf app/src/main/java
+          
           mkdir -p app/src/main/kotlin/com/venice/pkgmerger
           mkdir -p app/src/main/resources
 
@@ -467,7 +471,7 @@ jobs:
                           try {
                               val re = MessageDigest.getInstance("SHA-256")
                               FileInputStream(out).use { ins ->
-                              val b = ByteArray(1024 * 1024)
+                                  val b = ByteArray(1024 * 1024)
                                   while (true) {
                                       val r = ins.read(b)
                                       if (r <= 0) break
@@ -583,11 +587,6 @@ jobs:
                   return ca.size - cb.size
               }
 
-              private fun suggestName(): NameSuggestion? {
-                  // omitted or simplified logic or standard suggestName returning String
-                  return null
-              }
-
               private fun suggestName(): String {
                   if (selectedFiles.isEmpty()) return "merged.pkg"
                   val first = selectedFiles.minWithOrNull { a, b -> naturalCompare(a.name, b.name) }?.name ?: return "merged.pkg"
@@ -601,10 +600,10 @@ jobs:
           fun main() {
               SwingUtilities.invokeLater { MainWindow() }
           }
-          '@
+          EOF
 
       - name: Build JAR
-        run: ./gradlew jar
+        run: gradle jar
 
       - name: Créer le fichier .dmg pour macOS avec jpackage
         run: |
