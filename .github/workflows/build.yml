@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.1.4
+      - name: Générer le projet Android v2.1.5
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 214
-                  versionName = "2.1.4"
+                  versionCode = 215
+                  versionName = "2.1.5"
               }
 
               compileOptions {
@@ -254,6 +254,17 @@ jobs:
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
+              private fun styleButton(b: Button, bgHex: String, textHex: String = "#FFFFFF") {
+                  b.setBackgroundDrawable(GradientDrawable().apply {
+                      setColor(Color.parseColor(bgHex))
+                      cornerRadius = dp(10).toFloat()
+                  })
+                  b.setTextColor(Color.parseColor(textHex))
+                  b.setTypeface(null, Typeface.BOLD)
+                  b.textSize = 13f
+                  b.setPadding(dp(12), dp(10), dp(12), dp(10))
+              }
+
               private fun createNotificationChannel() {
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                       val channel = NotificationChannel(
@@ -362,12 +373,7 @@ jobs:
 
                   menuBtn = Button(this).apply {
                       text = "⚙️ Mode"
-                      textSize = 12f
-                      setBackgroundDrawable(GradientDrawable().apply {
-                          setColor(Color.parseColor("#334155"))
-                          cornerRadius = dp(8).toFloat()
-                      })
-                      setTextColor(Color.WHITE)
+                      styleButton(this, "#334155")
                       setOnClickListener { showMenu(it) }
                   }
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
@@ -379,6 +385,7 @@ jobs:
                   
                   pickBtn = Button(this).apply {
                       text = "📁 CHOISIR LES FICHIERS"
+                      styleButton(this, "#0284C7")
                       setOnClickListener {
                           if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           pick()
@@ -388,6 +395,7 @@ jobs:
 
                   dirBtn = Button(this).apply {
                       text = "📂 CHOISIR UN DOSSIER COMPLET"
+                      styleButton(this, "#0369A1")
                       setOnClickListener {
                           if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           pickFolder()
@@ -397,6 +405,7 @@ jobs:
 
                   revBtn = Button(this).apply {
                       text = "🔀 INVERSER L'ORDRE DES PARTIES"
+                      styleButton(this, "#475569")
                       setOnClickListener {
                           if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           reversed = !reversed; refresh()
@@ -419,6 +428,7 @@ jobs:
 
                   outBtn = Button(this).apply {
                       text = "💾 DÉFINIR L'EMPLACEMENT DE SORTIE"
+                      styleButton(this, "#0D9488")
                       setOnClickListener {
                           if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           pickOutput()
@@ -437,12 +447,14 @@ jobs:
                   }
                   goBtn = Button(this).apply {
                       text = "▶️ LANCER LA FUSION"
+                      styleButton(this, "#16A34A")
                       setOnClickListener { executeAction() }
                   }
                   actionLayout.addView(goBtn, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
                   cancelBtn = Button(this).apply {
                       text = "❌ ANNULER"
+                      styleButton(this, "#DC2626")
                       isEnabled = false
                       setOnClickListener {
                           if (processing) {
@@ -499,6 +511,7 @@ jobs:
 
                   copyBtn = Button(this).apply {
                       text = "📋 Copier le SHA-256 produit"
+                      styleButton(this, "#334155")
                       isEnabled = false
                       setOnClickListener { copyHash() }
                   }
@@ -543,7 +556,7 @@ jobs:
                               true
                           }
                           2 -> {
-                              toast("PS PKG Manager v2.1.4")
+                              toast("PS PKG Manager v2.1.5")
                               true
                           }
                           else -> false
@@ -552,7 +565,7 @@ jobs:
                   popup.show()
               }
 
-              private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(4) }
+              private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) }
               private fun lpCard() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12); bottomMargin = dp(4) }
 
               private fun createCard(): LinearLayout {
@@ -1190,12 +1203,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.1.4
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.1.4.apk
+      - name: Renommer l'APK v2.1.5
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.1.5.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.1.4-apk
-          path: PkgMerger-v2.1.4.apk
+          name: pkg-merger-v2.1.5-apk
+          path: PkgMerger-v2.1.5.apk
           if-no-files-found: error
