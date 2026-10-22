@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.1.1
+      - name: Générer le projet Android v2.1.2
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 211
-                  versionName = "2.1.1"
+                  versionCode = 212
+                  versionName = "2.1.2"
               }
 
               compileOptions {
@@ -209,7 +209,7 @@ jobs:
               private var output: Uri? = null
               private var reversed = false
               private var lastHash: String? = null
-              private var appMode = "MERGE" // MERGE ou SPLIT
+              private var appMode = "MERGE"
               @Volatile private var processing = false
               @Volatile private var cancelled = false
               private val ui = Handler(Looper.getMainLooper())
@@ -259,7 +259,7 @@ jobs:
                           "pkg_channel",
                           "PS PKG Notifications",
                           NotificationManager.IMPORTANCE_LOW
-                      ).apply { description = "Progression des traitements PKG (PS3/PS4/PS5)" }
+                      ).apply { description = "Progression des traitements PKG" }
                       getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
                   }
               }
@@ -542,7 +542,7 @@ jobs:
                               true
                           }
                           2 -> {
-                              toast("PS PKG Manager v2.1.1")
+                              toast("PS PKG Manager v2.1.2")
                               true
                           }
                           else -> false
@@ -729,19 +729,36 @@ jobs:
               private fun analyzePkg(u: Uri): PkgInfo {
                   try {
                       contentResolver.openInputStream(u)?.use { input ->
-                          val header = ByteArray(128)
+                          val header = ByteArray(256)
                           val read = input.read(header)
-                          if (read < 64) return PkgInfo("Inconnu", false, "", "Inconnue")
+                          if (read < 128) return PkgInfo("Inconnu", false, "", "Inconnue")
 
                           val isCnt = (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && 
                                        header[2] == 'N'.toByte() && header[3] == 'T'.toByte())
+                          val isFih = (header[0] == 0x7F.toByte() && header[1] == 'F'.toByte() && 
+                                       header[2] == 'I'.toByte() && header[3] == 'H'.toByte())
 
-                          if (!isCnt) return PkgInfo("Invalide", false, "", "Inconnue")
+                          if (!isCnt && !isFih) return PkgInfo("Invalide", false, "", "Inconnue")
 
                           var contentId = ""
-                          for (i in 48 until 96) {
+                          for (i in 48 until 200) {
                               val b = header[i]
-                              if (b in 32..126) contentId += b.toChar() else if (contentId.isNotEmpty() && contentId.length >= 10) break
+                              if (b in 32..126) {
+                                  contentId += b.toChar()
+                              } else {
+                                  if (contentId.length >= 20 && contentId.contains("-")) break
+                                  contentId = ""
+                              }
+                          }
+                          if (contentId.length < 15) {
+                              contentId = ""
+                              for (i in 0 until read - 20) {
+                                  val possibleId = String(header, i, 36)
+                                  if ((possibleId.startsWith("EP") || possibleId.startsWith("UP") || possibleId.startsWith("JP")) && possibleId.contains("-")) {
+                                      contentId = possibleId
+                                      break
+                                  }
+                              }
                           }
 
                           val region = when {
@@ -755,7 +772,7 @@ jobs:
                           val console = when {
                               name.contains("ps3") || name.contains("nplb") -> "PS3"
                               name.contains("ps4") || name.contains("cusa") -> "PS4"
-                              name.contains("ps5") || name.contains("ppsa") -> "PS5"
+                              name.contains("ps5") || name.contains("ppsa") || isFih -> "PS5"
                               else -> {
                                   val sz = size(u)
                                   if (sz < 4L * 1024L * 1024L * 1024L) "PS3" else "PS5/PS4"
@@ -852,7 +869,7 @@ jobs:
                       val sha256 = if (verifyBox.isChecked) MessageDigest.getInstance("SHA-256") else null
 
                       try {
-                          val maxPartSize = 4L * 1024L * 1024L * 1024L // 4 Go par partie
+                          val maxPartSize = 4L * 1024L * 1024L * 1024L
                           var partIndex = 0
                           val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
                           val baseDirUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocId)
@@ -1144,12 +1161,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.1.1
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.1.1.apk
+      - name: Renommer l'APK v2.1.2
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.1.2.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.1.1-apk
-          path: PkgMerger-v2.1.1.apk
+          name: pkg-merger-v2.1.2-apk
+          path: PkgMerger-v2.1.2.apk
           if-no-files-found: error
