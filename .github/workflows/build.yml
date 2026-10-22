@@ -1,4 +1,4 @@
-name: Build Android APK
+Name: Build Android APK
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.1.0
+      - name: Générer le projet Android v2.1.1
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 210
-                  versionName = "2.1.0"
+                  versionCode = 211
+                  versionName = "2.1.1"
               }
 
               compileOptions {
@@ -140,7 +140,7 @@ jobs:
               <uses-permission android:name="android.permission.WAKE_LOCK" />
 
               <application
-                  android:label="PS PKG Merger &amp; Splitter"
+                  android:label="PS PKG Manager &amp; Analyzer"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -149,7 +149,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Merger &amp; Splitter">
+                      android:label="PS PKG Manager &amp; Analyzer">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -351,7 +351,7 @@ jobs:
                   titlesLayout.addView(titleView)
                   
                   subtitleView = TextView(this).apply {
-                      text = "Fusion, découpage et vérification de PKG (PS3, PS4, PS5 / Mises à jour)."
+                      text = "Fusion, découpage et analyse détaillée de PKG (PS3, PS4, PS5)."
                       textSize = 11f
                       setTextColor(dim)
                       setPadding(0, dp(2), 0, 0)
@@ -379,7 +379,7 @@ jobs:
                   pickBtn = Button(this).apply {
                       text = "📁 CHOISIR LES FICHIERS"
                       setOnClickListener {
-                          if (processing) { toast("⚠️ Traitement en cours : impossible de modifier la sélection !"); return@setOnClickListener }
+                          if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           pick()
                       }
                   }
@@ -388,7 +388,7 @@ jobs:
                   dirBtn = Button(this).apply {
                       text = "📂 CHOISIR UN DOSSIER COMPLET"
                       setOnClickListener {
-                          if (processing) { toast("⚠️ Traitement en cours : impossible de modifier la sélection !"); return@setOnClickListener }
+                          if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           pickFolder()
                       }
                   }
@@ -419,7 +419,7 @@ jobs:
                   outBtn = Button(this).apply {
                       text = "💾 DÉFINIR L'EMPLACEMENT DE SORTIE"
                       setOnClickListener {
-                          if (processing) { toast("⚠️ Traitement en cours : impossible de changer la destination !"); return@setOnClickListener }
+                          if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           pickOutput()
                       }
                   }
@@ -514,12 +514,12 @@ jobs:
 
               private fun showMenu(v: android.view.View) {
                   if (processing) {
-                      toast("⚠️ Traitement en cours : impossible de changer de mode !")
+                      toast("⚠️ Traitement en cours !")
                       return
                   }
                   val popup = PopupMenu(this, v)
                   popup.menu.add(0, 1, 0, if (appMode == "MERGE") "📂 Basculer vers : Mode Splitter" else "🔗 Basculer vers : Mode Fusion")
-                  popup.menu.add(0, 2, 1, "ℹ️ À propos de l'application")
+                  popup.menu.add(0, 2, 1, "ℹ️ À propos")
                   popup.setOnMenuItemClickListener { item ->
                       when (item.itemId) {
                           1 -> {
@@ -532,7 +532,7 @@ jobs:
                                   statusView.text = "Prêt à découper."
                               } else {
                                   titleView.text = "⚡ PS PKG MANAGER"
-                                  subtitleView.text = "Fusion, découpage et vérification de PKG (PS3, PS4, PS5 / Mises à jour)."
+                                  subtitleView.text = "Fusion, découpage et analyse détaillée de PKG (PS3, PS4, PS5)."
                                   section1Title.text = "1. Sélection des parties (.pkg / .pkg.0 ...)"
                                   goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
@@ -542,7 +542,7 @@ jobs:
                               true
                           }
                           2 -> {
-                              toast("PS PKG Merger Suite v2.1.0")
+                              toast("PS PKG Manager v2.1.1")
                               true
                           }
                           else -> false
@@ -706,7 +706,7 @@ jobs:
                   }
                   reversed = false
                   refresh()
-                  if (uris.isEmpty()) toast("Aucun fichier .pkg valide trouvé dans ce dossier.")
+                  if (uris.isEmpty()) toast("Aucun fichier .pkg valide trouvé.")
               }
 
               private fun persist(u: Uri, write: Boolean = false) {
@@ -724,17 +724,32 @@ jobs:
                   uris.add(u); names.add(n); sizes.add(s)
               }
 
-              private fun detectConsoleAndVerify(u: Uri): Pair<String, Boolean> {
+              private data class PkgInfo(val console: String, val valid: Boolean, val contentId: String, val region: String)
+
+              private fun analyzePkg(u: Uri): PkgInfo {
                   try {
                       contentResolver.openInputStream(u)?.use { input ->
-                          val header = ByteArray(32)
+                          val header = ByteArray(128)
                           val read = input.read(header)
-                          if (read < 4) return Pair("Inconnu", false)
+                          if (read < 64) return PkgInfo("Inconnu", false, "", "Inconnue")
 
                           val isCnt = (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && 
                                        header[2] == 'N'.toByte() && header[3] == 'T'.toByte())
 
-                          if (!isCnt) return Pair("Invalide", false)
+                          if (!isCnt) return PkgInfo("Invalide", false, "", "Inconnue")
+
+                          var contentId = ""
+                          for (i in 48 until 96) {
+                              val b = header[i]
+                              if (b in 32..126) contentId += b.toChar() else if (contentId.isNotEmpty() && contentId.length >= 10) break
+                          }
+
+                          val region = when {
+                              contentId.startsWith("EP", true) || contentId.startsWith("BP", true) -> "🇪🇺 Europe (EP/BP)"
+                              contentId.startsWith("UP", true) || contentId.startsWith("HP", true) -> "🇺🇸 US (UP/HP)"
+                              contentId.startsWith("JP", true) || contentId.startsWith("AP", true) -> "🇯🇵 / Asie (JP/AP)"
+                              else -> "Inconnue"
+                          }
 
                           val name = getFileName(u).lowercase()
                           val console = when {
@@ -743,13 +758,13 @@ jobs:
                               name.contains("ps5") || name.contains("ppsa") -> "PS5"
                               else -> {
                                   val sz = size(u)
-                                  if (sz < 4L * 1024L * 1024L * 1024L) "PS3" else "PS5"
+                                  if (sz < 4L * 1024L * 1024L * 1024L) "PS3" else "PS5/PS4"
                               }
                           }
-                          return Pair(console, true)
+                          return PkgInfo(console, true, contentId.trim(), region)
                       }
                   } catch (_: Exception) {}
-                  return Pair("Invalide", false)
+                  return PkgInfo("Invalide", false, "", "Inconnue")
               }
 
               private fun refresh() {
@@ -761,7 +776,7 @@ jobs:
                   }
                   val order = order()
                   val total = order.sumOf { sizes[it] }
-                  val (detectedConsole, isValid) = detectConsoleAndVerify(uris[order[0]])
+                  val info = analyzePkg(uris[order[0]])
                   
                   listView.text = buildString {
                       append(order.size).append(" partie(s)")
@@ -774,8 +789,12 @@ jobs:
                       }
                   }
                   
-                  checkView.text = if (isValid) {
-                      "✓ Fichier PKG $detectedConsole détecté (En-tête valide)"
+                  checkView.text = if (info.valid) {
+                      buildString {
+                          append("✓ PKG ").append(info.console).append(" détecté\n")
+                          if (info.contentId.isNotEmpty()) append("• ID : ").append(info.contentId).append("\n")
+                          append("• Région : ").append(info.region)
+                      }
                   } else {
                       "⚠️ Fichier PKG invalide (En-tête incorrect)"
                   }
@@ -788,9 +807,9 @@ jobs:
 
               private fun executeAction() {
                   if (uris.isEmpty()) { toast("Sélectionne d'abord des fichiers."); return }
-                  val (_, isValid) = detectConsoleAndVerify(uris[0])
-                  if (!isValid) {
-                      toast("Erreur : L'en-tête du fichier PKG n'est pas valide !")
+                  val info = analyzePkg(uris[0])
+                  if (!info.valid) {
+                      toast("Erreur : En-tête PKG invalide !")
                       statusView.text = "Erreur : En-tête PKG invalide !"
                       return
                   }
@@ -811,8 +830,8 @@ jobs:
                   if (sourceName.isBlank() || sourceName == "game.pkg") {
                       sourceName = "pkg_game.pkg"
                   }
-                  val (detected, isValid) = detectConsoleAndVerify(sourceUri)
-                  if (!isValid) {
+                  val info = analyzePkg(sourceUri)
+                  if (!info.valid) {
                       toast("Erreur : En-tête PKG invalide !")
                       return
                   }
@@ -822,7 +841,7 @@ jobs:
                   goBtn.isEnabled = false
                   cancelBtn.isEnabled = true
                   bar.progress = 0
-                  statusView.text = "Découpage $detected en cours…"
+                  statusView.text = "Découpage ${info.console} en cours…"
 
                   Thread {
                       val total = size(sourceUri)
@@ -844,8 +863,9 @@ jobs:
                               os?.close()
                               val partName = "$sourceName.${String.format(Locale.US, "%02d", partIndex)}"
                               val docUri = DocumentsContract.createDocument(contentResolver, baseDirUri, "application/octet-stream", partName)
-                                  ?: throw IllegalStateException("Création du fichier $partName impossible")
-                              val pfd = contentResolver.openFileDescriptor(docUri, "wt")
+                                  ?: throw IllegalStateException("Création de $partName impossible")
+                              
+                              val pfd = contentResolver.openFileDescriptor(docUri, "w")
                                   ?: throw IllegalStateException("Ouverture du descripteur impossible")
                               os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
                               partIndex++
@@ -857,13 +877,13 @@ jobs:
                           var currentPartBytes = 0L
                           contentResolver.openInputStream(sourceUri)?.use { input ->
                               while (true) {
-                                  if (cancelled) throw InterruptedException("Traitement annulé par l'utilisateur.")
+                                  if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
                                   val bytesRead = input.read(buf)
                                   if (bytesRead <= 0) break
 
                                   var offset = 0
                                   while (offset < bytesRead) {
-                                      if (cancelled) throw InterruptedException("Traitement annulé par l'utilisateur.")
+                                      if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
                                       if (currentPartBytes >= maxPartSize) {
                                           openNextPart()
                                           currentPartBytes = 0L
@@ -893,7 +913,7 @@ jobs:
                                           }
                                           if (now - lastNotifTime > 2000 || pct == 100) {
                                               lastNotifTime = now
-                                              updateProgressNotif("Découpage $detected : $pct%", pct)
+                                              updateProgressNotif("Découpage : $pct%", pct)
                                           }
                                       }
                                   }
@@ -928,7 +948,7 @@ jobs:
                               hashView.text = "SHA-256 : $h256"
                           }
                           statusView.text = "Découpage réussi en ${secs}s !"
-                          showResultNotif("PS PKG Manager", "Découpage terminé avec succès en ${secs}s !")
+                          showResultNotif("PS PKG Manager", "Découpage terminé en ${secs}s !")
                           processing = false
                           doneUi()
                       }
@@ -941,8 +961,8 @@ jobs:
                   if (out == null) { toast("Choisis d'abord le fichier de sortie."); return }
 
                   val list = order().map { uris[it] }
-                  val (detected, isValid) = detectConsoleAndVerify(list[0])
-                  if (!isValid) {
+                  val info = analyzePkg(list[0])
+                  if (!info.valid) {
                       toast("Erreur : En-tête PKG invalide !")
                       return
                   }
@@ -952,7 +972,7 @@ jobs:
                   goBtn.isEnabled = false
                   cancelBtn.isEnabled = true
                   bar.progress = 0
-                  statusView.text = "Fusion $detected en cours…"
+                  statusView.text = "Fusion ${info.console} en cours…"
 
                   Thread {
                       val total = list.sumOf { size(it) }
@@ -963,17 +983,17 @@ jobs:
                       val t0 = System.currentTimeMillis()
 
                       try {
-                          val pfd = contentResolver.openFileDescriptor(out, "wt")
+                          val pfd = contentResolver.openFileDescriptor(out, "w")
                               ?: throw IllegalStateException("Ouverture sortie impossible")
                           try {
                               val os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
                               val buf = ByteArray(1 shl 20)
                               var bytesRead: Int
                               for (u in list) {
-                                  if (cancelled) throw InterruptedException("Traitement annulé par l'utilisateur.")
+                                  if (cancelled) throw InterruptedException("Annulé.")
                                   contentResolver.openInputStream(u)?.use { input ->
                                       while (true) {
-                                          if (cancelled) throw InterruptedException("Traitement annulé par l'utilisateur.")
+                                          if (cancelled) throw InterruptedException("Annulé.")
                                           bytesRead = input.read(buf)
                                           if (bytesRead <= 0) break
                                           os.write(buf, 0, bytesRead)
@@ -998,7 +1018,7 @@ jobs:
                                               }
                                               if (now - lastNotifTime > 2000 || pct == 100) {
                                                   lastNotifTime = now
-                                                  updateProgressNotif("Fusion $detected : $pct%", pct)
+                                                  updateProgressNotif("Fusion : $pct%", pct)
                                               }
                                           }
                                       }
@@ -1010,12 +1030,12 @@ jobs:
                           }
 
                           if (verifyBox.isChecked && !cancelled) {
-                              ui.post { statusView.text = "Vérification intégrité en cours…" }
+                              ui.post { statusView.text = "Vérification intégrité…" }
                               val verifyDigest = MessageDigest.getInstance("SHA-256")
                               contentResolver.openInputStream(out)?.use { verifyInput ->
                                   val verifyBuf = ByteArray(1 shl 20)
                                   while (true) {
-                                      if (cancelled) throw InterruptedException("Traitement annulé.")
+                                      if (cancelled) throw InterruptedException("Annulé.")
                                       val r = verifyInput.read(verifyBuf)
                                       if (r <= 0) break
                                       verifyDigest.update(verifyBuf, 0, r)
@@ -1064,7 +1084,7 @@ jobs:
               private fun copyHash() {
                   val h = lastHash ?: return
                   getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("sha256", h))
-                  toast("SHA-256 copié dans le presse-papier")
+                  toast("SHA-256 copié")
               }
 
               private fun size(u: Uri): Long {
@@ -1124,12 +1144,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.1.0
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.1.0.apk
+      - name: Renommer l'APK v2.1.1
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.1.1.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.1.0-apk
-          path: PkgMerger-v2.1.0.apk
+          name: pkg-merger-v2.1.1-apk
+          path: PkgMerger-v2.1.1.apk
           if-no-files-found: error
