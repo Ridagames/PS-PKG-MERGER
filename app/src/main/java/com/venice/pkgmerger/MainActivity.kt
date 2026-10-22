@@ -304,7 +304,7 @@ class MainActivity : Activity() {
 
         col.addView(
             text(
-                "💡 Astuce : Une notification de suivi s'affiche et restera active même en arrière-plan.",
+                "💡 Astuce : Choisissez d'abord vos sources, puis définissez l'emplacement de sortie.",
                 11f, dim
             ).apply { setPadding(dp(4), dp(8), dp(4), dp(16)) }
         )
@@ -367,6 +367,10 @@ class MainActivity : Activity() {
     }
 
     private fun pickOutput() {
+        if (uris.isEmpty()) {
+            toast("Choisis d'abord les parties sources !")
+            return
+        }
         startActivityForResult(
             Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
@@ -695,7 +699,6 @@ class MainActivity : Activity() {
         ui.post {
             bar.progress = pct * 10
             statusView.text = msg
-            // On met à jour la notification système toutes les 2 secondes max pour éviter les freezes
             if (nowTime - lastNotifTime > 2000 || pct == 100) {
                 lastNotifTime = nowTime
                 updateProgressNotif(msg, pct)
