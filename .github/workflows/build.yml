@@ -37,6 +37,7 @@ jobs:
         run: |
           set -e
           rm -rf app/src/main/kotlin
+          rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
           mkdir -p app/src/main/java/com/venice/pkgmerger
           mkdir -p app/src/main/res/drawable
 
