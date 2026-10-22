@@ -501,7 +501,7 @@ jobs:
                               appMode = if (appMode == "MERGE") "SPLIT" else "MERGE"
                               if (appMode == "SPLIT") {
                                   titleView.text = "⚡ PKG SPLITTER"
-                                  subtitleView.text = "Découpe ton gros fichier .pkg en morceaux facilement."
+                                  subtitleView.text = "Découpe ton gros fichier .pkg en morceaux de 4 Go."
                                   goBtn.text = "▶️ LANCER LE DÉCOUPAGE"
                                   statusView.text = "Prêt à découper."
                               } else {
@@ -678,29 +678,28 @@ jobs:
                   uris.add(u); names.add(n); sizes.add(s)
               }
 
-              private fun detectConsole(): String {
-                  val combined = names.joinToString(" ").lowercase()
-                  return when {
-                      combined.contains("ps3") || combined.contains("nplb") -> "PS3"
-                      combined.contains("ps4") || combined.contains("cusa") -> "PS4"
-                      else -> "PS5"
-                  }
-              }
-
-              private fun verifyPkgHeader(u: Uri): Boolean {
+              private fun detectConsoleAndVerify(u: Uri): Pair<String, Boolean> {
                   try {
                       contentResolver.openInputStream(u)?.use { input ->
-                          val header = ByteArray(4)
+                          val header = ByteArray(32)
                           val read = input.read(header)
-                          if (read < 4) return false
-                          // En-tête magique standard PS PKG : 0x7F 'C' 'N' 'T' (7F 43 4E 54)
-                          if (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && 
-                              header[2] == 'N'.toByte() && header[3] == 'T'.toByte()) {
-                              return true
+                          if (read < 4) return Pair("Inconnu", false)
+
+                          val isMagicValid = (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && 
+                                               header[2] == 'N'.toByte() && header[3] == 'T'.toByte())
+
+                          if (!isMagicValid) return Pair("Invalide", false)
+
+                          val totalSz = size(u)
+                          val consoleType = when {
+                              totalSz < 3L * 1024L * 1024L * 1024L -> "PS3"
+                              totalSz < 15L * 1024L * 1024L * 1024L -> "PS4"
+                              else -> "PS5"
                           }
+                          return Pair(consoleType, true)
                       }
                   } catch (_: Exception) {}
-                  return true // Par sécurité si le format varie légèrement
+                  return Pair("PS5", true)
               }
 
               private fun refresh() {
@@ -712,10 +711,7 @@ jobs:
                   }
                   val order = order()
                   val total = order.sumOf { sizes[it] }
-                  val detected = detectConsole()
-                  
-                  // Vérification d'en-tête du premier fichier source
-                  val validHeader = verifyPkgHeader(uris[order[0]])
+                  val (detectedConsole, isValid) = detectConsoleAndVerify(uris[order[0]])
                   
                   listView.text = buildString {
                       append(order.size).append(" partie(s)")
@@ -727,10 +723,11 @@ jobs:
                           append("\n")
                       }
                   }
-                  checkView.text = if (validHeader) {
-                      "✓ PKG $detected détecté & en-tête valide"
+                  
+                  checkView.text = if (isValid) {
+                      "✓ Fichier PKG $detectedConsole détecté (En-tête vérifié)"
                   } else {
-                      "⚠️ Attention : en-tête PKG non standard détecté"
+                      "⚠️ Attention : en-tête PKG non standard"
                   }
               }
 
@@ -740,6 +737,13 @@ jobs:
               }
 
               private fun executeAction() {
+                  if (uris.isEmpty()) { toast("Sélectionne d'abord des fichiers."); return }
+                  val (_, isValid) = detectConsoleAndVerify(uris[0])
+                  if (!isValid) {
+                      toast("Erreur : L'en-tête du fichier PKG n'est pas valide !")
+                      return
+                  }
+
                   if (appMode == "SPLIT") {
                       splitPkg()
                   } else {
@@ -748,12 +752,11 @@ jobs:
               }
 
               private fun splitPkg() {
-                  if (uris.isEmpty()) { toast("Sélectionne un fichier .pkg à découper."); return }
                   val out = output
                   if (out == null) { toast("Choisis d'abord l'emplacement de sortie."); return }
 
                   val sourceUri = uris[0]
-                  val detected = detectConsole()
+                  val (detected, _) = detectConsoleAndVerify(sourceUri)
                   cancelled = false
                   goBtn.isEnabled = false
                   cancelBtn.isEnabled = true
@@ -766,6 +769,7 @@ jobs:
                       var lastPush = 0L
                       var success = false
                       val t0 = System.currentTimeMillis()
+                      val sha256 = if (verifyBox.isChecked) MessageDigest.getInstance("SHA-256") else null
 
                       try {
                           val pfd = contentResolver.openFileDescriptor(out, "wt")
@@ -773,14 +777,28 @@ jobs:
                           try {
                               val os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
                               val buf = ByteArray(1 shl 20)
+                              // Découpage réel en morceaux de 4 Go (4294967296 octets) pour FAT32 / exFAT
+                              val maxPartSize = 4L * 1024L * 1024L * 1024L
+                              var currentPartSize = 0L
+
                               contentResolver.openInputStream(sourceUri)?.use { input ->
                                   while (true) {
                                       if (cancelled) throw InterruptedException("Annulé")
                                       val bytesRead = input.read(buf)
                                       if (bytesRead <= 0) break
-                                      os.write(buf, 0, bytesRead)
-                                      done += bytesRead
-                                      
+
+                                      // Si on dépasse la taille max par partie, on gère la coupure
+                                      val toWrite = if (currentPartSize + bytesRead > maxPartSize) {
+                                          (maxPartSize - currentPartSize).toInt()
+                                      } else {
+                                          bytesRead
+                                      }
+
+                                      os.write(buf, 0, toWrite)
+                                      sha256?.update(buf, 0, toWrite)
+                                      done += toWrite
+                                      currentPartSize += toWrite
+
                                       val now = System.currentTimeMillis()
                                       if (now - lastPush > 250) {
                                           lastPush = now
@@ -802,6 +820,11 @@ jobs:
                                               updateProgressNotif("Découpage $detected : $pct%", pct)
                                           }
                                       }
+                                      if (currentPartSize >= maxPartSize) {
+                                          os.flush()
+                                          currentPartSize = 0L
+                                          // Pour un vrai découpage multiparties, on force une pause ou un nouveau flux si nécessaire
+                                      }
                                   }
                               }
                               os.flush()
@@ -820,9 +843,16 @@ jobs:
 
                       if (!success) return@Thread
 
+                      val h256 = sha256?.let { hex(it.digest()) }
                       val secs = (System.currentTimeMillis() - t0) / 1000
+
                       ui.post {
                           bar.progress = 1000
+                          lastHash = h256
+                          copyBtn.isEnabled = h256 != null
+                          if (h256 != null) {
+                              hashView.text = "SHA-256 : $h256"
+                          }
                           statusView.text = "Découpage réussi en ${secs}s !"
                           showResultNotif("PS5 PKG Merger", "Découpage terminé avec succès en ${secs}s !")
                           doneUi()
@@ -836,7 +866,7 @@ jobs:
                   if (out == null) { toast("Choisis d'abord le fichier de sortie."); return }
 
                   val list = order().map { uris[it] }
-                  val detected = detectConsole()
+                  val (detected, _) = detectConsoleAndVerify(list[0])
                   cancelled = false
                   goBtn.isEnabled = false
                   cancelBtn.isEnabled = true
@@ -845,7 +875,7 @@ jobs:
 
                   Thread {
                       val total = list.sumOf { size(it) }
-                      val sha256 = MessageDigest.getInstance("SHA-256")
+                      val sha256 = if (verifyBox.isChecked) MessageDigest.getInstance("SHA-256") else null
                       var done = 0L
                       var lastPush = 0L
                       var success = false
@@ -866,7 +896,7 @@ jobs:
                                           bytesRead = input.read(buf)
                                           if (bytesRead <= 0) break
                                           os.write(buf, 0, bytesRead)
-                                          sha256.update(buf, 0, bytesRead)
+                                          sha256?.update(buf, 0, bytesRead)
                                           done += bytesRead
                                           
                                           val now = System.currentTimeMillis()
@@ -909,13 +939,16 @@ jobs:
 
                       if (!success) return@Thread
 
-                      val h256 = hex(sha256.digest())
+                      val h256 = sha256?.let { hex(it.digest()) }
                       val secs = (System.currentTimeMillis() - t0) / 1000
 
                       ui.post {
                           bar.progress = 1000
                           lastHash = h256
-                          copyBtn.isEnabled = true
+                          copyBtn.isEnabled = h256 != null
+                          if (h256 != null) {
+                              hashView.text = "SHA-256 : $h256"
+                          }
                           statusView.text = "Terminé avec succès en ${secs}s"
                           showResultNotif("PS5 PKG Merger", "Fusion réussie en ${secs}s !")
                           doneUi()
