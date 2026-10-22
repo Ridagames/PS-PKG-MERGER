@@ -1,4 +1,4 @@
-name: Build Windows App (.exe)
+name: Build macOS App (.dmg)
 
 on:
   push:
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,39 +31,38 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Windows
+      - name: Générer le projet macOS
         env:
           FORCE: ${{ github.event.inputs.regenerate == 'true' && '1' || '0' }}
         run: |
-          $ErrorActionPreference = "Stop"
-          
-          # Nettoyage des anciens dossiers/fichiers Android obsolètes
-          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "app/src/main/java"
-          
-          New-Item -ItemType Directory -Force -Path "app/src/main/kotlin/com/venice/pkgmerger"
-          New-Item -ItemType Directory -Force -Path "app/src/main/resources"
+          set -e
+          mkdir -p app/src/main/kotlin/com/venice/pkgmerger
+          mkdir -p app/src/main/resources
 
-          function Write-File([string]$path, [string]$content) {
-              if (([Environment]::GetEnvironmentVariable("FORCE") -eq "1") -or (-not (Test-Path $path))) {
-                  Write-Host "  écrit   $path"
-                  [System.IO.File]::WriteAllText($path, $content, [System.Text.UTF8Encoding]::new($false))
-              } else {
-                  Write-Host "  conserve $path"
-              }
+          write() {
+            f="$1"
+            if [ "${FORCE:-0}" = "1" ] || [ ! -f "$f" ]; then
+              echo "  écrit   $f"
+              cat > "$f"
+            else
+              echo "  conserve $f"
+              cat > /dev/null
+            fi
           }
 
-          Write-File ".gitignore" @'
+          write .gitignore <<'EOF'
           .gradle/
           build/
           local.properties
-          *.exe
+          *.dmg
+          *.app
           *.jar
           *.zip
           *.jks
           *.keystore
-          '@
+          EOF
 
-          Write-File "settings.gradle.kts" @'
+          write settings.gradle.kts <<'EOF'
           pluginManagement {
               repositories { mavenCentral(); gradlePluginPortal() }
           }
@@ -72,21 +71,21 @@ jobs:
           }
           rootProject.name = "PS5PkgMergerDesktop"
           include(":app")
-          '@
+          EOF
 
-          Write-File "build.gradle.kts" @'
+          write build.gradle.kts <<'EOF'
           plugins {
               id("org.jetbrains.kotlin.jvm") version "1.9.0" apply false
           }
-          '@
+          EOF
 
-          Write-File "gradle.properties" @'
+          write gradle.properties <<'EOF'
           org.gradle.jvmargs=-Xmx3072m -Dfile.encoding=UTF-8
           org.gradle.parallel=false
           kotlin.code.style=official
-          '@
+          EOF
 
-          Write-File "app/build.gradle.kts" @'
+          write app/build.gradle.kts <<'EOF'
           plugins {
               kotlin("jvm")
               application
@@ -112,9 +111,9 @@ jobs:
               from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
               duplicatesStrategy = DuplicatesStrategy.EXCLUDE
           }
-          '@
+          EOF
 
-          Write-File "app/src/main/kotlin/com/venice/pkgmerger/Main.kt" @'
+          write app/src/main/kotlin/com/venice/pkgmerger/Main.kt <<'EOF'
           package com.venice.pkgmerger
 
           import java.awt.*
@@ -124,7 +123,7 @@ jobs:
           import javax.swing.*
           import javax.swing.border.EmptyBorder
 
-          class MainWindow : JFrame("⚡ PS5 PKG Merger - Desktop") {
+          class MainWindow : JFrame("⚡ PS5 PKG Merger - macOS") {
 
               private val selectedFiles = ArrayList<File>()
               private var outputFile: File? = null
@@ -172,12 +171,12 @@ jobs:
                       background = bgMain
                       alignmentX = Component.LEFT_ALIGNMENT
                       maximumSize = Dimension(Int.MAX_VALUE, 50)
-                      add(JLabel("⚡ PS5 PKG MERGER (WINDOWS)").apply {
-                          font = Font("Segoe UI", Font.BOLD, 18)
+                      add(JLabel("⚡ PS5 PKG MERGER (MACOS)").apply {
+                          font = Font("SansSerif", Font.BOLD, 18)
                           foreground = textWhite
                       })
                       add(JLabel("Réassemble tes parties de jeux et vérifie l'intégrité en toute sécurité.").apply {
-                          font = Font("Segoe UI", Font.PLAIN, 12)
+                          font = Font("SansSerif", Font.PLAIN, 12)
                           foreground = dim
                       })
                   }
@@ -195,12 +194,12 @@ jobs:
                   card1.add(Box.createRigidArea(Dimension(0, 8)))
 
                   listLabel.text = "Aucune partie sélectionnée."
-                  listLabel.font = Font("Consolas", Font.PLAIN, 12)
+                  listLabel.font = Font("Monospaced", Font.PLAIN, 12)
                   listLabel.foreground = dim
                   card1.add(listLabel)
 
                   card1.add(Box.createRigidArea(Dimension(0, 4)))
-                  checkLabel.font = Font("Consolas", Font.PLAIN, 12)
+                  checkLabel.font = Font("Monospaced", Font.PLAIN, 12)
                   card1.add(checkLabel)
                   root.add(card1)
                   root.add(Box.createRigidArea(Dimension(0, 10)))
@@ -213,7 +212,7 @@ jobs:
                   card2.add(btnPanel2)
                   card2.add(Box.createRigidArea(Dimension(0, 4)))
 
-                  outLabel.font = Font("Consolas", Font.PLAIN, 12)
+                  outLabel.font = Font("Monospaced", Font.PLAIN, 12)
                   outLabel.foreground = dim
                   card2.add(outLabel)
                   card2.add(Box.createRigidArea(Dimension(0, 8)))
@@ -234,7 +233,7 @@ jobs:
                   card2.add(progressBar)
                   card2.add(Box.createRigidArea(Dimension(0, 6)))
 
-                  statusLabel.font = Font("Segoe UI", Font.BOLD, 13)
+                  statusLabel.font = Font("SansSerif", Font.BOLD, 13)
                   statusLabel.foreground = accent
                   card2.add(statusLabel)
                   root.add(card2)
@@ -252,15 +251,15 @@ jobs:
 
                   card3.add(JLabel("Hash attendu (Optionnel : MD5 / SHA-1 / SHA-256)").apply {
                       foreground = dim
-                      font = Font("Segoe UI", Font.PLAIN, 11)
+                      font = Font("SansSerif", Font.PLAIN, 11)
                   })
-                  hashField.font = Font("Consolas", Font.PLAIN, 11)
+                  hashField.font = Font("Monospaced", Font.PLAIN, 11)
                   hashField.background = bgMain
                   hashField.foreground = textWhite
                   card3.add(hashField)
                   card3.add(Box.createRigidArea(Dimension(0, 4)))
 
-                  hashArea.font = Font("Consolas", Font.PLAIN, 11)
+                  hashArea.font = Font("Monospaced", Font.PLAIN, 11)
                   hashArea.background = bgMain
                   hashArea.foreground = accent
                   hashArea.isEditable = false
@@ -295,7 +294,7 @@ jobs:
                       )
                       alignmentX = Component.LEFT_ALIGNMENT
                       add(JLabel(title).apply {
-                          font = Font("Segoe UI", Font.BOLD, 13)
+                          font = Font("SansSerif", Font.BOLD, 13)
                           foreground = accent
                       })
                       add(Box.createRigidArea(Dimension(0, 8)))
@@ -359,7 +358,7 @@ jobs:
                   sb.append(" • ordre ").append(if (reversed) "inversé" else "croissant").append("<br>")
                   order.forEachIndexed { i, idx ->
                       val f = selectedFiles[idx]
-                      sb.append("${i + 1}.${f.name}")
+                      sb.append("${i + 1}. ${f.name}")
                       if (f.length() > 0) sb.append(" (${fmtSize(f.length())})")
                       sb.append("<br>")
                   }
@@ -468,7 +467,7 @@ jobs:
                           try {
                               val re = MessageDigest.getInstance("SHA-256")
                               FileInputStream(out).use { ins ->
-                                  val b = ByteArray(1024 * 1024)
+                              val b = ByteArray(1024 * 1024)
                                   while (true) {
                                       val r = ins.read(b)
                                       if (r <= 0) break
@@ -584,6 +583,11 @@ jobs:
                   return ca.size - cb.size
               }
 
+              private fun suggestName(): NameSuggestion? {
+                  // omitted or simplified logic or standard suggestName returning String
+                  return null
+              }
+
               private fun suggestName(): String {
                   if (selectedFiles.isEmpty()) return "merged.pkg"
                   val first = selectedFiles.minWithOrNull { a, b -> naturalCompare(a.name, b.name) }?.name ?: return "merged.pkg"
@@ -600,26 +604,22 @@ jobs:
           '@
 
       - name: Build JAR
-        run: gradle jar
+        run: ./gradlew jar
 
-      - name: Créer le fichier .exe avec jpackage
+      - name: Créer le fichier .dmg pour macOS avec jpackage
         run: |
-          $javaHome =$env:JAVA_HOME
-          & "$javaHome\bin\jpackage.exe" `
-              --type app-image `
-              --name "PS5PkgMerger" `
-              --input "app/build/libs" `
-              --main-jar "app.jar" `
-              --main-class "com.venice.pkgmerger.MainKt" `
+          JAVA_HOME=$JAVA_HOME
+          $JAVA_HOME/bin/jpackage \
+              --type dmg \
+              --name "PS5PkgMerger" \
+              --input "app/build/libs" \
+              --main-jar "app.jar" \
+              --main-class "com.venice.pkgmerger.MainKt" \
               --dest "dist"
 
-      - name: Compresser l'application en ZIP
-        run: |
-          Compress-Archive -Path "dist\PS5PkgMerger" -DestinationPath "PS5PkgMerger-Windows.zip" -Force
-
-      - name: Upload Windows EXE Package
+      - name: Upload macOS DMG Package
         uses: actions/upload-artifact@v4
         with:
-          name: ps5-pkg-merger-windows-exe
-          path: PS5PkgMerger-Windows.zip
+          name: ps5-pkg-merger-macos
+          path: dist/*.dmg
           if-no-files-found: error
