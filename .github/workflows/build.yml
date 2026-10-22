@@ -101,8 +101,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 21
-                  versionName = "3.0"
+                  versionCode = 22
+                  versionName = "3.1"
               }
 
               compileOptions {
@@ -216,6 +216,7 @@ jobs:
               private var lastHash: String? = null
               @Volatile private var cancelled = false
               private val ui = Handler(Looper.getMainLooper())
+              private var lastNotifTime = 0L
 
               private lateinit var listView: TextView
               private lateinit var checkView: TextView
@@ -856,10 +857,16 @@ jobs:
                       append(" • ").append(fmt(speed.toLong())).append("/s")
                       if (eta > 0) append(" • reste ").append(eta).append("s")
                   }
+                  
+                  val nowTime = System.currentTimeMillis()
                   ui.post {
                       bar.progress = pct * 10
                       statusView.text = msg
-                      updateProgressNotif(msg, pct)
+                      // On met à jour la notification système toutes les 2 secondes max pour éviter les freezes
+                      if (nowTime - lastNotifTime > 2000 || pct == 100) {
+                          lastNotifTime = nowTime
+                          updateProgressNotif(msg, pct)
+                      }
                   }
               }
 
@@ -973,7 +980,6 @@ jobs:
           for i in 1 2 3; do
             git fetch origin "$GITHUB_REF_NAME"
             git rebase "origin/$GITHUB_REF_NAME" || git rebase --abort || true
-            if git push origin "HEAD:$GITHUB_REF_NAME"; from exit 0; fi
             if git push origin "HEAD:$GITHUB_REF_NAME"; then
               echo "OK: sources poussées."
               exit 0
