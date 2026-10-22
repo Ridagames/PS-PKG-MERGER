@@ -140,7 +140,7 @@ jobs:
               <uses-permission android:name="android.permission.WAKE_LOCK" />
 
               <application
-                  android:label="PS PKG Merger & Splitter"
+                  android:label="PS PKG Merger &amp; Splitter"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -149,7 +149,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Merger & Splitter">
+                      android:label="PS PKG Merger &amp; Splitter">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -731,7 +731,6 @@ jobs:
                           val read = input.read(header)
                           if (read < 4) return Pair("Inconnu", false)
 
-                          // Magic bytes PKG : PS3/PS4/PS5 commencent par 0x7F 'C' 'N' 'T' (.CNT)
                           val isCnt = (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && 
                                        header[2] == 'N'.toByte() && header[3] == 'T'.toByte())
 
@@ -743,7 +742,6 @@ jobs:
                               name.contains("ps4") || name.contains("cusa") -> "PS4"
                               name.contains("ps5") || name.contains("ppsa") -> "PS5"
                               else -> {
-                                  // Déduction par taille ou par défaut sécurisée
                                   val sz = size(u)
                                   if (sz < 4L * 1024L * 1024L * 1024L) "PS3" else "PS5"
                               }
