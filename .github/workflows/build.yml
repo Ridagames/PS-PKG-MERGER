@@ -140,7 +140,7 @@ jobs:
               <uses-permission android:name="android.permission.WAKE_LOCK" />
 
               <application
-                  android:label="PS5 PKG Merger"
+                  android:label="PS PKG Merger & Splitter"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -149,7 +149,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS5 PKG Merger">
+                      android:label="PS PKG Merger & Splitter">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -257,9 +257,9 @@ jobs:
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                       val channel = NotificationChannel(
                           "pkg_channel",
-                          "PS5 PKG Merger Notifications",
+                          "PS PKG Notifications",
                           NotificationManager.IMPORTANCE_LOW
-                      ).apply { description = "Progression des traitements PKG" }
+                      ).apply { description = "Progression des traitements PKG (PS3/PS4/PS5)" }
                       getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
                   }
               }
@@ -293,7 +293,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS5 PKG Merger")
+                          .setContentTitle("⚡ PS PKG Manager")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -343,16 +343,16 @@ jobs:
                       orientation = LinearLayout.VERTICAL
                   }
                   titleView = TextView(this).apply {
-                      text = "⚡ PS5 PKG MERGER"
-                      textSize = 24f
+                      text = "⚡ PS PKG MANAGER"
+                      textSize = 22f
                       setTextColor(Color.WHITE)
                       setTypeface(null, Typeface.BOLD)
                   }
                   titlesLayout.addView(titleView)
                   
                   subtitleView = TextView(this).apply {
-                      text = "Réassemble tes parties de jeux et vérifie l'intégrité en toute sécurité."
-                      textSize = 12f
+                      text = "Fusion, découpage et vérification de PKG (PS3, PS4, PS5 / Mises à jour)."
+                      textSize = 11f
                       setTextColor(dim)
                       setPadding(0, dp(2), 0, 0)
                   }
@@ -531,8 +531,8 @@ jobs:
                                   goBtn.text = "▶️ LANCER LE DÉCOUPAGE"
                                   statusView.text = "Prêt à découper."
                               } else {
-                                  titleView.text = "⚡ PS5 PKG MERGER"
-                                  subtitleView.text = "Réassemble tes parties de jeux et vérifie l'intégrité en toute sécurité."
+                                  titleView.text = "⚡ PS PKG MANAGER"
+                                  subtitleView.text = "Fusion, découpage et vérification de PKG (PS3, PS4, PS5 / Mises à jour)."
                                   section1Title.text = "1. Sélection des parties (.pkg / .pkg.0 ...)"
                                   goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
@@ -542,7 +542,7 @@ jobs:
                               true
                           }
                           2 -> {
-                              toast("PS5 PKG Merger Suite v2.1.0")
+                              toast("PS PKG Merger Suite v2.1.0")
                               true
                           }
                           else -> false
@@ -665,11 +665,11 @@ jobs:
               }
 
               private fun getFileName(u: Uri): String {
-                  var n = "file.pkg"
+                  var n = "game.pkg"
                   try {
                       contentResolver.query(u, null, null, null, null)?.use { c ->
                           val ni = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                          if (c.moveToFirst() && ni >= 0 && !c.isNull(ni)) c.getString(ni)?.let { n = it }
+                          if (c.moveToFirst() && ni >= 0 && !c.isNull(ni)) c.getString(ni)?.let { if (it.isNotBlank()) n = it }
                       }
                   } catch (_: Exception) {}
                   return n
@@ -731,21 +731,27 @@ jobs:
                           val read = input.read(header)
                           if (read < 4) return Pair("Inconnu", false)
 
-                          val isMagicValid = (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && 
-                                               header[2] == 'N'.toByte() && header[3] == 'T'.toByte())
+                          // Magic bytes PKG : PS3/PS4/PS5 commencent par 0x7F 'C' 'N' 'T' (.CNT)
+                          val isCnt = (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && 
+                                       header[2] == 'N'.toByte() && header[3] == 'T'.toByte())
 
-                          if (!isMagicValid) return Pair("Invalide", false)
+                          if (!isCnt) return Pair("Invalide", false)
 
                           val name = getFileName(u).lowercase()
                           val console = when {
                               name.contains("ps3") || name.contains("nplb") -> "PS3"
                               name.contains("ps4") || name.contains("cusa") -> "PS4"
-                              else -> "PS5"
+                              name.contains("ps5") || name.contains("ppsa") -> "PS5"
+                              else -> {
+                                  // Déduction par taille ou par défaut sécurisée
+                                  val sz = size(u)
+                                  if (sz < 4L * 1024L * 1024L * 1024L) "PS3" else "PS5"
+                              }
                           }
                           return Pair(console, true)
                       }
                   } catch (_: Exception) {}
-                  return Pair("PS5", true)
+                  return Pair("Invalide", false)
               }
 
               private fun refresh() {
@@ -771,9 +777,9 @@ jobs:
                   }
                   
                   checkView.text = if (isValid) {
-                      "✓ Fichier PKG $detectedConsole détecté (En-tête vérifié)"
+                      "✓ Fichier PKG $detectedConsole détecté (En-tête valide)"
                   } else {
-                      "⚠️ Attention : en-tête PKG non standard"
+                      "⚠️ Fichier PKG invalide (En-tête incorrect)"
                   }
               }
 
@@ -787,6 +793,7 @@ jobs:
                   val (_, isValid) = detectConsoleAndVerify(uris[0])
                   if (!isValid) {
                       toast("Erreur : L'en-tête du fichier PKG n'est pas valide !")
+                      statusView.text = "Erreur : En-tête PKG invalide !"
                       return
                   }
 
@@ -802,9 +809,16 @@ jobs:
                   if (treeUri == null) { toast("Choisis d'abord le dossier de sortie."); return }
 
                   val sourceUri = uris[0]
-                  val sourceName = getFileName(sourceUri)
-                  val (detected, _) = detectConsoleAndVerify(sourceUri)
-                  
+                  var sourceName = getFileName(sourceUri)
+                  if (sourceName.isBlank() || sourceName == "game.pkg") {
+                      sourceName = "pkg_game.pkg"
+                  }
+                  val (detected, isValid) = detectConsoleAndVerify(sourceUri)
+                  if (!isValid) {
+                      toast("Erreur : En-tête PKG invalide !")
+                      return
+                  }
+
                   processing = true
                   cancelled = false
                   goBtn.isEnabled = false
@@ -893,7 +907,7 @@ jobs:
                       } catch (e: Throwable) {
                           ui.post {
                               statusView.text = "Erreur : ${e.message}"
-                              showResultNotif("PS5 PKG Merger", "Échec : ${e.message}")
+                              showResultNotif("PS PKG Manager", "Échec : ${e.message}")
                               processing = false
                               doneUi()
                           }
@@ -916,7 +930,7 @@ jobs:
                               hashView.text = "SHA-256 : $h256"
                           }
                           statusView.text = "Découpage réussi en ${secs}s !"
-                          showResultNotif("PS5 PKG Merger", "Découpage terminé avec succès en ${secs}s !")
+                          showResultNotif("PS PKG Manager", "Découpage terminé avec succès en ${secs}s !")
                           processing = false
                           doneUi()
                       }
@@ -929,8 +943,12 @@ jobs:
                   if (out == null) { toast("Choisis d'abord le fichier de sortie."); return }
 
                   val list = order().map { uris[it] }
-                  val (detected, _) = detectConsoleAndVerify(list[0])
-                  
+                  val (detected, isValid) = detectConsoleAndVerify(list[0])
+                  if (!isValid) {
+                      toast("Erreur : En-tête PKG invalide !")
+                      return
+                  }
+
                   processing = true
                   cancelled = false
                   goBtn.isEnabled = false
@@ -1010,7 +1028,7 @@ jobs:
                       } catch (e: Throwable) {
                           ui.post {
                               statusView.text = "Erreur : ${e.message}"
-                              showResultNotif("PS5 PKG Merger", "Échec : ${e.message}")
+                              showResultNotif("PS PKG Manager", "Échec : ${e.message}")
                               processing = false
                               doneUi()
                           }
@@ -1031,7 +1049,7 @@ jobs:
                           copyBtn.isEnabled = true
                           hashView.text = "SHA-256 : $h256"
                           statusView.text = "Terminé avec succès en ${secs}s"
-                          showResultNotif("PS5 PKG Merger", "Fusion réussie en ${secs}s !")
+                          showResultNotif("PS PKG Manager", "Fusion réussie en ${secs}s !")
                           processing = false
                           doneUi()
                       }
