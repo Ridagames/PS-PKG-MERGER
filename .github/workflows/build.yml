@@ -577,14 +577,12 @@ jobs:
                       return
                   }
                   if (appMode == "SPLIT") {
-                      // Pour le splitter, on choisit un dossier de destination pour y déposer les morceaux
                       startActivityForResult(
                           Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-                              addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                              addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                           }, 4
                       )
                   } else {
-                      // Pour la fusion, on crée un fichier unique de sortie
                       startActivityForResult(
                           Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                               addCategory(Intent.CATEGORY_OPENABLE)
@@ -715,7 +713,6 @@ jobs:
 
                           if (!isMagicValid) return Pair("Invalide", false)
 
-                          // Détection basée sur l'extension ou le nom réel pour éviter les faux positifs de taille
                           val name = getFileName(u).lowercase()
                           val console = when {
                               name.contains("ps3") || name.contains("nplb") -> "PS3"
@@ -801,28 +798,24 @@ jobs:
                       try {
                           val maxPartSize = 4L * 1024L * 1024L * 1024L // 4 Go par partie
                           var partIndex = 0
-                          var currentPartBytes = 0L
-
-                          val docId = DocumentsContract.getTreeDocumentId(treeUri)
-                          var currentFileUri: Uri? = null
                           var os: BufferedOutputStream? = null
 
                           fun openNextPart() {
                               os?.flush()
                               os?.close()
                               val partName = "$sourceName.${String.format(Locale.US, "%02d", partIndex)}"
-                              val createdDoc = DocumentsContract.createDocument(contentResolver, treeUri, "application/octet-stream", partName)
-                                  ?: throw IllegalStateException("Création de la partie $partName impossible")
-                              val pfd = contentResolver.openFileDescriptor(createdDoc, "wt")
+                              val docUri = DocumentsContract.createDocument(contentResolver, treeUri, "application/octet-stream", partName)
+                                  ?: throw IllegalStateException("Création du fichier $partName impossible")
+                              val pfd = contentResolver.openFileDescriptor(docUri, "wt")
                                   ?: throw IllegalStateException("Ouverture du descripteur impossible")
                               os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
-                              currentPartBytes = 0L
                               partIndex++
                           }
 
                           openNextPart()
 
                           val buf = ByteArray(1 shl 20)
+                          var currentPartBytes = 0L
                           contentResolver.openInputStream(sourceUri)?.use { input ->
                               while (true) {
                                   if (cancelled) throw InterruptedException("Annulé")
@@ -833,6 +826,7 @@ jobs:
                                   while (offset < bytesRead) {
                                       if (currentPartBytes >= maxPartSize) {
                                           openNextPart()
+                                          currentPartBytes = 0L
                                       }
                                       val chunkToWrite = minOf(bytesRead - offset, (maxPartSize - currentPartBytes).toInt())
                                       os!!.write(buf, offset, chunkToWrite)
@@ -964,7 +958,6 @@ jobs:
                               pfd.close()
                           }
 
-                          // Vérification post-écriture si demandée
                           if (verifyBox.isChecked) {
                               ui.post { statusView.text = "Vérification intégrité en cours…" }
                               val verifyDigest = MessageDigest.getInstance("SHA-256")
