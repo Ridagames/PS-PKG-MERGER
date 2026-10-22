@@ -720,12 +720,13 @@ jobs:
                           try {
                               val os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
                               val buf = ByteArray(1 shl 20)
+                              var bytesRead: Int
                               for (u in list) {
                                   if (cancelled) throw InterruptedException("Annulé")
                                   contentResolver.openInputStream(u)?.use { input ->
                                       while (true) {
                                           if (cancelled) throw InterruptedException("Annulé")
-                                          val bytesRead: Int = input.read(buf)
+                                          bytesRead = input.read(buf)
                                           if (bytesRead <= 0) break
                                           os.write(buf, 0, bytesRead)
                                           sha256.update(buf, 0, bytesRead)
