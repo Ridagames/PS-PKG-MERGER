@@ -140,7 +140,7 @@ jobs:
               <uses-permission android:name="android.permission.WAKE_LOCK" />
 
               <application
-                  android:label="PKG Merger Suite"
+                  android:label="PS5 PKG Merger"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -149,7 +149,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PKG Merger Suite">
+                      android:label="PS5 PKG Merger">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -183,6 +183,7 @@ jobs:
           import android.provider.DocumentsContract
           import android.provider.OpenableColumns
           import android.provider.Settings
+          import android.view.Gravity
           import android.view.ViewGroup.LayoutParams.MATCH_PARENT
           import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
           import android.view.WindowManager
@@ -190,6 +191,7 @@ jobs:
           import android.widget.CheckBox
           import android.widget.EditText
           import android.widget.LinearLayout
+          import android.widget.PopupMenu
           import android.widget.ProgressBar
           import android.widget.ScrollView
           import android.widget.TextView
@@ -208,10 +210,9 @@ jobs:
               private var output: Uri? = null
               private var reversed = false
               private var lastHash: String? = null
-              private var currentConsole = "PS5"
+              private var appMode = "MERGE" // MERGE ou SPLIT
               @Volatile private var cancelled = false
               private val ui = Handler(Looper.getMainLooper())
-              private var lastNotifTime = 0L
 
               private lateinit var listView: TextView
               private lateinit var checkView: TextView
@@ -229,20 +230,13 @@ jobs:
               private lateinit var cancelBtn: Button
               private lateinit var revBtn: Button
               private lateinit var copyBtn: Button
-
-              private lateinit var btnPs3: Button
-              private lateinit var btnPs4: Button
-              private lateinit var btnPs5: Button
-              private lateinit var btnSplit: Button
+              private lateinit var menuBtn: Button
+              private lateinit var titleView: TextView
 
               private val accent = Color.parseColor("#38BDF8")
               private val dim = Color.parseColor("#94A3B8")
               private val cardBg = Color.parseColor("#1E293B")
               private val bgMain = Color.parseColor("#0F172A")
-              private val activeColor = Color.parseColor("#0284C7")
-
-              private val NOTIF_ID_PROGRESS = 101
-              private val NOTIF_ID_RESULT = 102
 
               override fun onCreate(state: Bundle?) {
                   super.onCreate(state)
@@ -259,9 +253,7 @@ jobs:
                           "pkg_channel",
                           "PKG Merger Notifications",
                           NotificationManager.IMPORTANCE_LOW
-                      ).apply {
-                          description = "Progression et alertes"
-                      }
+                      ).apply { description = "Notifications de fusion" }
                       getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
                   }
               }
@@ -272,60 +264,6 @@ jobs:
                           requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 100)
                       }
                   }
-
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                      val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-                      if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-                          try {
-                              val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                  data = Uri.parse("package:$packageName")
-                              }
-                              startActivity(intent)
-                          } catch (_: Exception) {}
-                      }
-                  }
-              }
-
-              private fun updateProgressNotif(msg: String, pct: Int) {
-                  try {
-                      val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                          android.app.Notification.Builder(this, "pkg_channel")
-                      } else {
-                          @Suppress("DEPRECATION")
-                          android.app.Notification.Builder(this)
-                      }
-                      val notification = builder
-                          .setContentTitle("⚡ PKG Merger Suite")
-                          .setContentText(msg)
-                          .setSmallIcon(android.R.drawable.ic_menu_save)
-                          .setProgress(100, pct, false)
-                          .setOngoing(true)
-                          .build()
-
-                      getSystemService(NotificationManager::class.java).notify(NOTIF_ID_PROGRESS, notification)
-                  } catch (_: Exception) {}
-              }
-
-              private fun showResultNotif(title: String, message: String) {
-                  try {
-                      val nm = getSystemService(NotificationManager::class.java)
-                      nm.cancel(NOTIF_ID_PROGRESS)
-
-                      val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                          android.app.Notification.Builder(this, "pkg_channel")
-                      } else {
-                          @Suppress("DEPRECATION")
-                          android.app.Notification.Builder(this)
-                      }
-                      val notification = builder
-                          .setContentTitle(title)
-                          .setContentText(message)
-                          .setSmallIcon(android.R.drawable.ic_menu_save)
-                          .setAutoCancel(true)
-                          .build()
-
-                      nm.notify(NOTIF_ID_RESULT, notification)
-                  } catch (_: Exception) {}
               }
 
               private fun showMergerScreen() {
@@ -336,76 +274,78 @@ jobs:
                       setBackgroundColor(bgMain)
                   }
 
+                  // En-tête avec Menu Vrai (PopUp)
                   val headerLayout = LinearLayout(this).apply {
-                      orientation = LinearLayout.VERTICAL
+                      orientation = LinearLayout.HORIZONTAL
                       setPadding(0, dp(4), 0, dp(12))
                   }
-                  headerLayout.addView(TextView(this).apply {
-                      text = "⚡ PKG MERGER SUITE"
+                  
+                  val titlesLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                  }
+                  titleView = TextView(this).apply {
+                      text = "⚡ PS5 PKG MERGER"
                       textSize = 24f
                       setTextColor(Color.WHITE)
                       setTypeface(null, Typeface.BOLD)
-                  })
-                  headerLayout.addView(TextView(this).apply {
-                      text = "Support universel PS3, PS4, PS5 & Splitter"
+                  }
+                  titlesLayout.addView(titleView)
+                  titlesLayout.addView(TextView(this).apply {
+                      text = "Réassemble tes parties de jeux et vérifie l'intégrité."
                       textSize = 12f
                       setTextColor(dim)
                       setPadding(0, dp(2), 0, 0)
                   })
+                  headerLayout.addView(titlesLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+
+                  menuBtn = Button(this).apply {
+                      text = "☰ Menu"
+                      textSize = 12f
+                      setBackgroundColor(Color.parseColor("#334155"))
+                      setTextColor(Color.WHITE)
+                      setOnClickListener { showMenu(it) }
+                  }
+                  headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
                   col.addView(headerLayout)
 
-                  val consoleCard = createCard()
-                  consoleCard.addView(text("Mode de fonctionnement", 14f, accent, true))
-                  
-                  val menuLayout = LinearLayout(this).apply {
-                      orientation = LinearLayout.HORIZONTAL
-                  }
-                  btnPs3 = Button(this).apply { text = "PS3"; setOnClickListener { setConsole("PS3") } }
-                  btnPs4 = Button(this).apply { text = "PS4"; setOnClickListener { setConsole("PS4") } }
-                  btnPs5 = Button(this).apply { text = "PS5"; setOnClickListener { setConsole("PS5") } }
-                  btnSplit = Button(this).apply { text = "Splitter"; setOnClickListener { setConsole("SPLIT") } }
-
-                  val btnParams = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginEnd = dp(4) }
-                  menuLayout.addView(btnPs3, btnParams)
-                  menuLayout.addView(btnPs4, btnParams)
-                  menuLayout.addView(btnPs5, btnParams)
-                  menuLayout.addView(btnSplit, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-                  consoleCard.addView(menuLayout, lp())
-                  col.addView(consoleCard, lpCard())
-
+                  // Carte 1 : Sélection
                   val card1 = createCard()
-                  card1.addView(text("1. Sélection des fichiers .pkg uniquement", 14f, accent, true))
+                  card1.addView(text("1. Sélection des parties (.pkg uniquement)", 14f, accent, true))
                   
                   pickBtn = Button(this).apply {
-                      text = "📁 Choisir les .pkg"
+                      text = "📁 CHOISIR LES FICHIERS"
                       setOnClickListener { pick() }
                   }
                   card1.addView(pickBtn, lp())
 
                   dirBtn = Button(this).apply {
-                      text = "📂 Choisir un dossier (.pkg seulement)"
+                      text = "📂 CHOISIR UN DOSSIER COMPLET"
                       setOnClickListener { pickFolder() }
                   }
                   card1.addView(dirBtn, lp())
 
                   revBtn = Button(this).apply {
-                      text = "🔀 Inverser l'ordre des parties"
+                      text = "🔀 INVERSER L'ORDRE DES PARTIES"
                       setOnClickListener { reversed = !reversed; refresh() }
                   }
                   card1.addView(revBtn, lp())
 
-                  listView = text("Aucun fichier .pkg sélectionné.", 12f, dim).apply {
+                  listView = text("Aucune partie sélectionnée.", 12f, dim).apply {
                       typeface = Typeface.MONOSPACE
                       setPadding(0, dp(8), 0, dp(4))
                   }
                   card1.addView(listView, lp())
+
+                  checkView = text("", 12f, accent).apply { typeface = Typeface.MONOSPACE }
+                  card1.addView(checkView, lp())
                   col.addView(card1, lpCard())
 
+                  // Carte 2 : Sortie & Fusion
                   val card2 = createCard()
-                  card2.addView(text("2. Sortie & Traitement", 14f, accent, true))
+                  card2.addView(text("2. Fichier de sortie & Fusion", 14f, accent, true))
 
                   outBtn = Button(this).apply {
-                      text = "💾 Définir l'emplacement de sortie"
+                      text = "💾 DÉFINIR L'EMPLACEMENT DE SORTIE"
                       setOnClickListener { pickOutput() }
                   }
                   card2.addView(outBtn, lp())
@@ -416,22 +356,22 @@ jobs:
                   }
                   card2.addView(outView, lp())
 
-                  val actionLayout = LinearLayout(this).apply {
+                  val mergeLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
                   }
                   goBtn = Button(this).apply {
-                      text = "▶️ Lancer"
+                      text = "▶️ LANCER LA FUSION"
                       setOnClickListener { executeAction() }
                   }
-                  actionLayout.addView(goBtn, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+                  mergeLayout.addView(goBtn, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
                   cancelBtn = Button(this).apply {
-                      text = "❌ Annuler"
+                      text = "❌ ANNULER"
                       isEnabled = false
                       setOnClickListener { cancelled = true }
                   }
-                  actionLayout.addView(cancelBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
-                  card2.addView(actionLayout, lp())
+                  mergeLayout.addView(cancelBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
+                  card2.addView(mergeLayout, lp())
 
                   bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
                       max = 1000
@@ -440,12 +380,13 @@ jobs:
                   }
                   card2.addView(bar, lp())
 
-                  statusView = text("Prêt.", 13f, accent).apply { setTypeface(null, Typeface.BOLD) }
+                  statusView = text("Prêt à fusionner.", 13f, accent).apply { setTypeface(null, Typeface.BOLD) }
                   card2.addView(statusView, lp())
                   col.addView(card2, lpCard())
 
+                  // Carte 3 : Sécurité
                   val card3 = createCard()
-                  card3.addView(text("3. Sécurité & Hash", 14f, accent, true))
+                  card3.addView(text("3. Options de sécurité & Hash", 14f, accent, true))
 
                   verifyBox = CheckBox(this).apply {
                       text = "Relire le fichier après écriture"
@@ -464,7 +405,7 @@ jobs:
                   card3.addView(deleteBox, lp())
 
                   hashField = EditText(this).apply {
-                      hint = "Hash attendu (SHA-256)"
+                      hint = "Hash attendu (Optionnel)"
                       setTextColor(Color.WHITE)
                       setHintTextColor(dim)
                       textSize = 11f
@@ -483,7 +424,6 @@ jobs:
                   card3.addView(copyBtn, lp())
                   col.addView(card3, lpCard())
 
-                  setConsole("PS5")
                   refresh()
 
                   setContentView(ScrollView(this).apply { 
@@ -492,14 +432,33 @@ jobs:
                   })
               }
 
-              private fun setConsole(c: String) {
-                  currentConsole = c
-                  btnPs3.setBackgroundColor(if (c == "PS3") activeColor else Color.DKGRAY)
-                  btnPs4.setBackgroundColor(if (c == "PS4") activeColor else Color.DKGRAY)
-                  btnPs5.setBackgroundColor(if (c == "PS5") activeColor else Color.DKGRAY)
-                  btnSplit.setBackgroundColor(if (c == "SPLIT") activeColor else Color.DKGRAY)
-                  goBtn.text = if (c == "SPLIT") "▶️ Lancer le découpage" else "▶️ Lancer la fusion ($c)"
-                  refresh()
+              private fun showMenu(v: android.view.View) {
+                  val popup = PopupMenu(this, v)
+                  popup.menu.add(0, 1, 0, if (appMode == "MERGE") "🔄 Mode : Fusion (.pkg)" else "🔄 Mode : Splitter")
+                  popup.menu.add(0, 2, 1, "ℹ️ À propos")
+                  popup.setOnMenuItemClickListener { item ->
+                      when (item.itemId) {
+                          1 -> {
+                              appMode = if (appMode == "MERGE") "SPLIT" else "MERGE"
+                              if (appMode == "SPLIT") {
+                                  titleView.text = "⚡ PKG SPLITTER"
+                                  goBtn.text = "▶️ LANCER LE DÉCOUPAGE"
+                                  statusView.text = "Prêt à découper."
+                              } else {
+                                  titleView.text = "⚡ PS5 PKG MERGER"
+                                  goBtn.text = "▶️ LANCER LA FUSION"
+                                  statusView.text = "Prêt à fusionner."
+                              }
+                              true
+                          }
+                          2 -> {
+                              toast("PKG Merger Suite v2.1.0 - Automatique PS3/PS4/PS5")
+                              true
+                          }
+                          else -> false
+                      }
+                  }
+                  popup.show()
               }
 
               private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(4) }
@@ -658,16 +617,28 @@ jobs:
                   uris.add(u); names.add(n); sizes.add(s)
               }
 
+              private fun detectConsole(): String {
+                  val combined = names.joinToString(" ").lowercase()
+                  return when {
+                      combined.contains("ps3") || combined.contains("nplb") -> "PS3"
+                      combined.contains("ps4") || combined.contains("CUSA") -> "PS4"
+                      else -> "PS5"
+                  }
+              }
+
               private fun refresh() {
                   if (!::listView.isInitialized) return
                   if (uris.isEmpty()) {
-                      listView.text = "Aucun fichier .pkg sélectionné."
+                      listView.text = "Aucune partie sélectionnée."
+                      checkView.text = ""
                       return
                   }
                   val order = order()
                   val total = order.sumOf { sizes[it] }
+                  val detected = detectConsole()
+                  
                   listView.text = buildString {
-                      append(order.size).append(" fichier(s) .pkg")
+                      append(order.size).append(" partie(s) (.pkg)")
                       if (total > 0) append(" • ").append(fmt(total))
                       append("\n")
                       order.forEachIndexed { i, idx ->
@@ -676,6 +647,7 @@ jobs:
                           append("\n")
                       }
                   }
+                  checkView.text = "✓ PKG $detected détecté automatiquement"
               }
 
               private fun order(): List<Int> {
@@ -684,7 +656,7 @@ jobs:
               }
 
               private fun executeAction() {
-                  if (currentConsole == "SPLIT") {
+                  if (appMode == "SPLIT") {
                       splitPkg()
                   } else {
                       mergePkg()
@@ -694,21 +666,22 @@ jobs:
               private fun splitPkg() {
                   if (uris.isEmpty()) { toast("Sélectionne un fichier .pkg à découper."); return }
                   val out = output
-                  if (out == null) { toast("Choisis le dossier/emplacement de sortie."); return }
-                  toast("Découpage $currentConsole prêt")
+                  if (out == null) { toast("Choisis l'emplacement de sortie."); return }
+                  toast("Découpage en cours...")
               }
 
               private fun mergePkg() {
-                  if (uris.size < 2 && currentConsole != "PS3") { toast("Sélectionne au moins 2 parties .pkg."); return }
+                  if (uris.size < 2) { toast("Sélectionne au moins 2 parties .pkg."); return }
                   val out = output
-                  if (out == null) { toast("Choisis le fichier de sortie."); return }
+                  if (out == null) { toast("Choisis d'abord le fichier de sortie."); return }
 
                   val list = order().map { uris[it] }
+                  val detected = detectConsole()
                   cancelled = false
                   goBtn.isEnabled = false
                   cancelBtn.isEnabled = true
                   bar.progress = 0
-                  statusView.text = "Fusion $currentConsole en cours…"
+                  statusView.text = "Fusion $detected en cours…"
 
                   Thread {
                       val sha256 = MessageDigest.getInstance("SHA-256")
@@ -756,8 +729,7 @@ jobs:
                           bar.progress = 1000
                           lastHash = h256
                           copyBtn.isEnabled = true
-                          statusView.text = "Succès ($currentConsole) en ${secs}s"
-                          showResultNotif("PKG Merger", "Fusion réussie !")
+                          statusView.text = "Succès ($detected) en ${secs}s !"
                           doneUi()
                       }
                   }.start()
@@ -773,7 +745,7 @@ jobs:
               private fun copyHash() {
                   val h = lastHash ?: return
                   getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("sha256", h))
-                  toast("SHA-256 copié")
+                  toast("SHA-256 copié !")
               }
 
               private fun size(u: Uri): Long {
