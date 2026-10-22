@@ -1,8 +1,7 @@
-package com.example.ps5pkgmerger // ⚠️ Garde ton nom de package
+package com.venice.pkgmerger
 
 import android.content.Context
 import android.net.Uri
-import androidx.documentfile.provider.DocumentFile
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.MessageDigest
@@ -23,7 +22,6 @@ object PkgManagerHelper {
             val totalSize = inputStream.available().toLong()
             val chunkSizeBytes = chunkSizeMB * 1024 * 1024
 
-            val destFolder = DocumentFile.fromTreeUri(context, destinationFolderUri) ?: return false
             val buffer = ByteArray(1024 * 1024)
             var bytesRead: Int
             var currentChunkIndex = 0
@@ -31,9 +29,16 @@ object PkgManagerHelper {
 
             while (true) {
                 val chunkFileName = "part_${String.format("%03d", currentChunkIndex + 1)}.pkg"
-                val chunkFile = destFolder.createFile("application/octet-stream", chunkFileName) ?: break
-                val outputStream: OutputStream = resolver.openOutputStream(chunkFile.uri) ?: break
+                
+                // Création directe via le ContentResolver pour éviter tout problème de dépendance
+                val chunkUri = android.provider.DocumentsContract.createDocument(
+                    resolver,
+                    destinationFolderUri,
+                    "application/octet-stream",
+                    chunkFileName
+                ) ?: break
 
+                val outputStream: OutputStream = resolver.openOutputStream(chunkUri) ?: break
                 var currentChunkBytes = 0L
 
                 while (currentChunkBytes < chunkSizeBytes) {
@@ -74,10 +79,15 @@ object PkgManagerHelper {
     ): Boolean {
         return try {
             val resolver = context.contentResolver
-            val destFolder = DocumentFile.fromTreeUri(context, destinationFolderUri) ?: return false
-            val outputFile = destFolder.createFile("application/octet-stream", outputFileName) ?: return false
+            
+            val outputUri = android.provider.DocumentsContract.createDocument(
+                resolver,
+                destinationFolderUri,
+                "application/octet-stream",
+                outputFileName
+            ) ?: return false
 
-            val outputStream: OutputStream = resolver.openOutputStream(outputFile.uri) ?: return false
+            val outputStream: OutputStream = resolver.openOutputStream(outputUri) ?: return false
             val buffer = ByteArray(1024 * 1024)
 
             var totalSize = 0L
@@ -112,7 +122,7 @@ object PkgManagerHelper {
         }
     }
 
-    // Vérification SHA-256 (pour l'intégrité au premier lancement ou sur les fichiers)
+    // Vérification SHA-256
     fun calculateSha256(context: Context, fileUri: Uri): String {
         return try {
             val digest = MessageDigest.getInstance("SHA-256")
@@ -131,4 +141,3 @@ object PkgManagerHelper {
         }
     }
 }
-
