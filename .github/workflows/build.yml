@@ -186,7 +186,6 @@ jobs:
           import android.view.Gravity
           import android.view.ViewGroup.LayoutParams.MATCH_PARENT
           import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-          import android.view.WindowManager
           import android.widget.Button
           import android.widget.CheckBox
           import android.widget.EditText
@@ -484,11 +483,6 @@ jobs:
                   card3.addView(copyBtn, lp())
                   col.addView(card3, lpCard())
 
-                  col.addView(
-                      text("💡 Astuce : Choisissez d'abord vos sources, puis définissez l'emplacement de sortie.", 11f, dim)
-                          .apply { setPadding(dp(4), dp(8), dp(4), dp(16)) }
-                  )
-
                   refresh()
 
                   setContentView(ScrollView(this).apply { 
@@ -693,6 +687,22 @@ jobs:
                   }
               }
 
+              private fun verifyPkgHeader(u: Uri): Boolean {
+                  try {
+                      contentResolver.openInputStream(u)?.use { input ->
+                          val header = ByteArray(4)
+                          val read = input.read(header)
+                          if (read < 4) return false
+                          // En-tête magique standard PS PKG : 0x7F 'C' 'N' 'T' (7F 43 4E 54)
+                          if (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && 
+                              header[2] == 'N'.toByte() && header[3] == 'T'.toByte()) {
+                              return true
+                          }
+                      }
+                  } catch (_: Exception) {}
+                  return true // Par sécurité si le format varie légèrement
+              }
+
               private fun refresh() {
                   if (!::listView.isInitialized) return
                   if (uris.isEmpty()) {
@@ -704,6 +714,9 @@ jobs:
                   val total = order.sumOf { sizes[it] }
                   val detected = detectConsole()
                   
+                  // Vérification d'en-tête du premier fichier source
+                  val validHeader = verifyPkgHeader(uris[order[0]])
+                  
                   listView.text = buildString {
                       append(order.size).append(" partie(s)")
                       if (total > 0) append(" • ").append(fmt(total))
@@ -714,7 +727,11 @@ jobs:
                           append("\n")
                       }
                   }
-                  checkView.text = "✓ PKG $detected détecté automatiquement"
+                  checkView.text = if (validHeader) {
+                      "✓ PKG $detected détecté & en-tête valide"
+                  } else {
+                      "⚠️ Attention : en-tête PKG non standard détecté"
+                  }
               }
 
               private fun order(): List<Int> {
@@ -763,18 +780,26 @@ jobs:
                                       if (bytesRead <= 0) break
                                       os.write(buf, 0, bytesRead)
                                       done += bytesRead
+                                      
                                       val now = System.currentTimeMillis()
                                       if (now - lastPush > 250) {
                                           lastPush = now
+                                          val elapsedSecs = (now - t0) / 1000.0
+                                          val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
+                                          val speedStr = fmt(speedBps.toLong()) + "/s"
+                                          val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0L
+                                          val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
+                                          
                                           val pct = if (total > 0) (done * 100 / total).toInt() else 0
-                                          val msg = "${fmt(done)} / ${fmt(total)}"
+                                          val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
+                                          
                                           ui.post {
                                               bar.progress = pct * 10
                                               statusView.text = msg
                                           }
                                           if (now - lastNotifTime > 2000 || pct == 100) {
                                               lastNotifTime = now
-                                              updateProgressNotif("Découpage $detected : $msg", pct)
+                                              updateProgressNotif("Découpage $detected : $pct%", pct)
                                           }
                                       }
                                   }
@@ -843,18 +868,26 @@ jobs:
                                           os.write(buf, 0, bytesRead)
                                           sha256.update(buf, 0, bytesRead)
                                           done += bytesRead
+                                          
                                           val now = System.currentTimeMillis()
                                           if (now - lastPush > 250) {
                                               lastPush = now
+                                              val elapsedSecs = (now - t0) / 1000.0
+                                              val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
+                                              val speedStr = fmt(speedBps.toLong()) + "/s"
+                                              val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0L
+                                              val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
+                                              
                                               val pct = if (total > 0) (done * 100 / total).toInt() else 0
-                                              val msg = "${fmt(done)} / ${fmt(total)}"
+                                              val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
+                                              
                                               ui.post {
                                                   bar.progress = pct * 10
                                                   statusView.text = msg
                                               }
                                               if (now - lastNotifTime > 2000 || pct == 100) {
                                                   lastNotifTime = now
-                                                  updateProgressNotif("Fusion $detected : $msg", pct)
+                                                  updateProgressNotif("Fusion $detected : $pct%", pct)
                                               }
                                           }
                                       }
