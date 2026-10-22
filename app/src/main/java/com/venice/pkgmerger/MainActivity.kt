@@ -49,6 +49,7 @@ class MainActivity : Activity() {
     private var lastHash: String? = null
     @Volatile private var cancelled = false
     private val ui = Handler(Looper.getMainLooper())
+    private var lastNotifTime = 0L
 
     private lateinit var listView: TextView
     private lateinit var checkView: TextView
@@ -689,10 +690,16 @@ class MainActivity : Activity() {
             append(" • ").append(fmt(speed.toLong())).append("/s")
             if (eta > 0) append(" • reste ").append(eta).append("s")
         }
+        
+        val nowTime = System.currentTimeMillis()
         ui.post {
             bar.progress = pct * 10
             statusView.text = msg
-            updateProgressNotif(msg, pct)
+            // On met à jour la notification système toutes les 2 secondes max pour éviter les freezes
+            if (nowTime - lastNotifTime > 2000 || pct == 100) {
+                lastNotifTime = nowTime
+                updateProgressNotif(msg, pct)
+            }
         }
     }
 

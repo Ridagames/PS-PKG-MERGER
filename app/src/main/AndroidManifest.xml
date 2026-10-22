@@ -6,8 +6,8 @@
 
     <application
         android:label="PS5 PKG Merger"
-        android:icon="@android:drawable/ic_menu_save"
-        android:roundIcon="@android:drawable/ic_menu_save"
+        android:icon="@drawable/ic_app_logo"
+        android:roundIcon="@drawable/ic_app_logo"
         android:largeHeap="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
         
