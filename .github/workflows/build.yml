@@ -36,6 +36,10 @@ jobs:
           FORCE: ${{ github.event.inputs.regenerate == 'true' && '1' || '0' }}
         run: |
           $ErrorActionPreference = "Stop"
+          
+          # Nettoyage des anciens dossiers/fichiers Android obsolètes
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "app/src/main/java"
+          
           New-Item -ItemType Directory -Force -Path "app/src/main/kotlin/com/venice/pkgmerger"
           New-Item -ItemType Directory -Force -Path "app/src/main/resources"
 
