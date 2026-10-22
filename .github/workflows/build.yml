@@ -37,6 +37,7 @@ jobs:
         run: |
           set -e
           mkdir -p app/src/main/java/com/venice/pkgmerger
+          mkdir -p app/src/main/res/drawable
           
           rm -f app/src/main/java/com/venice/pkgmerger/MergeService.kt
 
@@ -100,8 +101,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 20
-                  versionName = "2.9"
+                  versionCode = 21
+                  versionName = "3.0"
               }
 
               compileOptions {
@@ -117,6 +118,25 @@ jobs:
           }
           EOF
 
+          write app/src/main/res/drawable/ic_app_logo.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="108"
+              android:viewportHeight="108">
+            <path
+                android:fillColor="#0F172A"
+                android:pathData="M16,0h76c8.8,0 16,7.2 16,16v76c0,8.8 -7.2,16 -16,16H16c-8.8,0 -16,-7.2 -16,-16V16C0,7.2 7.2,0 16,0z"/>
+            <path
+                android:fillColor="#38BDF8"
+                android:pathData="M54,18c19.9,0 36,16.1 36,36s-16.1,36 -36,36s-36,-16.1 -36,-36S34.1,18 54,18z"
+                android:fillAlpha="0.15"/>
+            <path
+                android:fillColor="#38BDF8"
+                android:pathData="M58,32L38,58h14l-4,18l24-30H40L58,32z"/>
+          </vector>
+          EOF
+
           write app/src/main/AndroidManifest.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -126,8 +146,8 @@ jobs:
 
               <application
                   android:label="PS5 PKG Merger"
-                  android:icon="@android:drawable/ic_menu_save"
-                  android:roundIcon="@android:drawable/ic_menu_save"
+                  android:icon="@drawable/ic_app_logo"
+                  android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
                   android:theme="@android:style/Theme.Material.NoActionBar">
                   
@@ -953,6 +973,7 @@ jobs:
           for i in 1 2 3; do
             git fetch origin "$GITHUB_REF_NAME"
             git rebase "origin/$GITHUB_REF_NAME" || git rebase --abort || true
+            if git push origin "HEAD:$GITHUB_REF_NAME"; from exit 0; fi
             if git push origin "HEAD:$GITHUB_REF_NAME"; then
               echo "OK: sources poussées."
               exit 0
