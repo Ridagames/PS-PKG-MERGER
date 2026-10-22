@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.1.2
+      - name: Générer le projet Android v2.1.3
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 212
-                  versionName = "2.1.2"
+                  versionCode = 213
+                  versionName = "2.1.3"
               }
 
               compileOptions {
@@ -196,7 +196,7 @@ jobs:
           import android.widget.TextView
           import android.widget.Toast
           import java.io.BufferedOutputStream
-          import java.io.FileOutputStream
+          import java.io.OutputStream
           import java.security.MessageDigest
           import java.util.Locale
 
@@ -215,7 +215,7 @@ jobs:
               private val ui = Handler(Looper.getMainLooper())
               private var lastNotifTime = 0L
 
-              private lateinit var listView: TextView
+              private lateinit var listContainer: LinearLayout
               private lateinit var checkView: TextView
               private lateinit var outView: TextView
               private lateinit var statusView: TextView
@@ -403,11 +403,11 @@ jobs:
                   }
                   card1.addView(revBtn, lp())
 
-                  listView = text("Aucune partie sélectionnée.", 12f, dim).apply {
-                      typeface = Typeface.MONOSPACE
+                  listContainer = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
                       setPadding(0, dp(8), 0, dp(4))
                   }
-                  card1.addView(listView, lp())
+                  card1.addView(listContainer, lp())
 
                   checkView = text("", 12f, accent).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(checkView, lp())
@@ -542,7 +542,7 @@ jobs:
                               true
                           }
                           2 -> {
-                              toast("PS PKG Manager v2.1.2")
+                              toast("PS PKG Manager v2.1.3")
                               true
                           }
                           else -> false
@@ -724,6 +724,15 @@ jobs:
                   uris.add(u); names.add(n); sizes.add(s)
               }
 
+              private fun removeAt(index: Int) {
+                  if (index in uris.indices) {
+                      uris.removeAt(index)
+                      names.removeAt(index)
+                      sizes.removeAt(index)
+                      refresh()
+                  }
+              }
+
               private data class PkgInfo(val console: String, val valid: Boolean, val contentId: String, val region: String)
 
               private fun analyzePkg(u: Uri): PkgInfo {
@@ -782,27 +791,51 @@ jobs:
               }
 
               private fun refresh() {
-                  if (!::listView.isInitialized) return
+                  if (!::listContainer.isInitialized) return
+                  listContainer.removeAllViews()
+
                   if (uris.isEmpty()) {
-                      listView.text = "Aucune partie sélectionnée."
+                      listContainer.addView(text("Aucun fichier sélectionné.", 12f, dim))
                       checkView.text = ""
                       return
                   }
+
                   val order = order()
                   val total = order.sumOf { sizes[it] }
                   val info = analyzePkg(uris[order[0]])
-                  
-                  listView.text = buildString {
-                      append(order.size).append(" partie(s)")
-                      if (total > 0) append(" • ").append(fmt(total))
-                      append(" • ordre ").append(if (reversed) "inversé" else "croissant").append("\n")
-                      order.forEachIndexed { i, idx ->
-                          append(i + 1).append(". ").append(names[idx])
-                          if (sizes[idx] > 0) append("  (").append(fmt(sizes[idx])).append(")")
-                          append("\n")
+
+                  val summaryView = text("${order.size} partie(s) • ${fmt(total)} • Ordre ${if (reversed) "inversé" else "croissant"}", 12f, Color.WHITE, true)
+                  listContainer.addView(summaryView)
+
+                  order.forEachIndexed { i, idx ->
+                      val row = LinearLayout(this).apply {
+                          orientation = LinearLayout.HORIZONTAL
+                          setPadding(0, dp(4), 0, dp(4))
+                          gravity = Gravity.CENTER_VERTICAL
                       }
+
+                      val itemText = TextView(this).apply {
+                          text = "${i + 1}. ${names[idx]} (${fmt(sizes[idx])})"
+                          textSize = 12f
+                          setTextColor(dim)
+                          typeface = Typeface.MONOSPACE
+                      }
+                      row.addView(itemText, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+
+                      val deleteBtn = Button(this).apply {
+                          text = "🚫"
+                          textSize = 12f
+                          setBackgroundColor(Color.TRANSPARENT)
+                          setOnClickListener {
+                              if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
+                              removeAt(idx)
+                          }
+                      }
+                      row.addView(deleteBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
+
+                      listContainer.addView(row)
                   }
-                  
+
                   checkView.text = if (info.valid) {
                       buildString {
                           append("✓ PKG ").append(info.console).append(" détecté\n")
@@ -870,20 +903,17 @@ jobs:
                           var partIndex = 0
                           val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
                           val baseDirUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocId)
-                          var pfd: android.os.ParcelFileDescriptor? = null
-                          var os: BufferedOutputStream? = null
+                          var currentOutputStream: OutputStream? = null
 
                           fun openNextPart() {
-                              try { os?.flush(); os?.close() } catch (_: Exception) {}
-                              try { pfd?.close() } catch (_: Exception) {}
+                              try { currentOutputStream?.flush(); currentOutputStream?.close() } catch (_: Exception) {}
 
                               val partName = "$sourceName.${String.format(Locale.US, "%02d", partIndex)}"
                               val docUri = DocumentsContract.createDocument(contentResolver, baseDirUri, "application/octet-stream", partName)
                                   ?: throw IllegalStateException("Création de $partName impossible")
                               
-                              pfd = contentResolver.openFileDescriptor(docUri, "w")
-                                  ?: throw IllegalStateException("Ouverture du descripteur impossible")
-                              os = BufferedOutputStream(FileOutputStream(pfd!!.fileDescriptor), 1 shl 20)
+                              currentOutputStream = BufferedOutputStream(contentResolver.openOutputStream(docUri)
+                                  ?: throw IllegalStateException("Ouverture du flux écriture impossible"), 1 shl 20)
                               partIndex++
                           }
 
@@ -905,7 +935,7 @@ jobs:
                                           currentPartBytes = 0L
                                       }
                                       val chunkToWrite = minOf(bytesRead - offset, (maxPartSize - currentPartBytes).toInt())
-                                      os!!.write(buf, offset, chunkToWrite)
+                                      currentOutputStream!!.write(buf, offset, chunkToWrite)
                                       sha256?.update(buf, offset, chunkToWrite)
                                       offset += chunkToWrite
                                       currentPartBytes += chunkToWrite
@@ -935,8 +965,7 @@ jobs:
                                   }
                               }
                           }
-                          try { os?.flush(); os?.close() } catch (_: Exception) {}
-                          try { pfd?.close() } catch (_: Exception) {}
+                          try { currentOutputStream?.flush(); currentOutputStream?.close() } catch (_: Exception) {}
                           success = true
                       } catch (e: Throwable) {
                           ui.post {
@@ -1160,12 +1189,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.1.2
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.1.2.apk
+      - name: Renommer l'APK v2.1.3
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.1.3.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.1.2-apk
-          path: PkgMerger-v2.1.2.apk
+          name: pkg-merger-v2.1.3-apk
+          path: PkgMerger-v2.1.3.apk
           if-no-files-found: error
