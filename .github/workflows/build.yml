@@ -210,6 +210,7 @@ jobs:
               private var reversed = false
               private var lastHash: String? = null
               private var appMode = "MERGE" // MERGE ou SPLIT
+              @Volatile private var processing = false
               @Volatile private var cancelled = false
               private val ui = Handler(Looper.getMainLooper())
               private var lastNotifTime = 0L
@@ -377,19 +378,28 @@ jobs:
                   
                   pickBtn = Button(this).apply {
                       text = "📁 CHOISIR LES FICHIERS"
-                      setOnClickListener { pick() }
+                      setOnClickListener {
+                          if (processing) { toast("⚠️ Traitement en cours : impossible de modifier la sélection !"); return@setOnClickListener }
+                          pick()
+                      }
                   }
                   card1.addView(pickBtn, lp())
 
                   dirBtn = Button(this).apply {
                       text = "📂 CHOISIR UN DOSSIER COMPLET"
-                      setOnClickListener { pickFolder() }
+                      setOnClickListener {
+                          if (processing) { toast("⚠️ Traitement en cours : impossible de modifier la sélection !"); return@setOnClickListener }
+                          pickFolder()
+                      }
                   }
                   card1.addView(dirBtn, lp())
 
                   revBtn = Button(this).apply {
                       text = "🔀 INVERSER L'ORDRE DES PARTIES"
-                      setOnClickListener { reversed = !reversed; refresh() }
+                      setOnClickListener {
+                          if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
+                          reversed = !reversed; refresh()
+                      }
                   }
                   card1.addView(revBtn, lp())
 
@@ -408,7 +418,10 @@ jobs:
 
                   outBtn = Button(this).apply {
                       text = "💾 DÉFINIR L'EMPLACEMENT DE SORTIE"
-                      setOnClickListener { pickOutput() }
+                      setOnClickListener {
+                          if (processing) { toast("⚠️ Traitement en cours : impossible de changer la destination !"); return@setOnClickListener }
+                          pickOutput()
+                      }
                   }
                   card2.addView(outBtn, lp())
 
@@ -430,7 +443,13 @@ jobs:
                   cancelBtn = Button(this).apply {
                       text = "❌ ANNULER"
                       isEnabled = false
-                      setOnClickListener { cancelled = true }
+                      setOnClickListener {
+                          if (processing) {
+                              cancelled = true
+                              statusView.text = "Annulation en cours..."
+                              toast("Annulation demandée...")
+                          }
+                      }
                   }
                   actionLayout.addView(cancelBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
                   card2.addView(actionLayout, lp())
@@ -494,6 +513,10 @@ jobs:
               }
 
               private fun showMenu(v: android.view.View) {
+                  if (processing) {
+                      toast("⚠️ Traitement en cours : impossible de changer de mode !")
+                      return
+                  }
                   val popup = PopupMenu(this, v)
                   popup.menu.add(0, 1, 0, if (appMode == "MERGE") "📂 Basculer vers : Mode Splitter" else "🔗 Basculer vers : Mode Fusion")
                   popup.menu.add(0, 2, 1, "ℹ️ À propos de l'application")
@@ -781,6 +804,8 @@ jobs:
                   val sourceUri = uris[0]
                   val sourceName = getFileName(sourceUri)
                   val (detected, _) = detectConsoleAndVerify(sourceUri)
+                  
+                  processing = true
                   cancelled = false
                   goBtn.isEnabled = false
                   cancelBtn.isEnabled = true
@@ -820,12 +845,13 @@ jobs:
                           var currentPartBytes = 0L
                           contentResolver.openInputStream(sourceUri)?.use { input ->
                               while (true) {
-                                  if (cancelled) throw InterruptedException("Annulé")
+                                  if (cancelled) throw InterruptedException("Traitement annulé par l'utilisateur.")
                                   val bytesRead = input.read(buf)
                                   if (bytesRead <= 0) break
 
                                   var offset = 0
                                   while (offset < bytesRead) {
+                                      if (cancelled) throw InterruptedException("Traitement annulé par l'utilisateur.")
                                       if (currentPartBytes >= maxPartSize) {
                                           openNextPart()
                                           currentPartBytes = 0L
@@ -867,13 +893,17 @@ jobs:
                       } catch (e: Throwable) {
                           ui.post {
                               statusView.text = "Erreur : ${e.message}"
-                              showResultNotif("PS5 PKG Merger", "Échec du découpage : ${e.message}")
+                              showResultNotif("PS5 PKG Merger", "Échec : ${e.message}")
+                              processing = false
                               doneUi()
                           }
                           return@Thread
                       }
 
-                      if (!success) return@Thread
+                      if (!success) {
+                          processing = false
+                          return@Thread
+                      }
 
                       val h256 = sha256?.let { hex(it.digest()) }
                       val secs = (System.currentTimeMillis() - t0) / 1000
@@ -887,6 +917,7 @@ jobs:
                           }
                           statusView.text = "Découpage réussi en ${secs}s !"
                           showResultNotif("PS5 PKG Merger", "Découpage terminé avec succès en ${secs}s !")
+                          processing = false
                           doneUi()
                       }
                   }.start()
@@ -899,6 +930,8 @@ jobs:
 
                   val list = order().map { uris[it] }
                   val (detected, _) = detectConsoleAndVerify(list[0])
+                  
+                  processing = true
                   cancelled = false
                   goBtn.isEnabled = false
                   cancelBtn.isEnabled = true
@@ -921,10 +954,10 @@ jobs:
                               val buf = ByteArray(1 shl 20)
                               var bytesRead: Int
                               for (u in list) {
-                                  if (cancelled) throw InterruptedException("Annulé")
+                                  if (cancelled) throw InterruptedException("Traitement annulé par l'utilisateur.")
                                   contentResolver.openInputStream(u)?.use { input ->
                                       while (true) {
-                                          if (cancelled) throw InterruptedException("Annulé")
+                                          if (cancelled) throw InterruptedException("Traitement annulé par l'utilisateur.")
                                           bytesRead = input.read(buf)
                                           if (bytesRead <= 0) break
                                           os.write(buf, 0, bytesRead)
@@ -960,12 +993,13 @@ jobs:
                               pfd.close()
                           }
 
-                          if (verifyBox.isChecked) {
+                          if (verifyBox.isChecked && !cancelled) {
                               ui.post { statusView.text = "Vérification intégrité en cours…" }
                               val verifyDigest = MessageDigest.getInstance("SHA-256")
                               contentResolver.openInputStream(out)?.use { verifyInput ->
                                   val verifyBuf = ByteArray(1 shl 20)
                                   while (true) {
+                                      if (cancelled) throw InterruptedException("Traitement annulé.")
                                       val r = verifyInput.read(verifyBuf)
                                       if (r <= 0) break
                                       verifyDigest.update(verifyBuf, 0, r)
@@ -976,13 +1010,17 @@ jobs:
                       } catch (e: Throwable) {
                           ui.post {
                               statusView.text = "Erreur : ${e.message}"
-                              showResultNotif("PS5 PKG Merger", "Échec de la fusion : ${e.message}")
+                              showResultNotif("PS5 PKG Merger", "Échec : ${e.message}")
+                              processing = false
                               doneUi()
                           }
                           return@Thread
                       }
 
-                      if (!success) return@Thread
+                      if (!success) {
+                          processing = false
+                          return@Thread
+                      }
 
                       val h256 = hex(sha256.digest())
                       val secs = (System.currentTimeMillis() - t0) / 1000
@@ -994,6 +1032,7 @@ jobs:
                           hashView.text = "SHA-256 : $h256"
                           statusView.text = "Terminé avec succès en ${secs}s"
                           showResultNotif("PS5 PKG Merger", "Fusion réussie en ${secs}s !")
+                          processing = false
                           doneUi()
                       }
                   }.start()
