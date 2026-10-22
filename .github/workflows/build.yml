@@ -1,4 +1,4 @@
-name: Build Android APK
+Name: Build Android APK
 
 on:
   push:
@@ -182,7 +182,6 @@ jobs:
           import android.provider.DocumentsContract
           import android.provider.OpenableColumns
           import android.provider.Settings
-          import android.text.Html
           import android.view.ViewGroup.LayoutParams.MATCH_PARENT
           import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
           import android.view.WindowManager
@@ -208,7 +207,7 @@ jobs:
               private var output: Uri? = null
               private var reversed = false
               private var lastHash: String? = null
-              private var currentConsole = "PS5" // PS3, PS4, PS5, SPLIT
+              private var currentConsole = "PS5"
               @Volatile private var cancelled = false
               private val ui = Handler(Looper.getMainLooper())
               private var lastNotifTime = 0L
@@ -354,7 +353,6 @@ jobs:
                   })
                   col.addView(headerLayout)
 
-                  // Menu Sélection Console / Outil
                   val consoleCard = createCard()
                   consoleCard.addView(text("Mode de fonctionnement", 14f, accent, true))
                   
@@ -400,9 +398,6 @@ jobs:
                       setPadding(0, dp(8), 0, dp(4))
                   }
                   card1.addView(listView, lp())
-
-                  checkView = text("", 12f, accent).apply { typeface = Typeface.MONOSPACE }
-                  card1.addView(checkView, lp())
                   col.addView(card1, lpCard())
 
                   val card2 = createCard()
@@ -506,6 +501,7 @@ jobs:
                   refresh()
               }
 
+              private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
               private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(4) }
               private fun lpCard() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12); bottomMargin = dp(4) }
 
@@ -666,7 +662,6 @@ jobs:
                   if (!::listView.isInitialized) return
                   if (uris.isEmpty()) {
                       listView.text = "Aucun fichier .pkg sélectionné."
-                      checkView.text = ""
                       return
                   }
                   val order = order()
@@ -700,7 +695,7 @@ jobs:
                   if (uris.isEmpty()) { toast("Sélectionne un fichier .pkg à découper."); return }
                   val out = output
                   if (out == null) { toast("Choisis le dossier/emplacement de sortie."); return }
-                  toast("Fonction Splitter prête pour $currentConsole")
+                  toast("Découpage $currentConsole prêt")
               }
 
               private fun mergePkg() {
@@ -709,9 +704,6 @@ jobs:
                   if (out == null) { toast("Choisis le fichier de sortie."); return }
 
                   val list = order().map { uris[it] }
-                  val wantReread = verifyBox.isChecked
-                  val wantDelete = deleteBox.isChecked
-
                   cancelled = false
                   goBtn.isEnabled = false
                   cancelBtn.isEnabled = true
@@ -719,9 +711,7 @@ jobs:
                   statusView.text = "Fusion $currentConsole en cours…"
 
                   Thread {
-                      val total = list.sumOf { size(it) }
                       val sha256 = MessageDigest.getInstance("SHA-256")
-                      var done = 0L
                       var success = false
                       val t0 = System.currentTimeMillis()
 
@@ -736,11 +726,10 @@ jobs:
                                   contentResolver.openInputStream(u)?.use { input ->
                                       while (true) {
                                           if (cancelled) throw InterruptedException("Annulé")
-                                          val r = input.read(buf)
-                                          if (r <= 0) break
-                                          os.write(buf, 0, r)
-                                          sha256.update(buf, 0, r)
-                                          done += r
+                                          var bytesRead = input.read(buf)
+                                          if (bytesRead <= 0) break
+                                          os.write(buf, 0, bytesRead)
+                                          sha256.update(buf, 0, bytesRead)
                                       }
                                   }
                               }
