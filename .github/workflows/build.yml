@@ -1,4 +1,4 @@
-name: Build macOS App (.dmg)
+name: Build Linux App (.tar.gz)
 
 on:
   push:
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet macOS
+      - name: Générer le projet Linux
         env:
           FORCE: ${{ github.event.inputs.regenerate == 'true' && '1' || '0' }}
         run: |
@@ -58,8 +58,7 @@ jobs:
           .gradle/
           build/
           local.properties
-          *.dmg
-          *.app
+          *.tar.gz
           *.jar
           *.zip
           *.jks
@@ -127,7 +126,7 @@ jobs:
           import javax.swing.*
           import javax.swing.border.EmptyBorder
 
-          class MainWindow : JFrame("⚡ PS5 PKG Merger - macOS") {
+          class MainWindow : JFrame("⚡ PS5 PKG Merger - Linux") {
 
               private val selectedFiles = ArrayList<File>()
               private var outputFile: File? = null
@@ -175,7 +174,7 @@ jobs:
                       background = bgMain
                       alignmentX = Component.LEFT_ALIGNMENT
                       maximumSize = Dimension(Int.MAX_VALUE, 50)
-                      add(JLabel("⚡ PS5 PKG MERGER (MACOS)").apply {
+                      add(JLabel("⚡ PS5 PKG MERGER (LINUX)").apply {
                           font = Font("SansSerif", Font.BOLD, 18)
                           foreground = textWhite
                       })
@@ -605,20 +604,22 @@ jobs:
       - name: Build JAR
         run: gradle jar
 
-      - name: Créer le fichier .dmg pour macOS avec jpackage
+      - name: Créer l'archive Linux avec jpackage
         run: |
-          JAVA_HOME=$JAVA_HOME
           $JAVA_HOME/bin/jpackage \
-              --type dmg \
+              --type app-image \
               --name "PS5PkgMerger" \
               --input "app/build/libs" \
               --main-jar "app.jar" \
               --main-class "com.venice.pkgmerger.MainKt" \
               --dest "dist"
 
-      - name: Upload macOS DMG Package
+          # Compresser le dossier généré en .tar.gz
+          tar -czf PS5PkgMerger-Linux.tar.gz -C dist PS5PkgMerger
+
+      - name: Upload Linux Package
         uses: actions/upload-artifact@v4
         with:
-          name: ps5-pkg-merger-macos
-          path: dist/*.dmg
+          name: ps5-pkg-merger-linux
+          path: PS5PkgMerger-Linux.tar.gz
           if-no-files-found: error
