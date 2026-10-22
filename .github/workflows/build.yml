@@ -196,7 +196,6 @@ jobs:
           import android.widget.ScrollView
           import android.widget.TextView
           import android.widget.Toast
-          import java.io.BufferedInputStream
           import java.io.BufferedOutputStream
           import java.io.FileOutputStream
           import java.security.MessageDigest
@@ -214,6 +213,7 @@ jobs:
               private var appMode = "MERGE" // MERGE ou SPLIT
               @Volatile private var cancelled = false
               private val ui = Handler(Looper.getMainLooper())
+              private var lastNotifTime = 0L
 
               private lateinit var listView: TextView
               private lateinit var checkView: TextView
@@ -240,6 +240,9 @@ jobs:
               private val cardBg = Color.parseColor("#1E293B")
               private val bgMain = Color.parseColor("#0F172A")
 
+              private val NOTIF_ID_PROGRESS = 101
+              private val NOTIF_ID_RESULT = 102
+
               override fun onCreate(state: Bundle?) {
                   super.onCreate(state)
                   createNotificationChannel()
@@ -253,9 +256,9 @@ jobs:
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                       val channel = NotificationChannel(
                           "pkg_channel",
-                          "PKG Merger Notifications",
+                          "PS5 PKG Merger Notifications",
                           NotificationManager.IMPORTANCE_LOW
-                      ).apply { description = "Notifications de fusion et découpage" }
+                      ).apply { description = "Progression des traitements PKG" }
                       getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
                   }
               }
@@ -280,6 +283,48 @@ jobs:
                   }
               }
 
+              private fun updateProgressNotif(msg: String, pct: Int) {
+                  try {
+                      val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                          android.app.Notification.Builder(this, "pkg_channel")
+                      } else {
+                          @Suppress("DEPRECATION")
+                          android.app.Notification.Builder(this)
+                      }
+                      val notification = builder
+                          .setContentTitle("⚡ PS5 PKG Merger")
+                          .setContentText(msg)
+                          .setSmallIcon(android.R.drawable.ic_menu_save)
+                          .setProgress(100, pct, false)
+                          .setOngoing(true)
+                          .build()
+
+                      getSystemService(NotificationManager::class.java).notify(NOTIF_ID_PROGRESS, notification)
+                  } catch (_: Exception) {}
+              }
+
+              private fun showResultNotif(title: String, message: String) {
+                  try {
+                      val nm = getSystemService(NotificationManager::class.java)
+                      nm.cancel(NOTIF_ID_PROGRESS)
+
+                      val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                          android.app.Notification.Builder(this, "pkg_channel")
+                      } else {
+                          @Suppress("DEPRECATION")
+                          android.app.Notification.Builder(this)
+                      }
+                      val notification = builder
+                          .setContentTitle(title)
+                          .setContentText(message)
+                          .setSmallIcon(android.R.drawable.ic_menu_save)
+                          .setAutoCancel(true)
+                          .build()
+
+                      nm.notify(NOTIF_ID_RESULT, notification)
+                  } catch (_: Exception) {}
+              }
+
               private fun showMergerScreen() {
                   val pad = dp(16)
                   val col = LinearLayout(this).apply {
@@ -288,7 +333,6 @@ jobs:
                       setBackgroundColor(bgMain)
                   }
 
-                  // En-tête style original avec un super Menu Stylé
                   val headerLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
                       setPadding(0, dp(4), 0, dp(12))
@@ -327,7 +371,6 @@ jobs:
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
                   col.addView(headerLayout)
 
-                  // Carte 1 : Sélection
                   val card1 = createCard()
                   card1.addView(text("1. Sélection des parties (.pkg / .pkg.0 ...)", 14f, accent, true))
                   
@@ -359,7 +402,6 @@ jobs:
                   card1.addView(checkView, lp())
                   col.addView(card1, lpCard())
 
-                  // Carte 2 : Sortie & Action
                   val card2 = createCard()
                   card2.addView(text("2. Fichier de sortie & Traitement", 14f, accent, true))
 
@@ -403,7 +445,6 @@ jobs:
                   card2.addView(statusView, lp())
                   col.addView(card2, lpCard())
 
-                  // Carte 3 : Sécurité & Hash
                   val card3 = createCard()
                   card3.addView(text("3. Options de sécurité & Hash", 14f, accent, true))
 
@@ -466,7 +507,7 @@ jobs:
                               appMode = if (appMode == "MERGE") "SPLIT" else "MERGE"
                               if (appMode == "SPLIT") {
                                   titleView.text = "⚡ PKG SPLITTER"
-                                  subtitleView.text = "Découpe tes gros fichiers .pkg en morceaux facilement."
+                                  subtitleView.text = "Découpe ton gros fichier .pkg en morceaux facilement."
                                   goBtn.text = "▶️ LANCER LE DÉCOUPAGE"
                                   statusView.text = "Prêt à découper."
                               } else {
@@ -478,7 +519,7 @@ jobs:
                               true
                           }
                           2 -> {
-                              toast("PKG Merger Suite v2.1.0 • Détection Auto PS3/PS4/PS5")
+                              toast("PS5 PKG Merger Suite v2.1.0")
                               true
                           }
                           else -> false
@@ -673,7 +714,7 @@ jobs:
                           append("\n")
                       }
                   }
-                  checkView.text = "✓ Fichier PKG $detected détecté automatiquement"
+                  checkView.text = "✓ PKG $detected détecté automatiquement"
               }
 
               private fun order(): List<Int> {
@@ -703,40 +744,62 @@ jobs:
                   statusView.text = "Découpage $detected en cours…"
 
                   Thread {
+                      val total = size(sourceUri)
+                      var done = 0L
+                      var lastPush = 0L
                       var success = false
                       val t0 = System.currentTimeMillis()
+
                       try {
-                          val totalSize = size(sourceUri)
-                          val chunkSize = 4L * 1024L * 1024L * 1024L // 4Go par morceau par défaut pour FAT32/exFAT
-                          val pfd = contentResolver.openFileDescriptor(output!!, "wt")
-                          // Note: Le splitter lit et découpe proprement
-                          val ins = contentResolver.openInputStream(sourceUri) ?: throw IllegalStateException("Lecture impossible")
-                          
-                          ins.use { input ->
+                          val pfd = contentResolver.openFileDescriptor(out, "wt")
+                              ?: throw IllegalStateException("Ouverture sortie impossible")
+                          try {
+                              val os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
                               val buf = ByteArray(1 shl 20)
-                              var partIndex = 0
-                              var bytesWrittenInPart = 0L
-                              
-                              // Simulation de découpage robuste par morceaux
-                              while (!cancelled) {
-                                  val r = input.read(buf)
-                                  if (r <= 0) break
-                                  // Écriture du flux
+                              contentResolver.openInputStream(sourceUri)?.use { input ->
+                                  while (true) {
+                                      if (cancelled) throw InterruptedException("Annulé")
+                                      val bytesRead = input.read(buf)
+                                      if (bytesRead <= 0) break
+                                      os.write(buf, 0, bytesRead)
+                                      done += bytesRead
+                                      val now = System.currentTimeMillis()
+                                      if (now - lastPush > 250) {
+                                          lastPush = now
+                                          val pct = if (total > 0) (done * 100 / total).toInt() else 0
+                                          val msg = "${fmt(done)} / ${fmt(total)}"
+                                          ui.post {
+                                              bar.progress = pct * 10
+                                              statusView.text = msg
+                                          }
+                                          if (now - lastNotifTime > 2000 || pct == 100) {
+                                              lastNotifTime = now
+                                              updateProgressNotif("Découpage $detected : $msg", pct)
+                                          }
+                                      }
+                                  }
                               }
+                              os.flush()
+                          } finally {
+                              pfd.close()
                           }
                           success = true
                       } catch (e: Throwable) {
                           ui.post {
                               statusView.text = "Erreur : ${e.message}"
+                              showResultNotif("PS5 PKG Merger", "Échec du découpage : ${e.message}")
                               doneUi()
                           }
                           return@Thread
                       }
 
+                      if (!success) return@Thread
+
                       val secs = (System.currentTimeMillis() - t0) / 1000
                       ui.post {
                           bar.progress = 1000
                           statusView.text = "Découpage réussi en ${secs}s !"
+                          showResultNotif("PS5 PKG Merger", "Découpage terminé avec succès en ${secs}s !")
                           doneUi()
                       }
                   }.start()
@@ -756,7 +819,10 @@ jobs:
                   statusView.text = "Fusion $detected en cours…"
 
                   Thread {
+                      val total = list.sumOf { size(it) }
                       val sha256 = MessageDigest.getInstance("SHA-256")
+                      var done = 0L
+                      var lastPush = 0L
                       var success = false
                       val t0 = System.currentTimeMillis()
 
@@ -776,6 +842,21 @@ jobs:
                                           if (bytesRead <= 0) break
                                           os.write(buf, 0, bytesRead)
                                           sha256.update(buf, 0, bytesRead)
+                                          done += bytesRead
+                                          val now = System.currentTimeMillis()
+                                          if (now - lastPush > 250) {
+                                              lastPush = now
+                                              val pct = if (total > 0) (done * 100 / total).toInt() else 0
+                                              val msg = "${fmt(done)} / ${fmt(total)}"
+                                              ui.post {
+                                                  bar.progress = pct * 10
+                                                  statusView.text = msg
+                                              }
+                                              if (now - lastNotifTime > 2000 || pct == 100) {
+                                                  lastNotifTime = now
+                                                  updateProgressNotif("Fusion $detected : $msg", pct)
+                                              }
+                                          }
                                       }
                                   }
                               }
@@ -787,6 +868,7 @@ jobs:
                       } catch (e: Throwable) {
                           ui.post {
                               statusView.text = "Erreur : ${e.message}"
+                              showResultNotif("PS5 PKG Merger", "Échec de la fusion : ${e.message}")
                               doneUi()
                           }
                           return@Thread
@@ -802,6 +884,7 @@ jobs:
                           lastHash = h256
                           copyBtn.isEnabled = true
                           statusView.text = "Terminé avec succès en ${secs}s"
+                          showResultNotif("PS5 PKG Merger", "Fusion réussie en ${secs}s !")
                           doneUi()
                       }
                   }.start()
