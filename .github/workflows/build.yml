@@ -501,7 +501,6 @@ jobs:
                   refresh()
               }
 
-              private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
               private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(4) }
               private fun lpCard() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12); bottomMargin = dp(4) }
 
@@ -726,7 +725,7 @@ jobs:
                                   contentResolver.openInputStream(u)?.use { input ->
                                       while (true) {
                                           if (cancelled) throw InterruptedException("Annulé")
-                                          var bytesRead = input.read(buf)
+                                          val bytesRead = input.read(buf)
                                           if (bytesRead <= 0) break
                                           os.write(buf, 0, bytesRead)
                                           sha256.update(buf, 0, bytesRead)
