@@ -798,13 +798,15 @@ jobs:
                       try {
                           val maxPartSize = 4L * 1024L * 1024L * 1024L // 4 Go par partie
                           var partIndex = 0
+                          val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
+                          val baseDirUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocId)
                           var os: BufferedOutputStream? = null
 
                           fun openNextPart() {
                               os?.flush()
                               os?.close()
                               val partName = "$sourceName.${String.format(Locale.US, "%02d", partIndex)}"
-                              val docUri = DocumentsContract.createDocument(contentResolver, treeUri, "application/octet-stream", partName)
+                              val docUri = DocumentsContract.createDocument(contentResolver, baseDirUri, "application/octet-stream", partName)
                                   ?: throw IllegalStateException("Création du fichier $partName impossible")
                               val pfd = contentResolver.openFileDescriptor(docUri, "wt")
                                   ?: throw IllegalStateException("Ouverture du descripteur impossible")
