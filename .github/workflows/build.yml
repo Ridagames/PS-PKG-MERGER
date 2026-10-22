@@ -725,7 +725,7 @@ jobs:
                                   contentResolver.openInputStream(u)?.use { input ->
                                       while (true) {
                                           if (cancelled) throw InterruptedException("Annulé")
-                                          val bytesRead = input.read(buf)
+                                          val bytesRead: Int = input.read(buf)
                                           if (bytesRead <= 0) break
                                           os.write(buf, 0, bytesRead)
                                           sha256.update(buf, 0, bytesRead)
