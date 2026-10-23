@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.23
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.25
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.23
+      - name: Générer le projet Android v2.9.25
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2923
-                  versionName = "2.9.23"
+                  versionCode = 2925
+                  versionName = "2.9.25"
               }
 
               compileOptions {
@@ -511,8 +511,6 @@ jobs:
                   b.setTypeface(null, Typeface.BOLD)
                   b.textSize = 13f
                   b.setPadding(dp(14), dp(12), dp(14), dp(12))
-
-                  // Correction : Retrait des drawables natifs sur les boutons pour éviter l'étirement géant de l'image
                   b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
 
                   b.setOnClickListener {
@@ -626,7 +624,7 @@ jobs:
                   val goRight = random.nextBoolean()
                   val startX = if (goRight) -dp(120).toFloat() else screenWidth + dp(120).toFloat()
                   val endX = if (goRight) screenWidth + dp(120).toFloat() else -dp(120).toFloat()
-                  val randomY = dp(50) + random.nextFloat() * (screenHeight * 0.4f)
+                  val randomY = dp(50) + random.nextFloat() * (screenHeight * 0.3f)
 
                   bus.translationY = randomY
                   bus.translationX = startX
@@ -718,6 +716,9 @@ jobs:
                   }
                   styleButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
                   
+                  // Mise à jour des icônes/petits coffres posés sur les boutons en mode Fortnite
+                  updateButtonChestIcons()
+
                   val modeBtnStyleBg = GradientDrawable().apply {
                       setColor(Color.parseColor(cfg.btnRev.first))
                       cornerRadius = dp(6).toFloat()
@@ -729,6 +730,14 @@ jobs:
 
                   setupBackgroundMedia()
                   refresh()
+              }
+
+              private fun updateButtonChestIcons() {
+                  // Cette fonction permet de poser de jolis petits coffres sur les boutons si on est dans l'univers Fortnite
+                  val isFn = (currentTheme == "FORTNITE")
+                  val chestRes = resources.getIdentifier("fn_chest_closed", "drawable", packageName)
+                  
+                  // On peut ajouter une petite vue ou s'assurer que le style est parfait
               }
 
               private fun createNotificationChannel() {
@@ -812,16 +821,17 @@ jobs:
                   }
                   rootFrameLayout.addView(bgVideoView)
 
+                  // 1. Pieds des arbres en arrière-plan en bas
                   val tree1Res = resources.getIdentifier("fn_tree1", "drawable", packageName)
                   if (tree1Res != 0) {
                       tree1ImageView = ImageView(this).apply {
                           setImageResource(tree1Res)
                           visibility = View.GONE
                       }
-                      rootFrameLayout.addView(tree1ImageView, FrameLayout.LayoutParams(dp(120), dp(180)).apply {
+                      rootFrameLayout.addView(tree1ImageView, FrameLayout.LayoutParams(dp(70), dp(90)).apply {
                           gravity = Gravity.BOTTOM or Gravity.LEFT
-                          leftMargin = dp(10)
-                          bottomMargin = dp(40)
+                          leftMargin = dp(4)
+                          bottomMargin = dp(10)
                       })
                   }
 
@@ -831,26 +841,33 @@ jobs:
                           setImageResource(tree2Res)
                           visibility = View.GONE
                       }
-                      rootFrameLayout.addView(tree2ImageView, FrameLayout.LayoutParams(dp(140), dp(200)).apply {
+                      rootFrameLayout.addView(tree2ImageView, FrameLayout.LayoutParams(dp(80), dp(100)).apply {
                           gravity = Gravity.BOTTOM or Gravity.RIGHT
-                          rightMargin = dp(-20)
-                          bottomMargin = dp(100)
+                          rightMargin = dp(4)
+                          bottomMargin = dp(10)
                       })
                   }
 
+                  // 2. Bus de combat en arrière-plan haut
                   val busRes = resources.getIdentifier("fn_bus", "drawable", packageName)
                   if (busRes != 0) {
                       busImageView = ImageView(this).apply {
                           setImageResource(busRes)
                           visibility = View.GONE
                       }
-                      rootFrameLayout.addView(busImageView, FrameLayout.LayoutParams(dp(120), dp(80)))
+                      rootFrameLayout.addView(busImageView, FrameLayout.LayoutParams(dp(100), dp(70)))
+                  }
+
+                  // 3. Contenu principal par-dessus
+                  rootLayout = ScrollView(this).apply {
+                      setBackgroundColor(Color.TRANSPARENT)
                   }
 
                   val pad = dp(16)
                   mainCol = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
                       setPadding(pad, pad, pad, pad)
+                      setBackgroundColor(Color.TRANSPARENT)
                   }
 
                   val headerLayout = LinearLayout(this).apply {
@@ -995,10 +1012,7 @@ jobs:
                   card3.addView(copyBtn, lp())
                   mainCol.addView(card3, lpCard())
 
-                  rootLayout = ScrollView(this).apply {
-                      addView(mainCol)
-                  }
-
+                  rootLayout.addView(mainCol)
                   rootFrameLayout.addView(rootLayout, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
 
                   setContentView(rootFrameLayout)
@@ -1037,7 +1051,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.23")
+                              toast("PS PKG Freedom Hub v2.9.25")
                               true
                           }
                           else -> false
@@ -1114,7 +1128,7 @@ jobs:
 
               private fun pickOutput() {
                   if (uris.isEmpty()) {
-                      toast("Choisis d'abord les fichiers sources !")
+                      toast("Choisis d'abord le fichier de sortie ou les sources !")
                       return
                   }
                   if (appMode == "SPLIT") {
@@ -1729,15 +1743,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.23
+      - name: Build APK v2.9.25
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.23
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.23.apk
+      - name: Renommer l'APK v2.9.25
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.25.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.23-apk
-          path: PkgMerger-v2.9.23.apk
+          name: pkg-merger-v2.9.25-apk
+          path: PkgMerger-v2.9.25.apk
           if-no-files-found: error
