@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.27
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.28
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.27
+      - name: Générer le projet Android v2.9.28
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2927
-                  versionName = "2.9.27"
+                  versionCode = 2928
+                  versionName = "2.9.28"
               }
 
               compileOptions {
@@ -203,7 +203,6 @@ jobs:
           import android.graphics.BitmapFactory
           import android.graphics.Color
           import android.graphics.Typeface
-          import android.graphics.drawable.BitmapDrawable
           import android.graphics.drawable.GradientDrawable
           import android.media.MediaPlayer
           import android.net.Uri
@@ -220,7 +219,6 @@ jobs:
           import android.view.Gravity
           import android.view.MotionEvent
           import android.view.View
-          import android.view.ViewGroup
           import android.view.ViewGroup.LayoutParams.MATCH_PARENT
           import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
           import android.widget.Button
@@ -287,6 +285,7 @@ jobs:
 
               private var busImageView: ImageView? = null
               private val busHandler = Handler(Looper.getMainLooper())
+              private val animationHandler = Handler(Looper.getMainLooper())
               private val random = Random()
 
               private val NOTIF_ID_PROGRESS = 101
@@ -310,13 +309,15 @@ jobs:
               private lateinit var verifyBox: CheckBox
               private lateinit var deleteBox: CheckBox
               private lateinit var bar: ProgressBar
-              private lateinit var pickBtn: Button
-              private lateinit var dirBtn: Button
-              private lateinit var outBtn: Button
-              private lateinit var goBtn: Button
-              private lateinit var cancelBtn: Button
-              private lateinit var revBtn: Button
-              private lateinit var copyBtn: Button
+
+              private lateinit var pickBtnLayout: View
+              private lateinit var dirBtnLayout: View
+              private lateinit var outBtnLayout: View
+              private lateinit var goBtnLayout: View
+              private lateinit var cancelBtnLayout: View
+              private lateinit var revBtnLayout: View
+              private lateinit var copyBtnLayout: View
+
               private lateinit var menuBtn: Button
               private lateinit var titleView: TextView
               private lateinit var subtitleView: TextView
@@ -491,9 +492,32 @@ jobs:
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
               @SuppressLint("ClickableViewAccessibility")
-              private fun styleButton(b: Button, bgHex: String, borderHexStr: String, textHex: String = "#FFFFFF", onClickAction: () -> Unit) {
+              private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, treeSide: Int, onClickAction: () -> View?): View {
                   val cfg = getThemeConfig(currentTheme)
-                  
+                  val outerFrame = FrameLayout(this)
+
+                  // 1. Pieds des arbres attachés juste derrière le bouton si Fortnite
+                  if (currentTheme == "FORTNITE" && treeSide != 0) {
+                      val treeRes = resources.getIdentifier(if (treeSide == 1) "fn_tree1" else "fn_tree2", "drawable", packageName)
+                      if (treeRes != 0) {
+                          val treeIv = ImageView(this).apply {
+                              setImageResource(treeRes)
+                              scaleType = ImageView.ScaleType.FIT_CENTER
+                          }
+                          val treeLp = FrameLayout.LayoutParams(dp(42), dp(55), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
+                              if (treeSide == 1) leftMargin = -dp(10) else rightMargin = -dp(10)
+                          }
+                          outerFrame.addView(treeIv, treeLp)
+                      }
+                  }
+
+                  // 2. Corps principal du bouton
+                  val buttonContent = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.CENTER
+                      setPadding(dp(14), dp(12), dp(14), dp(12))
+                  }
+
                   val normalBg = GradientDrawable().apply {
                       setColor(Color.parseColor(bgHex))
                       cornerRadius = dp(6).toFloat()
@@ -505,55 +529,55 @@ jobs:
                       cornerRadius = dp(6).toFloat()
                       setStroke(dp(3), Color.WHITE)
                   }
+                  buttonContent.background = normalBg
 
-                  b.background = normalBg
-                  b.setTextColor(Color.parseColor(textHex))
-                  b.setTypeface(null, Typeface.BOLD)
-                  b.textSize = 13f
-                  b.setPadding(dp(14), dp(12), dp(14), dp(12))
+                  // 3. Image du Coffre posée sur le bouton (si Fortnite)
+                  var chestIv: ImageView? = null
+                  val closedRes = resources.getIdentifier("fn_chest_closed", "drawable", packageName)
+                  val openRes = resources.getIdentifier("fn_chest_open", "drawable", packageName)
 
-                  if (currentTheme == "FORTNITE") {
-                      val chestRes = resources.getIdentifier("fn_chest_closed", "drawable", packageName)
-                      if (chestRes != 0) {
-                          try {
-                              val bmp = BitmapFactory.decodeResource(resources, chestRes)
-                              if (bmp != null) {
-                                  val scaled = Bitmap.createScaledBitmap(bmp, dp(24), dp(24), true)
-                                  val drawable = BitmapDrawable(resources, scaled)
-                                  b.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
-                                  b.compoundDrawablePadding = dp(10)
-                              } else {
-                                  b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
-                              }
-                          } catch (_: Exception) {
-                              b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
-                          }
-                      } else {
-                          b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                  if (currentTheme == "FORTNITE" && closedRes != 0) {
+                      chestIv = ImageView(this).apply {
+                          setImageResource(closedRes)
+                          scaleType = ImageView.ScaleType.FIT_CENTER
                       }
-                  } else {
-                      b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                      val chestLp = LinearLayout.LayoutParams(dp(28), dp(28)).apply { rightMargin = dp(10) }
+                      buttonContent.addView(chestIv, chestLp)
                   }
 
-                  b.setOnClickListener {
+                  // 4. Texte du bouton
+                  val tv = TextView(this).apply {
+                      text = labelText
+                      setTextColor(Color.WHITE)
+                      textSize = 13f
+                      setTypeface(null, Typeface.BOLD)
+                  }
+                  buttonContent.addView(tv)
+
+                  // 5. Gestion dynamique du clic et de l'ouverture du coffre
+                  buttonContent.setOnClickListener {
                       val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                       vibrator?.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
-                      
+
                       if (currentTheme == "GOW") {
                           playClickSound("gow_click")
-                          onClickAction()
                       } else if (currentTheme == "FORTNITE") {
                           playClickSound("fn_chest_open")
-                          onClickAction()
-                      } else {
-                          onClickAction()
+                          if (chestIv != null && openRes != 0) {
+                              chestIv.setImageResource(openRes)
+                              animationHandler.removeCallbacksAndMessages(null)
+                              animationHandler.postDelayed({
+                                  try { chestIv.setImageResource(closedRes) } catch (_: Exception) {}
+                              }, 1200L) // Reste ouvert pendant 1.2s
+                          }
                       }
+                      onClickAction()
                   }
 
-                  b.setOnTouchListener { view, event ->
+                  buttonContent.setOnTouchListener { view, event ->
                       when (event.action) {
                           MotionEvent.ACTION_DOWN -> {
-                              view.animate().scaleX(0.95f).scaleY(0.95f).setDuration(60).start()
+                              view.animate().scaleX(0.96f).scaleY(0.96f).setDuration(60).start()
                               view.background = pressedBg
                           }
                           MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -563,6 +587,13 @@ jobs:
                       }
                       false
                   }
+
+                  val contentLp = FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
+                      leftMargin = dp(8)
+                      rightMargin = dp(8)
+                  }
+                  outerFrame.addView(buttonContent, contentLp)
+                  return outerFrame
               }
 
               private fun playClickSound(soundName: String) {
@@ -619,7 +650,7 @@ jobs:
 
               private fun startFortniteBusAnimation() {
                   stopFortniteBusAnimation()
-                  scheduleNextBusRun(1000L)
+                  scheduleNextBusRun(800L)
               }
 
               private fun stopFortniteBusAnimation() {
@@ -628,7 +659,7 @@ jobs:
               }
 
               private fun scheduleNextBusRun(initialDelay: Long = 0L) {
-                  val delay = if (initialDelay > 0) initialDelay else (6000L + random.nextInt(8000).toLong())
+                  val delay = if (initialDelay > 0) initialDelay else (5000L + random.nextInt(6000).toLong())
                   busHandler.postDelayed({
                       runFortniteBus()
                   }, delay)
@@ -640,9 +671,9 @@ jobs:
                   val screenHeight = resources.displayMetrics.heightPixels.toFloat()
 
                   val goRight = random.nextBoolean()
-                  val startX = if (goRight) -dp(120).toFloat() else screenWidth + dp(120).toFloat()
-                  val endX = if (goRight) screenWidth + dp(120).toFloat() else -dp(120).toFloat()
-                  val randomY = dp(40) + random.nextFloat() * (screenHeight * 0.25f)
+                  val startX = if (goRight) -dp(140).toFloat() else screenWidth + dp(140).toFloat()
+                  val endX = if (goRight) screenWidth + dp(140).toFloat() else -dp(140).toFloat()
+                  val randomY = dp(30) + random.nextFloat() * (screenHeight * 0.3f)
 
                   bus.translationY = randomY
                   bus.translationX = startX
@@ -660,7 +691,7 @@ jobs:
 
                   bus.animate()
                       .translationX(endX)
-                      .setDuration(4000)
+                      .setDuration(4200)
                       .withEndAction {
                           bus.visibility = View.GONE
                           scheduleNextBusRun()
@@ -724,16 +755,9 @@ jobs:
                       }
                   }
 
-                  styleButton(pickBtn, cfg.btnPick.first, cfg.btnPick.second) { pick() }
-                  styleButton(dirBtn, cfg.btnDir.first, cfg.btnDir.second) { pickFolder() }
-                  styleButton(revBtn, cfg.btnRev.first, cfg.btnRev.second) { reversed = !reversed; refresh() }
-                  styleButton(outBtn, cfg.btnOut.first, cfg.btnOut.second) { pickOutput() }
-                  styleButton(goBtn, cfg.btnGo.first, cfg.btnGo.second) { executeAction() }
-                  styleButton(cancelBtn, cfg.btnCancel.first, cfg.btnCancel.second) {
-                      if (processing) { cancelled = true; statusView.text = "Annulation..." }
-                  }
-                  styleButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
-                  
+                  // Reconstitution des boutons dynamiques avec coffres et arbres
+                  rebuildButtons()
+
                   val modeBtnStyleBg = GradientDrawable().apply {
                       setColor(Color.parseColor(cfg.btnRev.first))
                       cornerRadius = dp(6).toFloat()
@@ -745,6 +769,56 @@ jobs:
 
                   setupBackgroundMedia()
                   refresh()
+              }
+
+              private fun rebuildButtons() {
+                  val cfg = getThemeConfig(currentTheme)
+
+                  val parentCard1 = pickBtnLayout.parent as? LinearLayout
+                  val parentCard2 = outBtnLayout.parent as? LinearLayout
+                  val parentCard3 = copyBtnLayout.parent as? LinearLayout
+
+                  val idxPick = parentCard1?.indexOfChild(pickBtnLayout) ?: -1
+                  val idxDir = parentCard1?.indexOfChild(dirBtnLayout) ?: -1
+                  val idxRev = parentCard1?.indexOfChild(revBtnLayout) ?: -1
+                  val idxOut = parentCard2?.indexOfChild(outBtnLayout) ?: -1
+                  val idxGo = (goBtnLayout.parent as? LinearLayout)?.indexOfChild(goBtnLayout) ?: -1
+                  val idxCancel = (cancelBtnLayout.parent as? LinearLayout)?.indexOfChild(cancelBtnLayout) ?: -1
+                  val idxCopy = parentCard3?.indexOfChild(copyBtnLayout) ?: -1
+
+                  val actionContainer = goBtnLayout.parent as? LinearLayout
+
+                  pickBtnLayout = createCustomButton("CHOISIR LES FICHIERS", cfg.btnPick.first, cfg.btnPick.second, 1) { pick(); null }
+                  dirBtnLayout = createCustomButton("CHOISIR UN DOSSIER COMPLET", cfg.btnDir.first, cfg.btnDir.second, 2) { pickFolder(); null }
+                  revBtnLayout = createCustomButton("INVERSER L'ORDRE DES PARTIES", cfg.btnRev.first, cfg.btnRev.second, 1) { reversed = !reversed; refresh(); null }
+                  outBtnLayout = createCustomButton("DÉFINIR EMPLACEMENT DE SORTIE", cfg.btnOut.first, cfg.btnOut.second, 2) { pickOutput(); null }
+                  goBtnLayout = createCustomButton("▶️ LANCER LA FUSION", cfg.btnGo.first, cfg.btnGo.second, 0) { executeAction(); null }
+                  cancelBtnLayout = createCustomButton("❌ ANNULER", cfg.btnCancel.first, cfg.btnCancel.second, 0) {
+                      if (processing) { cancelled = true; statusView.text = "Annulation..." }
+                      null
+                  }
+                  copyBtnLayout = createCustomButton("📋 Copier le SHA-256", cfg.btnRev.first, cfg.btnRev.second, 1) { copyHash(); null }
+
+                  if (parentCard1 != null && idxPick != -1) {
+                      parentCard1.removeViewAt(idxPick); parentCard1.addView(pickBtnLayout, idxPick, lp())
+                      parentCard1.removeViewAt(idxDir); parentCard1.addView(dirBtnLayout, idxDir, lp())
+                      parentCard1.removeViewAt(idxRev); parentCard1.addView(revBtnLayout, idxRev, lp())
+                  }
+
+                  if (parentCard2 != null && idxOut != -1) {
+                      parentCard2.removeViewAt(idxOut); parentCard2.addView(outBtnLayout, idxOut, lp())
+                  }
+
+                  if (actionContainer != null && idxGo != -1) {
+                      actionContainer.removeViewAt(idxGo)
+                      actionContainer.addView(goBtnLayout, idxGo, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+                      actionContainer.removeViewAt(idxCancel)
+                      actionContainer.addView(cancelBtnLayout, idxCancel, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
+                  }
+
+                  if (parentCard3 != null && idxCopy != -1) {
+                      parentCard3.removeViewAt(idxCopy); parentCard3.addView(copyBtnLayout, idxCopy, lp())
+                  }
               }
 
               private fun createNotificationChannel() {
@@ -820,28 +894,6 @@ jobs:
                   } catch (_: Exception) {}
               }
 
-              private fun addButtonWithTree(card: LinearLayout, btn: Button, lp: LinearLayout.LayoutParams, isLeftTree: Boolean) {
-                  if (currentTheme == "FORTNITE") {
-                      val container = FrameLayout(this)
-                      val treeRes = resources.getIdentifier(if (isLeftTree) "fn_tree1" else "fn_tree2", "drawable", packageName)
-                      if (treeRes != 0) {
-                          val treeIv = ImageView(this).apply {
-                              setImageResource(treeRes)
-                              scaleType = ImageView.ScaleType.FIT_CENTER
-                          }
-                          // Le pied de l'arbre positionné juste derrière/sous le bouton et qui suit le mouvement
-                          val treeLp = FrameLayout.LayoutParams(dp(32), dp(44), Gravity.CENTER_VERTICAL or if (isLeftTree) Gravity.START else Gravity.END).apply {
-                              if (isLeftTree) leftMargin = dp(6) else rightMargin = dp(6)
-                          }
-                          container.addView(treeIv, treeLp)
-                      }
-                      container.addView(btn, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-                      card.addView(container, lp)
-                  } else {
-                      card.addView(btn, lp)
-                  }
-              }
-
               private fun showMergerScreen() {
                   rootFrameLayout = FrameLayout(this)
 
@@ -850,14 +902,14 @@ jobs:
                   }
                   rootFrameLayout.addView(bgVideoView)
 
-                  // Bus de combat en haut en arrière-plan
+                  // Bus de combat au tout premier plan en arrière-plan
                   val busRes = resources.getIdentifier("fn_bus", "drawable", packageName)
                   if (busRes != 0) {
                       busImageView = ImageView(this).apply {
                           setImageResource(busRes)
                           visibility = View.GONE
                       }
-                      rootFrameLayout.addView(busImageView, FrameLayout.LayoutParams(dp(90), dp(60)))
+                      rootFrameLayout.addView(busImageView, FrameLayout.LayoutParams(dp(110), dp(70)))
                   }
 
                   // Contenu principal (ScrollView)
@@ -902,18 +954,20 @@ jobs:
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
                   mainCol.addView(headerLayout)
 
+                  val cfg = getThemeConfig(currentTheme)
+
                   val card1 = createCard()
                   section1Title = text("1. SOURCE FILES (PKG / PARTS)", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(section1Title)
                   
-                  pickBtn = Button(this).apply { text = "📁 CHOISIR LES FICHIERS" }
-                  addButtonWithTree(card1, pickBtn, lp(), true)
+                  pickBtnLayout = createCustomButton("CHOISIR LES FICHIERS", cfg.btnPick.first, cfg.btnPick.second, 1) { pick(); null }
+                  card1.addView(pickBtnLayout, lp())
 
-                  dirBtn = Button(this).apply { text = "📂 CHOISIR UN DOSSIER COMPLET" }
-                  addButtonWithTree(card1, dirBtn, lp(), false)
+                  dirBtnLayout = createCustomButton("CHOISIR UN DOSSIER COMPLET", cfg.btnDir.first, cfg.btnDir.second, 2) { pickFolder(); null }
+                  card1.addView(dirBtnLayout, lp())
 
-                  revBtn = Button(this).apply { text = "🔀 INVERSER L'ORDRE DES PARTIES" }
-                  addButtonWithTree(card1, revBtn, lp(), true)
+                  revBtnLayout = createCustomButton("INVERSER L'ORDRE DES PARTIES", cfg.btnRev.first, cfg.btnRev.second, 1) { reversed = !reversed; refresh(); null }
+                  card1.addView(revBtnLayout, lp())
 
                   listContainer = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
@@ -944,8 +998,8 @@ jobs:
                   section2Title = text("2. OUTPUT & PROCESSING", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card2.addView(section2Title)
 
-                  outBtn = Button(this).apply { text = "💾 DÉFINIR EMPLACEMENT DE SORTIE" }
-                  addButtonWithTree(card2, outBtn, lp(), false)
+                  outBtnLayout = createCustomButton("DÉFINIR EMPLACEMENT DE SORTIE", cfg.btnOut.first, cfg.btnOut.second, 2) { pickOutput(); null }
+                  card2.addView(outBtnLayout, lp())
 
                   outView = text("Sortie : —", 11f, Color.GRAY).apply { 
                       typeface = Typeface.MONOSPACE
@@ -956,14 +1010,14 @@ jobs:
                   val actionLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
                   }
-                  goBtn = Button(this).apply { text = "▶️ LANCER LA FUSION" }
-                  actionLayout.addView(goBtn, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+                  goBtnLayout = createCustomButton("▶️ LANCER LA FUSION", cfg.btnGo.first, cfg.btnGo.second, 0) { executeAction(); null }
+                  actionLayout.addView(goBtnLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
-                  cancelBtn = Button(this).apply {
-                      text = "❌ ANNULER"
-                      isEnabled = false
+                  cancelBtnLayout = createCustomButton("❌ ANNULER", cfg.btnCancel.first, cfg.btnCancel.second, 0) {
+                      if (processing) { cancelled = true; statusView.text = "Annulation..." }
+                      null
                   }
-                  actionLayout.addView(cancelBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
+                  actionLayout.addView(cancelBtnLayout, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
                   card2.addView(actionLayout, lp())
 
                   bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
@@ -1007,11 +1061,8 @@ jobs:
                   hashView = text("", 11f, Color.CYAN).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(hashView, lp())
 
-                  copyBtn = Button(this).apply {
-                      text = "📋 Copier le SHA-256"
-                      isEnabled = false
-                  }
-                  addButtonWithTree(card3, copyBtn, lp(), true)
+                  copyBtnLayout = createCustomButton("📋 Copier le SHA-256", cfg.btnRev.first, cfg.btnRev.second, 1) { copyHash(); null }
+                  card3.addView(copyBtnLayout, lp())
                   mainCol.addView(card3, lpCard())
 
                   rootLayout.addView(mainCol)
@@ -1036,16 +1087,15 @@ jobs:
                               if (appMode == "SPLIT") {
                                   titleView.text = "⚡ PKG SPLITTER"
                                   section1Title.text = "1. FICHIER SOURCE UNIQUE (.PKG)"
-                                  goBtn.text = "▶️ DÉCOUPER"
                                   statusView.text = "Prêt à découper."
                               } else {
                                   titleView.text = "⚡ PS PKG FREEDOM HUB"
                                   section1Title.text = "1. SOURCE FILES (PKG / PARTS)"
-                                  goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
                               }
                               output = null
                               outView.text = "Sortie : —"
+                              rebuildButtons()
                               true
                           }
                           2 -> {
@@ -1053,7 +1103,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.27")
+                              toast("PS PKG Freedom Hub v2.9.28")
                               true
                           }
                           else -> false
@@ -1444,8 +1494,8 @@ jobs:
 
                   processing = true
                   cancelled = false
-                  goBtn.isEnabled = false
-                  cancelBtn.isEnabled = true
+                  goBtnLayout.isEnabled = false
+                  cancelBtnLayout.isEnabled = true
                   bar.progress = 0
                   statusView.text = "Découpage ${info.console} en cours…"
 
@@ -1547,7 +1597,7 @@ jobs:
                       ui.post {
                           bar.progress = 1000
                           lastHash = h256
-                          copyBtn.isEnabled = h256 != null
+                          copyBtnLayout.isEnabled = h256 != null
                           if (h256 != null) {
                               hashView.text = "SHA-256 : $h256"
                           }
@@ -1573,8 +1623,8 @@ jobs:
 
                   processing = true
                   cancelled = false
-                  goBtn.isEnabled = false
-                  cancelBtn.isEnabled = true
+                  goBtnLayout.isEnabled = false
+                  cancelBtnLayout.isEnabled = true
                   bar.progress = 0
                   statusView.text = "Fusion ${info.console} en cours…"
 
@@ -1668,7 +1718,7 @@ jobs:
                       ui.post {
                           bar.progress = 1000
                           lastHash = h256
-                          copyBtn.isEnabled = true
+                          copyBtnLayout.isEnabled = true
                           hashView.text = "SHA-256 : $h256"
                           statusView.text = "Terminé avec succès en ${secs}s"
                           showResultNotif("PS PKG Manager", "Fusion réussie en ${secs}s !")
@@ -1679,10 +1729,8 @@ jobs:
               }
 
               private fun doneUi() {
-                  if (::goBtn.isInitialized) {
-                      goBtn.isEnabled = true
-                      cancelBtn.isEnabled = false
-                  }
+                  goBtnLayout.isEnabled = true
+                  cancelBtnLayout.isEnabled = false
               }
 
               private fun copyHash() {
@@ -1745,15 +1793,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.27
+      - name: Build APK v2.9.28
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.27
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.27.apk
+      - name: Renommer l'APK v2.9.28
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.28.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.27-apk
-          path: PkgMerger-v2.9.27.apk
+          name: pkg-merger-v2.9.28-apk
+          path: PkgMerger-v2.9.28.apk
           if-no-files-found: error
