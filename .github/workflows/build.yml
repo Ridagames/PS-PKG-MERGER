@@ -31,8 +31,11 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources v2.9.21
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.22
         run: |
+          echo "Nettoyage des fichiers obsolètes ou parasites..."
+          rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
+
           echo "Nettoyage et correction des extensions de fichiers..."
           for dir in app/src/main/res/drawable app/src/main/res/raw; do
             if [ -d "$dir" ]; then
@@ -53,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.21
+      - name: Générer le projet Android v2.9.22
         env:
           FORCE: '1'
         run: |
@@ -117,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2921
-                  versionName = "2.9.21"
+                  versionCode = 2922
+                  versionName = "2.9.22"
               }
 
               compileOptions {
@@ -1045,7 +1048,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.21")
+                              toast("PS PKG Freedom Hub v2.9.22")
                               true
                           }
                           else -> false
@@ -1584,7 +1587,7 @@ jobs:
                           try {
                               val os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
                               val buf = ByteArray(1 shl 20)
-                              var bytesRead = 0 // Initialisation correcte pour Kotlin
+                              var bytesRead = 0
                               for (u in list) {
                                   if (cancelled) throw InterruptedException("Annulé.")
                                   contentResolver.openInputStream(u)?.use { input ->
@@ -1737,15 +1740,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.21
+      - name: Build APK v2.9.22
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.21
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.21.apk
+      - name: Renommer l'APK v2.9.22
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.22.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.21-apk
-          path: PkgMerger-v2.9.21.apk
+          name: pkg-merger-v2.9.22-apk
+          path: PkgMerger-v2.9.22.apk
           if-no-files-found: error
