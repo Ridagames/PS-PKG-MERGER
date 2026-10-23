@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.9.12 Vertical Aspect Ratio
+      - name: Générer le projet Android v2.9.13 Vertical Center Crop
         env:
           FORCE: '1'
         run: |
@@ -97,8 +97,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2912
-                  versionName = "2.9.12"
+                  versionCode = 2913
+                  versionName = "2.9.13"
               }
 
               compileOptions {
@@ -231,7 +231,7 @@ jobs:
                   val height = getDefaultSize(videoHeight, heightMeasureSpec)
                   
                   if (videoWidth > 0 && videoHeight > 0) {
-                      if (videoWidth * height > width * videoHeight) {
+                      if (videoWidth * height < width * videoHeight) {
                           setMeasuredDimension(width, width * videoHeight / videoWidth)
                       } else {
                           setMeasuredDimension(height * videoWidth / videoHeight, height)
@@ -252,7 +252,7 @@ jobs:
               private var reversed = false
               private var lastHash: String? = null
               private var appMode = "MERGE"
-              private var currentTheme = "FORTNITE"
+              private var currentTheme = "GOW"
 
               private var bgVideoView: AspectRatioVideoView? = null
               private var musicPlayer: MediaPlayer? = null
@@ -434,7 +434,7 @@ jobs:
               override fun onCreate(state: Bundle?) {
                   super.onCreate(state)
                   prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
-                  currentTheme = prefs.getString("theme", "FORTNITE") ?: "FORTNITE"
+                  currentTheme = prefs.getString("theme", "GOW") ?: "GOW"
                   
                   createNotificationChannel()
                   checkPermissions()
@@ -681,7 +681,7 @@ jobs:
                   rootFrameLayout = FrameLayout(this)
 
                   bgVideoView = AspectRatioVideoView(this).apply {
-                      layoutParams = FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER)
+                      layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT, Gravity.CENTER)
                   }
                   rootFrameLayout.addView(bgVideoView)
 
@@ -875,7 +875,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.12")
+                              toast("PS PKG Freedom Hub v2.9.13")
                               true
                           }
                           else -> false
@@ -1570,12 +1570,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.12
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.12.apk
+      - name: Renommer l'APK v2.9.13
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.13.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.12-apk
-          path: PkgMerger-v2.9.12.apk
+          name: pkg-merger-v2.9.13-apk
+          path: PkgMerger-v2.9.13.apk
           if-no-files-found: error
