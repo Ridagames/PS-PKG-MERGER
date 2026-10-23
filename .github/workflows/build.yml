@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.37
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.39
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.37
+      - name: Générer le projet Android v2.9.39
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2937
-                  versionName = "2.9.37"
+                  versionCode = 2939
+                  versionName = "2.9.39"
               }
 
               compileOptions {
@@ -503,8 +503,8 @@ jobs:
                               setImageResource(treeRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val treeLp = FrameLayout.LayoutParams(dp(80), dp(110), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
-                              if (treeSide == 1) leftMargin = -dp(18) else rightMargin = -dp(18)
+                          val treeLp = FrameLayout.LayoutParams(dp(75), dp(100), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
+                              if (treeSide == 1) leftMargin = -dp(12) else rightMargin = -dp(12)
                           }
                           outerFrame.addView(treeIv, treeLp)
                       }
@@ -554,7 +554,7 @@ jobs:
                               setImageResource(closedRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val chestLp = FrameLayout.LayoutParams(dp(38), dp(38), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
+                          val chestLp = FrameLayout.LayoutParams(dp(36), dp(36), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
                               topMargin = dp(0)
                           }
                           outerFrame.addView(chestIv, chestLp)
@@ -662,7 +662,7 @@ jobs:
 
               private fun startFortniteBusAnimation() {
                   stopFortniteBusAnimation()
-                  scheduleNextBusRun(100)
+                  scheduleNextBusRun(300)
               }
 
               private fun stopFortniteBusAnimation() {
@@ -671,7 +671,7 @@ jobs:
               }
 
               private fun scheduleNextBusRun(initialDelay: Long = 0) {
-                  val delay = if (initialDelay > 0) initialDelay else (3500 + random.nextInt(4000)).toLong()
+                  val delay = if (initialDelay > 0) initialDelay else (2000 + random.nextInt(2500)).toLong()
                   busHandler.postDelayed({
                       runFortniteBus()
                   }, delay)
@@ -685,7 +685,7 @@ jobs:
                   val goRight = random.nextBoolean()
                   val startX = if (goRight) -dp(180).toFloat() else screenWidth + dp(180).toFloat()
                   val endX = if (goRight) screenWidth + dp(180).toFloat() else -dp(180).toFloat()
-                  val randomY = dp(25) + random.nextFloat() * (screenHeight * 0.25f)
+                  val randomY = dp(30) + random.nextFloat() * (screenHeight * 0.45f)
 
                   bus.translationY = randomY
                   bus.translationX = startX
@@ -1111,7 +1111,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.37")
+                              toast("PS PKG Freedom Hub v2.9.39")
                               true
                           }
                           else -> false
@@ -1801,15 +1801,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.37
+      - name: Build APK v2.9.39
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.37
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.37.apk
+      - name: Renommer l'APK v2.9.39
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.39.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.37-apk
-          path: PkgMerger-v2.9.37.apk
+          name: pkg-merger-v2.9.39-apk
+          path: PkgMerger-v2.9.39.apk
           if-no-files-found: error
