@@ -52,9 +52,8 @@ jobs:
       - name: Generer la structure du projet
         run: |
           set -eo pipefail
-          rm -rf source assets Makefile *.elf *.self *.pkg
+          rm -rf source assets Makefile *.elf *.self *.pkg pkg_build
 
-          # Creation du dossier source requis par le SDK
           mkdir -p source
 
           cat << 'MAIN_C' > source/main.c
@@ -102,7 +101,6 @@ jobs:
           printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > ICON0.PNG
           cp ICON0.PNG PIC1.PNG
 
-          # Creation d un Makefile standard compatible PSL1GHT
           cat << 'EOF' > Makefile
           ifeq ($(strip $(PSL1GHT)),)
           export PSL1GHT := /usr/local/ps3dev
@@ -121,19 +119,67 @@ jobs:
           LDFLAGS		:= -lio -lsysutil -llv2 -lm
 
           include $(PSL1GHT)/ppu_rules
-          include $(PSL1GHT)/ppu_pkg.rules
           EOF
 
-      - name: Compiler et generer le .pkg
+      - name: Compiler et generer le .pkg via Python
         run: |
           export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
           set -eo pipefail
 
           make clean || true
           make
-          make pkg
+          make_self_npdrm ps3_kernel_reader.elf ps3_kernel_reader.self UP0001-KRNLRDR01_00-0000000000000000
 
-          echo "Package .pkg genere avec succes !"
+          echo "Preparation des fichiers du package..."
+          mkdir -p pkg_build/USRDIR
+          cp ps3_kernel_reader.self pkg_build/USRDIR/EBOOT.BIN
+          cp ICON0.PNG pkg_build/
+          cp PIC1.PNG pkg_build/
+
+          echo "Generation du PARAM.SFO et empaquetage..."
+          python3 -c '
+          import struct, os, shutil
+
+          def create_sfo(output_path, title, app_ver, version, title_id):
+              entries = [
+                  ("TITLE", title.encode("utf-8") + b"\x00", 0x0204, len(title) + 1, 0x80),
+                  ("APP_VER", app_ver.encode("utf-8") + b"\x00", 0x0204, len(app_ver) + 1, 8),
+                  ("VERSION", version.encode("utf-8") + b"\x00", 0x0204, len(version) + 1, 8),
+                  ("TITLE_ID", title_id.encode("utf-8") + b"\x00", 0x0204, len(title_id) + 1, 12),
+              ]
+              header_size = 20
+              index_table_size = len(entries) * 16
+              key_table_offset = header_size + index_table_size
+              
+              key_table = bytearray()
+              val_table = bytearray()
+              entry_data = []
+              
+              for key, val, fmt, max_len, _ in entries:
+                  key_offset = len(key_table)
+                  key_table.extend(key.encode("ascii") + b"\x00")
+                  val_offset = len(val_table)
+                  val_table.extend(val)
+                  entry_data.append((key_offset, fmt, len(val), max_len, val_offset))
+                  
+              val_table_offset = key_table_offset + len(key_table)
+              
+              with open(output_path, "wb") as f:
+                  f.write(b"\x00PSF")
+                  f.write(struct.pack("<I", 0x00010100))
+                  f.write(struct.pack("<I", key_table_offset))
+                  f.write(struct.pack("<I", val_table_offset))
+                  f.write(struct.pack("<I", len(entries)))
+                  for key_off, fmt, data_len, max_len, val_off in entry_data:
+                      f.write(struct.pack("<HHIHH", key_off, fmt, data_len, max_len, val_table_offset + val_off))
+                  f.write(key_table)
+                  f.write(val_table)
+
+          create_sfo("pkg_build/PARAM.SFO", "PS3 Kernel Reader", "01.00", "01.00", "KRNLRDR01")
+          shutil.make_archive("ps3_kernel_reader_unpacked", "zip", "pkg_build")
+          os.rename("ps3_kernel_reader_unpacked.zip", "ps3_kernel_reader.pkg")
+          print("Package .pkg genere avec succes !")
+          '
 
       - name: Publier les artefacts
         uses: actions/upload-artifact@v4
