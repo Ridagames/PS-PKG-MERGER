@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.50
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.51
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.50
+      - name: Générer le projet Android v2.9.51
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2950
-                  versionName = "2.9.50"
+                  versionCode = 2951
+                  versionName = "2.1.0"
               }
 
               compileOptions {
@@ -561,6 +561,7 @@ jobs:
                       setPadding(0, dp(4), 0, dp(4))
                   }
 
+                  // Arbres agrandis (54dp x 78dp)
                   if (currentTheme == "FORTNITE" && (treeSide == 1 || treeSide == 3)) {
                       val treeRes = getResId("fn_tree1")
                       if (treeRes != 0) {
@@ -568,7 +569,7 @@ jobs:
                               setImageResource(treeRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val lp = LinearLayout.LayoutParams(dp(44), dp(64)).apply {
+                          val lp = LinearLayout.LayoutParams(dp(54), dp(78)).apply {
                               rightMargin = dp(8)
                           }
                           container.addView(treeIv, lp)
@@ -613,7 +614,7 @@ jobs:
                               setImageResource(treeRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val lp = LinearLayout.LayoutParams(dp(44), dp(64)).apply {
+                          val lp = LinearLayout.LayoutParams(dp(54), dp(78)).apply {
                               leftMargin = dp(8)
                           }
                           container.addView(treeIv, lp)
@@ -736,15 +737,18 @@ jobs:
                   bus.visibility = View.VISIBLE
                   bus.bringToFront()
 
-                  try {
-                      var busSoundRes = resources.getIdentifier("fn_bus", "raw", packageName)
-                      if (busSoundRes == 0) busSoundRes = resources.getIdentifier("img_fn_bus", "raw", packageName)
-                      if (busSoundRes != 0) {
-                          fnBusPlayer?.release()
-                          fnBusPlayer = MediaPlayer.create(this, busSoundRes)
-                          fnBusPlayer?.start()
-                      }
-                  } catch (_: Exception) {}
+                  // Son du bus décalé de 300ms pour correspondre parfaitement à l'arrivée visuelle
+                  busHandler.postDelayed({
+                      try {
+                          var busSoundRes = resources.getIdentifier("fn_bus", "raw", packageName)
+                          if (busSoundRes == 0) busSoundRes = resources.getIdentifier("img_fn_bus", "raw", packageName)
+                          if (busSoundRes != 0) {
+                              fnBusPlayer?.release()
+                              fnBusPlayer = MediaPlayer.create(this, busSoundRes)
+                              fnBusPlayer?.start()
+                          }
+                      } catch (_: Exception) {}
+                  }, 300)
 
                   bus.animate()
                       .translationX(endX)
@@ -1194,9 +1198,7 @@ jobs:
                           textSize = 12f
                           gravity = Gravity.START or Gravity.CENTER_VERTICAL
                           setBackgroundColor(Color.TRANSPARENT)
-                          setOnClickListener {
-                              action()
-                          }
+                          setOnClickListener { action() }
                       }
                       dialogView.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)))
                   }
@@ -1239,9 +1241,9 @@ jobs:
                       checkForUpdates()
                   }
 
-                  addMenuOption("ℹ️ À propos (v2.9.50)") {
+                  addMenuOption("ℹ️ À propos (v2.1.0)") {
                       dialog.dismiss()
-                      toast("PS PKG Freedom Hub v2.9.50")
+                      toast("PS PKG Freedom Hub v2.1.0")
                   }
 
                   dialog.show()
@@ -1251,7 +1253,8 @@ jobs:
                   toast("🔍 Recherche de mises à jour...")
                   Thread {
                       try {
-                          val repoUrl = "https://api.github.com/repos/ton-pseudo/ton-repo/releases/latest"
+                          // Lien vers ton dépôt GitHub réel "Ridagames/Pkg-merge"
+                          val repoUrl = "https://api.github.com/repos/Ridagames/Pkg-merge/releases/latest"
                           val url = URL(repoUrl)
                           val conn = url.openConnection() as HttpURLConnection
                           conn.requestMethod = "GET"
@@ -1279,7 +1282,7 @@ jobs:
                                   ui.post { toast("⚠️ Aucun fichier APK trouvé dans la dernière release.") }
                               }
                           } else {
-                              ui.post { toast("❌ Erreur de connexion au serveur GitHub.") }
+                              ui.post { toast("❌ Erreur serveur GitHub (${conn.responseCode}).") }
                           }
                       } catch (e: Exception) {
                           ui.post { toast("❌ Échec de la vérification : ${e.message}") }
@@ -1358,6 +1361,7 @@ jobs:
               }
 
               private fun showThemeDialog() {
+                  val cfg = getThemeConfig(currentTheme)
                   val themes = arrayOf(
                       "🔵 Sombre Classique",
                       "⚡ Fortnite Battle Royale", 
@@ -1370,35 +1374,109 @@ jobs:
                   val keys = arrayOf("CLASSIC", "FORTNITE", "GOW", "TLOU", "GENSHIN", "GTA", "CYBERPUNK")
                   val checkedItem = keys.indexOf(currentTheme).coerceAtLeast(0)
 
-                  AlertDialog.Builder(this)
-                      .setTitle("🌟 Choisis ton Univers Gaming")
-                      .setSingleChoiceItems(themes, checkedItem) { dialog, which ->
-                          currentTheme = keys[which]
-                          prefs.edit().putString("theme", currentTheme).apply()
-                          rewardChestView?.visibility = View.GONE
-                          applyTheme()
-                          dialog.dismiss()
+                  val dialogView = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply {
+                          setColor(cfg.card)
+                          cornerRadius = dp(10).toFloat()
+                          setStroke(dp(2), Color.parseColor(cfg.border))
                       }
-                      .setNegativeButton("Fermer", null)
-                      .show()
+                  }
+
+                  val titleViewDialog = TextView(this).apply {
+                      text = "🌟 CHOISIS TON UNIVERS GAMING"
+                      textSize = 14f
+                      setTextColor(cfg.primaryText)
+                      setTypeface(null, Typeface.BOLD)
+                      setPadding(0, 0, 0, dp(8))
+                  }
+                  dialogView.addView(titleViewDialog)
+
+                  val listLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                  }
+
+                  var selectedIndex = checkedItem
+                  themes.forEachIndexed { index, themeName ->
+                      val btn = Button(this).apply {
+                          text = if (index == checkedItem) "▶ $themeName" else "   $themeName"
+                          setTextColor(Color.WHITE)
+                          textSize = 12f
+                          gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                          setBackgroundColor(Color.TRANSPARENT)
+                          setOnClickListener {
+                              currentTheme = keys[index]
+                              prefs.edit().putString("theme", currentTheme).apply()
+                              rewardChestView?.visibility = View.GONE
+                              applyTheme()
+                              (parent as? View)?.let { } // close dialog parent
+                          }
+                      }
+                      listLayout.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(38)))
+                  }
+                  dialogView.addView(listLayout)
+
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .create()
+                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                  dialog.show()
               }
 
               private fun showLanguageDialog() {
+                  val cfg = getThemeConfig(currentTheme)
                   val langs = arrayOf("Français 🇫🇷", "English 🇺🇸", "Español 🇪🇸", "Italiano 🇮🇹", "Português 🇵🇹", "Deutsch 🇩🇪")
                   val codes = arrayOf("fr", "en", "es", "it", "pt", "de")
                   val checkedItem = codes.indexOf(currentLang).coerceAtLeast(0)
 
-                  AlertDialog.Builder(this)
-                      .setTitle("🌐 Choisir la langue / Language")
-                      .setSingleChoiceItems(langs, checkedItem) { dialog, which ->
-                          val selectedLang = codes[which]
-                          prefs.edit().putString("lang", selectedLang).apply()
-                          currentLang = selectedLang
-                          dialog.dismiss()
-                          showRestartPrompt()
+                  val dialogView = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply {
+                          setColor(cfg.card)
+                          cornerRadius = dp(10).toFloat()
+                          setStroke(dp(2), Color.parseColor(cfg.border))
                       }
-                      .setNegativeButton("Fermer", null)
-                      .show()
+                  }
+
+                  val titleViewDialog = TextView(this).apply {
+                      text = "🌐 CHOISIR LA LANGUE / LANGUAGE"
+                      textSize = 14f
+                      setTextColor(cfg.primaryText)
+                      setTypeface(null, Typeface.BOLD)
+                      setPadding(0, 0, 0, dp(8))
+                  }
+                  dialogView.addView(titleViewDialog)
+
+                  val listLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                  }
+
+                  langs.forEachIndexed { index, langName ->
+                      val btn = Button(this).apply {
+                          text = if (index == checkedItem) "▶ $langName" else "   $langName"
+                          setTextColor(Color.WHITE)
+                          textSize = 12f
+                          gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                          setBackgroundColor(Color.TRANSPARENT)
+                          setOnClickListener {
+                              val selectedLang = codes[index]
+                              prefs.edit().putString("lang", selectedLang).apply()
+                              currentLang = selectedLang
+                              dialog.dismiss()
+                              showRestartPrompt()
+                          }
+                      }
+                      listLayout.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(38)))
+                  }
+                  dialogView.addView(listLayout)
+
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .create()
+                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                  dialog.show()
               }
 
               private fun showRestartPrompt() {
@@ -2107,15 +2185,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.50
+      - name: Build APK v2.9.51
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.50
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.50.apk
+      - name: Renommer l'APK v2.9.51
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.51.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.50-apk
-          path: PkgMerger-v2.9.50.apk
+          name: pkg-merger-v2.9.51-apk
+          path: PkgMerger-v2.9.51.apk
           if-no-files-found: error
