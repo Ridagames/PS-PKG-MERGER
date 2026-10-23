@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.6.0 Ultimate Gaming Hub
+      - name: Générer le projet Android v2.7.0 Live Gaming FX Hub
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 260
-                  versionName = "2.6.0"
+                  versionCode = 270
+                  versionName = "2.7.0"
               }
 
               compileOptions {
@@ -140,7 +140,7 @@ jobs:
               <uses-permission android:name="android.permission.WAKE_LOCK" />
 
               <application
-                  android:label="PS PKG Ultimate Hub"
+                  android:label="PS PKG Live FX Hub"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -149,7 +149,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Ultimate Hub">
+                      android:label="PS PKG Live FX Hub">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -163,6 +163,7 @@ jobs:
           package com.venice.pkgmerger
 
           import android.Manifest
+          import android.animation.ValueAnimator
           import android.annotation.SuppressLint
           import android.app.Activity
           import android.app.AlertDialog
@@ -176,7 +177,9 @@ jobs:
           import android.content.pm.PackageManager
           import android.graphics.Bitmap
           import android.graphics.BitmapFactory
+          import android.graphics.Canvas
           import android.graphics.Color
+          import android.graphics.Paint
           import android.graphics.Typeface
           import android.graphics.drawable.GradientDrawable
           import android.net.Uri
@@ -208,6 +211,7 @@ jobs:
           import java.io.OutputStream
           import java.security.MessageDigest
           import java.util.Locale
+          import kotlin.math.sin
 
           class MainActivity : Activity() {
 
@@ -248,7 +252,7 @@ jobs:
               private lateinit var menuBtn: Button
               private lateinit var titleView: TextView
               private lateinit var subtitleView: TextView
-              private lateinit var bannerView: TextView
+              private lateinit var animationBarView: GameAnimationView
               private lateinit var section1Title: TextView
               private lateinit var section2Title: TextView
               private lateinit var section3Title: TextView
@@ -256,6 +260,113 @@ jobs:
               private lateinit var infoLayout: LinearLayout
 
               private val cardViews = ArrayList<LinearLayout>()
+
+              // Vue personnalisée pour animer le Bus de Fortnite ou les Orbes God of War en arrière-plan
+              inner class GameAnimationView(context: Context) : View(context) {
+                  private var animProgress = 0f
+                  private val paint = Paint().apply { isAntiAlias = true }
+                  private val animator = ValueAnimator.ofFloat(0f, 1f).apply {
+                      duration = 4000
+                      repeatCount = ValueAnimator.INFINITE
+                      addUpdateListener {
+                          animProgress = it.animatedValue as Float
+                          invalidate()
+                      }
+                  }
+
+                  init {
+                      animator.start()
+                  }
+
+                  override fun onDraw(canvas: Canvas) {
+                      super.onDraw(canvas)
+                      val w = width.toFloat()
+                      val h = height.toFloat()
+                      if (w <= 0 || h <= 0) return
+
+                      when (currentTheme) {
+                          "FORTNITE" -> {
+                              // Dessin animé du Battle Bus traversant l'écran horizontalement
+                              val busX = -150f + (w + 300f) * animProgress
+                              val busY = h / 2f
+
+                              // Route / Traînée du bus
+                              paint.color = Color.parseColor("#3300D9FF")
+                              paint.strokeWidth = 4f
+                              canvas.drawLine(0f, busY + 15f, w, busY + 15f, paint)
+
+                              // Corps du Bus Bleu
+                              paint.color = Color.parseColor("#00D9FF")
+                              canvas.drawRect(busX, busY - 15f, busX + 90f, busY + 15f, paint)
+                              // Fenêtres du bus
+                              paint.color = Color.parseColor("#FFE600")
+                              canvas.drawRect(busX + 15f, busY - 10f, busX + 35f, busY + 2f, paint)
+                              canvas.drawRect(busX + 45f, busY - 10f, busX + 75f, busY + 2f, paint)
+                              // Ballon du bus au-dessus
+                              paint.color = Color.parseColor("#B800FF")
+                              canvas.drawCircle(busX + 45f, busY - 35f, 18f, paint)
+                              paint.color = Color.WHITE
+                              paint.textSize = 24f
+                              canvas.drawText("🚌 BATTLE BUS", w - 220f, h / 2f + 8f, paint)
+                          }
+                          "GOW" -> {
+                              // Animation des Orbes Rouges de Rage qui flottent et pulsent
+                              for (i in 0..4) {
+                                  val cx = (w / 6f) * (i + 1) + sin(animProgress * 6.28f + i) * 20f
+                                  val cy = h / 2f + ((i % 2) * 20f - 10f)
+                                  val radius = 12f + 4f * sin(animProgress * 12.56f + i)
+
+                                  paint.color = Color.parseColor("#FF0000")
+                                  canvas.drawCircle(cx, cy, radius, paint)
+                                  paint.color = Color.parseColor("#FFD700")
+                                  canvas.drawCircle(cx, cy, radius * 0.4f, paint)
+                              }
+                              paint.color = Color.parseColor("#FF4500")
+                              paint.textSize = 24f
+                              paint.typeface = Typeface.DEFAULT_BOLD
+                              canvas.drawText("🪓 SPARTAN RAGE ACTIVE", 20f, h / 2f + 8f, paint)
+                          }
+                          "TLOU" -> {
+                              // Particules de spores vertes flottantes
+                              for (i in 0..6) {
+                                  val sx = (w / 7f) * (i + 1) + sin(animProgress * 6.28f + i) * 15f
+                                  val sy = h / 2f + cos(animProgress * 6.28f + i) * 12f
+                                  paint.color = Color.parseColor("#7FA98B")
+                                  canvas.drawCircle(sx, sy, 6f, paint)
+                              }
+                              paint.color = Color.parseColor("#D4A359")
+                              paint.textSize = 24f
+                              canvas.drawText("🌿 SPORES DETECTED", 20f, h / 2f + 8f, paint)
+                          }
+                          "GENSHIN" -> {
+                              // Étoiles scintillantes Teyvat
+                              paint.color = Color.parseColor("#4CC9F0")
+                              val starX = w * animProgress
+                              val starY = h / 2f + sin(animProgress * 12f) * 15f
+                              canvas.drawCircle(starX, starY, 10f, paint)
+                              paint.color = Color.parseColor("#F72585")
+                              paint.textSize = 24f
+                              canvas.drawText("✨ TEYVAT STELLAR FX", 20f, h / 2f + 8f, paint)
+                          }
+                          "GTA" -> {
+                              // Ligne néon Los Santos
+                              paint.color = Color.parseColor("#00FF66")
+                              paint.strokeWidth = 6f
+                              val lineX = w * animProgress
+                              canvas.drawLine(lineX - 100f, h / 2f, lineX + 100f, h / 2f, paint)
+                              paint.color = Color.parseColor("#FF007F")
+                              paint.textSize = 24f
+                              canvas.drawText("🚗 VINEWOOD CASH FLOW", 20f, h / 2f + 8f, paint)
+                          }
+                          else -> {
+                              // Thème Classique / Cyberpunk sobre
+                              paint.color = Color.parseColor("#38BDF8")
+                              paint.textSize = 24f
+                              canvas.drawText("⚡ SYSTEM ONLINE", 20f, h / 2f + 8f, paint)
+                          }
+                      }
+                  }
+              }
 
               private data class ThemeConfig(
                   val name: String,
@@ -265,9 +376,6 @@ jobs:
                   val primaryText: Int,
                   val secondaryText: Int,
                   val dim: Int,
-                  val bannerText: String,
-                  val bannerBg: Int,
-                  val bannerBorder: String,
                   val pressColor: String,
                   val btnPick: Pair<String, String>,
                   val btnDir: Pair<String, String>,
@@ -287,9 +395,6 @@ jobs:
                           primaryText = Color.parseColor("#FFE600"),
                           secondaryText = Color.parseColor("#00D9FF"),
                           dim = Color.parseColor("#8A99D1"),
-                          bannerText = "🚌 [BATTLE BUS] Destination : Tilted Towers — V-Bucks Ready 💎",
-                          bannerBg = Color.parseColor("#1A2559"),
-                          bannerBorder = "#FFE600",
                           pressColor = "#FFE600",
                           btnPick = Pair("#1E2D6E", "#00D9FF"),
                           btnDir = Pair("#1E2D6E", "#00D9FF"),
@@ -306,9 +411,6 @@ jobs:
                           primaryText = Color.parseColor("#FFD700"),
                           secondaryText = Color.parseColor("#FF4500"),
                           dim = Color.parseColor("#B8860B"),
-                          bannerText = "🪓 [SPARTAN RAGE] Les Orbes Rouges alimentent la Forge de Kratos 🔥",
-                          bannerBg = Color.parseColor("#3D1414"),
-                          bannerBorder = "#FF4500",
                           pressColor = "#FF0000",
                           btnPick = Pair("#3D1414", "#FF4500"),
                           btnDir = Pair("#3D1414", "#FF4500"),
@@ -325,9 +427,6 @@ jobs:
                           primaryText = Color.parseColor("#D4A359"),
                           secondaryText = Color.parseColor("#7FA98B"),
                           dim = Color.parseColor("#8C9E91"),
-                          bannerText = "🌿 [ZONE DE QUARANTAINE] Attention aux Spores — Restez silencieux...",
-                          bannerBg = Color.parseColor("#1C3325"),
-                          bannerBorder = "#7FA98B",
                           pressColor = "#D4A359",
                           btnPick = Pair("#1C3325", "#7FA98B"),
                           btnDir = Pair("#1C3325", "#7FA98B"),
@@ -344,9 +443,6 @@ jobs:
                           primaryText = Color.parseColor("#F72585"),
                           secondaryText = Color.parseColor("#4CC9F0"),
                           dim = Color.parseColor("#8093F1"),
-                          bannerText = "✨ [TEYVAT HUB] Énergie Stellaire active — Connexion aux Sept Archontes 🌟",
-                          bannerBg = Color.parseColor("#22223B"),
-                          bannerBorder = "#4CC9F0",
                           pressColor = "#F72585",
                           btnPick = Pair("#22223B", "#4CC9F0"),
                           btnDir = Pair("#22223B", "#4CC9F0"),
@@ -363,9 +459,6 @@ jobs:
                           primaryText = Color.parseColor("#FF007F"),
                           secondaryText = Color.parseColor("#00FF66"),
                           dim = Color.parseColor("#7FA98B"),
-                          bannerText = "🚗 [LOS SANTOS CASH] Livraison en cours à Vinewood Hills 💵",
-                          bannerBg = Color.parseColor("#123015"),
-                          bannerBorder = "#00FF66",
                           pressColor = "#00FF66",
                           btnPick = Pair("#123015", "#00FF66"),
                           btnDir = Pair("#123015", "#00FF66"),
@@ -373,6 +466,22 @@ jobs:
                           btnOut = Pair("#0D2E2B", "#00FFFF"),
                           btnGo = Pair("#16521A", "#00FF00"),
                           btnCancel = Pair("#521616", "#FF0033")
+                      )
+                      "CLASSIC" -> ThemeConfig(
+                          name = "Sombre Classique",
+                          bg = Color.parseColor("#0F172A"),
+                          card = Color.parseColor("#1E293B"),
+                          border = "#334155",
+                          primaryText = Color.WHITE,
+                          secondaryText = Color.parseColor("#38BDF8"),
+                          dim = Color.parseColor("#94A3B8"),
+                          pressColor = "#38BDF8",
+                          btnPick = Pair("#0284C7", "#38BDF8"),
+                          btnDir = Pair("#0369A1", "#38BDF8"),
+                          btnRev = Pair("#334155", "#64748B"),
+                          btnOut = Pair("#0D9488", "#14B8A6"),
+                          btnGo = Pair("#16A34A", "#22C55E"),
+                          btnCancel = Pair("#DC2626", "#EF4444")
                       )
                       else -> ThemeConfig(
                           name = "Cyberpunk Neo Hub",
@@ -382,9 +491,6 @@ jobs:
                           primaryText = Color.parseColor("#FF007F"),
                           secondaryText = Color.parseColor("#00F0FF"),
                           dim = Color.parseColor("#A899C2"),
-                          bannerText = "⚡ [CYBERNETIC CORE] Système Neural Opérationnel 🌐",
-                          bannerBg = Color.parseColor("#2A1845"),
-                          bannerBorder = "#FF007F",
                           pressColor = "#00F0FF",
                           btnPick = Pair("#182045", "#00F0FF"),
                           btnDir = Pair("#182045", "#00F0FF"),
@@ -459,15 +565,9 @@ jobs:
 
                   titleView.setTextColor(cfg.primaryText)
                   subtitleView.setTextColor(cfg.secondaryText)
-                  subtitleView.text = "UNIVERSE : ${cfg.name.uppercase()}"
+                  subtitleView.text = "LIVE UNIVERSE : ${cfg.name.uppercase()}"
 
-                  bannerView.text = cfg.bannerText
-                  bannerView.setTextColor(cfg.primaryText)
-                  bannerView.background = GradientDrawable().apply {
-                      setColor(cfg.bannerBg)
-                      cornerRadius = dp(6).toFloat()
-                      setStroke(dp(2), Color.parseColor(cfg.bannerBorder))
-                  }
+                  animationBarView.invalidate()
 
                   section1Title.setTextColor(cfg.secondaryText)
                   section2Title.setTextColor(cfg.secondaryText)
@@ -543,7 +643,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS PKG Ultimate Hub")
+                          .setContentTitle("⚡ PS PKG Live FX Hub")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -585,14 +685,14 @@ jobs:
 
                   val headerLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
-                      setPadding(0, dp(4), 0, dp(10))
+                      setPadding(0, dp(4), 0, dp(8))
                   }
                   
                   val titlesLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
                   }
                   titleView = TextView(this).apply {
-                      text = "⚡ PS PKG ULTIMATE HUB"
+                      text = "⚡ PS PKG LIVE FX HUB"
                       textSize = 20f
                       setTypeface(null, Typeface.BOLD)
                   }
@@ -614,14 +714,9 @@ jobs:
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
                   mainCol.addView(headerLayout)
 
-                  // Bannière Animée / Dynamique du Thème
-                  bannerView = TextView(this).apply {
-                      textSize = 11f
-                      setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
-                      setPadding(dp(10), dp(8), dp(10), dp(8))
-                      gravity = Gravity.CENTER
-                  }
-                  mainCol.addView(bannerView, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = dp(12) })
+                  // Vue animée dynamique en direct (Bus de combat / Orbes rouges / Spores)
+                  animationBarView = GameAnimationView(this)
+                  mainCol.addView(animationBarView, LinearLayout.LayoutParams(MATCH_PARENT, dp(45)).apply { bottomMargin = dp(10) })
 
                   val card1 = createCard()
                   section1Title = text("1. SOURCE FILES (PKG / PARTS)", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
@@ -795,7 +890,7 @@ jobs:
                                   goBtn.text = "▶️ DÉCOUPER"
                                   statusView.text = "Prêt à découper."
                               } else {
-                                  titleView.text = "⚡ PS PKG ULTIMATE HUB"
+                                  titleView.text = "⚡ PS PKG LIVE FX HUB"
                                   section1Title.text = "1. SOURCE FILES (PKG / PARTS)"
                                   goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
@@ -809,7 +904,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Ultimate Hub v2.6.0")
+                              toast("PS PKG Live FX Hub v2.7.0")
                               true
                           }
                           else -> false
@@ -825,9 +920,10 @@ jobs:
                       "🌿 The Last of Us Part II", 
                       "🌌 Genshin Impact Teyvat", 
                       "🚗 GTA V Los Santos",
+                      "🔵 Sombre Classique",
                       "🌐 Cyberpunk Neo Hub"
                   )
-                  val keys = arrayOf("FORTNITE", "GOW", "TLOU", "GENSHIN", "GTA", "CYBERPUNK")
+                  val keys = arrayOf("FORTNITE", "GOW", "TLOU", "GENSHIN", "GTA", "CLASSIC", "CYBERPUNK")
                   val checkedItem = keys.indexOf(currentTheme).coerceAtLeast(0)
 
                   AlertDialog.Builder(this)
@@ -1503,12 +1599,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.6.0
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.6.0.apk
+      - name: Renommer l'APK v2.7.0
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.7.0.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.6.0-apk
-          path: PkgMerger-v2.6.0.apk
+          name: pkg-merger-v2.7.0-apk
+          path: PkgMerger-v2.7.0.apk
           if-no-files-found: error
