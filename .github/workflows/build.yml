@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.2.1 Fix Visibility
+      - name: Générer le projet Android v2.3.1 Fix Icon View
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 221
-                  versionName = "2.2.1"
+                  versionCode = 231
+                  versionName = "2.3.1"
               }
 
               compileOptions {
@@ -165,12 +165,14 @@ jobs:
           import android.Manifest
           import android.annotation.SuppressLint
           import android.app.Activity
+          import android.app.AlertDialog
           import android.app.NotificationChannel
           import android.app.NotificationManager
           import android.content.ClipData
           import android.content.ClipboardManager
           import android.content.Context
           import android.content.Intent
+          import android.content.SharedPreferences
           import android.content.pm.PackageManager
           import android.graphics.Bitmap
           import android.graphics.BitmapFactory
@@ -217,11 +219,16 @@ jobs:
               private var reversed = false
               private var lastHash: String? = null
               private var appMode = "MERGE"
+              private var currentTheme = "CYBERPUNK"
+              
               @Volatile private var processing = false
               @Volatile private var cancelled = false
               private val ui = Handler(Looper.getMainLooper())
               private var lastNotifTime = 0L
 
+              private lateinit var prefs: SharedPreferences
+              private lateinit var rootLayout: ScrollView
+              private lateinit var mainCol: LinearLayout
               private lateinit var listContainer: LinearLayout
               private lateinit var checkView: TextView
               private lateinit var outView: TextView
@@ -242,30 +249,46 @@ jobs:
               private lateinit var titleView: TextView
               private lateinit var subtitleView: TextView
               private lateinit var section1Title: TextView
+              private lateinit var section2Title: TextView
+              private lateinit var section3Title: TextView
               private lateinit var pkgIconView: ImageView
               private lateinit var infoLayout: LinearLayout
 
-              private val cyanNeon = Color.parseColor("#00F0FF")
-              private val pinkNeon = Color.parseColor("#FF007F")
-              private val bgDark = Color.parseColor("#0D0814")
-              private val cardCyber = Color.parseColor("#170F26")
-              private val borderCyber = "#FF007F"
-              private val dimText = Color.parseColor("#A899C2")
+              private val cardViews = ArrayList<LinearLayout>()
+
+              // Couleurs Thème CYBERPUNK
+              private val cyberBg = Color.parseColor("#0D0814")
+              private val cyberCard = Color.parseColor("#170F26")
+              private val cyberBorder = "#FF007F"
+              private val cyberCyan = Color.parseColor("#00F0FF")
+              private val cyberPink = Color.parseColor("#FF007F")
+              private val cyberDim = Color.parseColor("#A899C2")
+
+              // Couleurs Thème CLASSIC DARK
+              private val classicBg = Color.parseColor("#0F172A")
+              private val classicCard = Color.parseColor("#1E293B")
+              private val classicBorder = "#334155"
+              private val classicAccent = Color.parseColor("#38BDF8")
+              private val classicDim = Color.parseColor("#94A3B8")
 
               private val NOTIF_ID_PROGRESS = 101
               private val NOTIF_ID_RESULT = 102
 
               override fun onCreate(state: Bundle?) {
                   super.onCreate(state)
+                  prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
+                  currentTheme = prefs.getString("theme", "CYBERPUNK") ?: "CYBERPUNK"
+                  
                   createNotificationChannel()
                   checkPermissions()
                   showMergerScreen()
+                  applyTheme()
               }
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
               @SuppressLint("ClickableViewAccessibility")
-              private fun styleCyberButton(b: Button, bgHex: String, borderHexStr: String = "#00F0FF", textHex: String = "#FFFFFF") {
+              private fun styleButton(b: Button, bgHex: String, borderHexStr: String, textHex: String = "#FFFFFF") {
                   val normalBg = GradientDrawable().apply {
                       setColor(Color.parseColor(bgHex))
                       cornerRadius = dp(6).toFloat()
@@ -299,6 +322,64 @@ jobs:
                       }
                       false
                   }
+              }
+
+              private fun applyTheme() {
+                  val isCyber = currentTheme == "CYBERPUNK"
+                  val bg = if (isCyber) cyberBg else classicBg
+                  val cardColor = if (isCyber) cyberCard else classicCard
+                  val border = if (isCyber) cyberBorder else classicBorder
+                  val primaryText = if (isCyber) cyberPink else Color.WHITE
+                  val secondaryText = if (isCyber) cyberCyan else classicAccent
+                  val dim = if (isCyber) cyberDim else classicDim
+
+                  rootLayout.setBackgroundColor(bg)
+                  mainCol.setBackgroundColor(bg)
+
+                  titleView.setTextColor(primaryText)
+                  subtitleView.setTextColor(secondaryText)
+
+                  section1Title.setTextColor(secondaryText)
+                  section2Title.setTextColor(secondaryText)
+                  section3Title.setTextColor(secondaryText)
+
+                  checkView.setTextColor(secondaryText)
+                  statusView.setTextColor(primaryText)
+                  hashView.setTextColor(secondaryText)
+
+                  verifyBox.setTextColor(dim)
+                  deleteBox.setTextColor(dim)
+                  outView.setTextColor(dim)
+
+                  cardViews.forEach { card ->
+                      card.background = GradientDrawable().apply {
+                          setColor(cardColor)
+                          cornerRadius = dp(if (isCyber) 8 else 12).toFloat()
+                          setStroke(dp(2), Color.parseColor(border))
+                      }
+                  }
+
+                  if (isCyber) {
+                      styleButton(pickBtn, "#182045", "#00F0FF")
+                      styleButton(dirBtn, "#182045", "#00F0FF")
+                      styleButton(revBtn, "#2A1845", "#FF007F")
+                      styleButton(outBtn, "#0D3838", "#00F0FF")
+                      styleButton(goBtn, "#0F4D2A", "#00FF66")
+                      styleButton(cancelBtn, "#4D0F1A", "#FF0055")
+                      styleButton(copyBtn, "#2A1845", "#FF007F")
+                      styleButton(menuBtn, "#2A1845", "#FF007F", "#00F0FF")
+                  } else {
+                      styleButton(pickBtn, "#0284C7", "#38BDF8")
+                      styleButton(dirBtn, "#0369A1", "#38BDF8")
+                      styleButton(revBtn, "#334155", "#64748B")
+                      styleButton(outBtn, "#0D9488", "#14B8A6")
+                      styleButton(goBtn, "#16A34A", "#22C55E")
+                      styleButton(cancelBtn, "#DC2626", "#EF4444")
+                      styleButton(copyBtn, "#334155", "#64748B")
+                      styleButton(menuBtn, "#334155", "#64748B")
+                  }
+
+                  refresh()
               }
 
               private fun createNotificationChannel() {
@@ -341,7 +422,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS PKG Cyber Manager")
+                          .setContentTitle("⚡ PS PKG Manager")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -376,10 +457,9 @@ jobs:
 
               private fun showMergerScreen() {
                   val pad = dp(16)
-                  val col = LinearLayout(this).apply {
+                  mainCol = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
                       setPadding(pad, pad, pad, pad)
-                      setBackgroundColor(bgDark)
                   }
 
                   val headerLayout = LinearLayout(this).apply {
@@ -391,17 +471,15 @@ jobs:
                       orientation = LinearLayout.VERTICAL
                   }
                   titleView = TextView(this).apply {
-                      text = "⚡ CYBER PKG MANAGER"
+                      text = "⚡ PS PKG MANAGER"
                       textSize = 22f
-                      setTextColor(pinkNeon)
                       setTypeface(null, Typeface.BOLD)
                   }
                   titlesLayout.addView(titleView)
                   
                   subtitleView = TextView(this).apply {
-                      text = "ENGINE v2.2.1 • PS3/PS4/PS5 FX TOOLKIT"
+                      text = "ENGINE v2.3.1 • PS3/PS4/PS5 FX TOOLKIT"
                       textSize = 10f
-                      setTextColor(cyanNeon)
                       typeface = Typeface.MONOSPACE
                       setPadding(0, dp(2), 0, 0)
                   }
@@ -410,19 +488,17 @@ jobs:
 
                   menuBtn = Button(this).apply {
                       text = "⚙️ MODE"
-                      styleCyberButton(this, "#2A1845", "#FF007F", "#00F0FF")
                       setOnClickListener { showMenu(it) }
                   }
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
-                  col.addView(headerLayout)
+                  mainCol.addView(headerLayout)
 
                   val card1 = createCard()
-                  section1Title = text("1. SOURCE FILES (PKG / PARTS)", 13f, cyanNeon, true).apply { typeface = Typeface.MONOSPACE }
+                  section1Title = text("1. SOURCE FILES (PKG / PARTS)", 13f, cyberCyan, true).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(section1Title)
                   
                   pickBtn = Button(this).apply {
                       text = "📁 CHOISIR LES FICHIERS"
-                      styleCyberButton(this, "#182045", "#00F0FF")
                       setOnClickListener {
                           if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           pick()
@@ -432,7 +508,6 @@ jobs:
 
                   dirBtn = Button(this).apply {
                       text = "📂 CHOISIR UN DOSSIER COMPLET"
-                      styleCyberButton(this, "#182045", "#00F0FF")
                       setOnClickListener {
                           if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           pickFolder()
@@ -442,7 +517,6 @@ jobs:
 
                   revBtn = Button(this).apply {
                       text = "🔀 INVERSER L'ORDRE DES PARTIES"
-                      styleCyberButton(this, "#2A1845", "#FF007F")
                       setOnClickListener {
                           if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           reversed = !reversed; refresh()
@@ -464,27 +538,27 @@ jobs:
 
                   pkgIconView = ImageView(this).apply {
                       visibility = View.GONE
-                      adjustViewBounds = true
+                      scaleType = ImageView.ScaleType.FIT_CENTER
                       background = GradientDrawable().apply {
                           setColor(Color.parseColor("#0D0814"))
                           cornerRadius = dp(8).toFloat()
                           setStroke(dp(1), Color.parseColor("#00F0FF"))
                       }
                   }
-                  infoLayout.addView(pkgIconView, LinearLayout.LayoutParams(dp(64), dp(64)).apply { rightMargin = dp(12) })
+                  infoLayout.addView(pkgIconView, LinearLayout.LayoutParams(dp(72), dp(72)).apply { rightMargin = dp(12) })
 
-                  checkView = text("", 11f, cyanNeon).apply { typeface = Typeface.MONOSPACE }
+                  checkView = text("", 11f, cyberCyan).apply { typeface = Typeface.MONOSPACE }
                   infoLayout.addView(checkView, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
                   
                   card1.addView(infoLayout, lp())
-                  col.addView(card1, lpCard())
+                  mainCol.addView(card1, lpCard())
 
                   val card2 = createCard()
-                  card2.addView(text("2. OUTPUT & PROCESSING", 13f, cyanNeon, true).apply { typeface = Typeface.MONOSPACE })
+                  section2Title = text("2. OUTPUT & PROCESSING", 13f, cyberCyan, true).apply { typeface = Typeface.MONOSPACE }
+                  card2.addView(section2Title)
 
                   outBtn = Button(this).apply {
                       text = "💾 DÉFINIR EMPLACEMENT DE SORTIE"
-                      styleCyberButton(this, "#0D3838", "#00F0FF")
                       setOnClickListener {
                           if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           pickOutput()
@@ -492,7 +566,7 @@ jobs:
                   }
                   card2.addView(outBtn, lp())
 
-                  outView = text("Sortie : —", 11f, dimText).apply { 
+                  outView = text("Sortie : —", 11f, cyberDim).apply { 
                       typeface = Typeface.MONOSPACE
                       setPadding(0, dp(6), 0, dp(8))
                   }
@@ -503,14 +577,12 @@ jobs:
                   }
                   goBtn = Button(this).apply {
                       text = "▶️ LANCER LA FUSION"
-                      styleCyberButton(this, "#0F4D2A", "#00FF66")
                       setOnClickListener { executeAction() }
                   }
                   actionLayout.addView(goBtn, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
                   cancelBtn = Button(this).apply {
                       text = "❌ ANNULER"
-                      styleCyberButton(this, "#4D0F1A", "#FF0055")
                       isEnabled = false
                       setOnClickListener {
                           if (processing) {
@@ -530,17 +602,17 @@ jobs:
                   }
                   card2.addView(bar, lp())
 
-                  statusView = text("Prêt.", 13f, pinkNeon).apply { setTypeface(Typeface.MONOSPACE, Typeface.BOLD) }
+                  statusView = text("Prêt.", 13f, cyberPink).apply { setTypeface(Typeface.MONOSPACE, Typeface.BOLD) }
                   card2.addView(statusView, lp())
-                  col.addView(card2, lpCard())
+                  mainCol.addView(card2, lpCard())
 
                   val card3 = createCard()
-                  card3.addView(text("3. SECURITY & CHECKSUM", 13f, cyanNeon, true).apply { typeface = Typeface.MONOSPACE })
+                  section3Title = text("3. SECURITY & CHECKSUM", 13f, cyberCyan, true).apply { typeface = Typeface.MONOSPACE }
+                  card3.addView(section3Title)
 
                   verifyBox = CheckBox(this).apply {
                       text = "Contrôle d'intégrité après écriture"
                       isChecked = true
-                      setTextColor(dimText)
                       textSize = 12f
                   }
                   card3.addView(verifyBox, lp())
@@ -548,7 +620,6 @@ jobs:
                   deleteBox = CheckBox(this).apply {
                       text = "Supprimer les sources après succès"
                       isChecked = false
-                      setTextColor(dimText)
                       textSize = 12f
                   }
                   card3.addView(deleteBox, lp())
@@ -556,53 +627,51 @@ jobs:
                   hashField = EditText(this).apply {
                       hint = "Coller un hash SHA-256 de contrôle"
                       setTextColor(Color.WHITE)
-                      setHintTextColor(dimText)
+                      setHintTextColor(cyberDim)
                       textSize = 11f
                       typeface = Typeface.MONOSPACE
                   }
                   card3.addView(hashField, lp())
 
-                  hashView = text("", 11f, cyanNeon).apply { typeface = Typeface.MONOSPACE }
+                  hashView = text("", 11f, cyberCyan).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(hashView, lp())
 
                   copyBtn = Button(this).apply {
                       text = "📋 Copier le SHA-256"
-                      styleCyberButton(this, "#2A1845", "#FF007F")
                       isEnabled = false
                       setOnClickListener { copyHash() }
                   }
                   card3.addView(copyBtn, lp())
-                  col.addView(card3, lpCard())
+                  mainCol.addView(card3, lpCard())
 
-                  refresh()
-
-                  setContentView(ScrollView(this).apply { 
-                      setBackgroundColor(bgDark)
-                      addView(col) 
-                  })
+                  rootLayout = ScrollView(this).apply { 
+                      addView(mainCol) 
+                  }
+                  setContentView(rootLayout)
               }
 
-              private fun showMenu(v: android.view.View) {
+              private fun showMenu(v: View) {
                   if (processing) {
                       toast("⚠️ Traitement en cours !")
                       return
                   }
                   val popup = PopupMenu(this, v)
                   popup.menu.add(0, 1, 0, if (appMode == "MERGE") "📂 Mode Splitter" else "🔗 Mode Fusion")
-                  popup.menu.add(0, 2, 1, "ℹ️ À propos")
+                  popup.menu.add(0, 2, 1, "🎨 Changer de Thème")
+                  popup.menu.add(0, 3, 2, "ℹ️ À propos")
                   popup.setOnMenuItemClickListener { item ->
                       when (item.itemId) {
                           1 -> {
                               appMode = if (appMode == "MERGE") "SPLIT" else "MERGE"
                               if (appMode == "SPLIT") {
-                                  titleView.text = "⚡ CYBER SPLITTER"
+                                  titleView.text = "⚡ PKG SPLITTER"
                                   subtitleView.text = "DECOUPAGE DES FICHIERS PKG EN BLOCS"
                                   section1Title.text = "1. FICHIER SOURCE UNIQUE (.PKG)"
                                   goBtn.text = "▶️ DÉCOUPER"
                                   statusView.text = "Prêt à découper."
                               } else {
-                                  titleView.text = "⚡ CYBER PKG MANAGER"
-                                  subtitleView.text = "ENGINE v2.2.1 • PS3/PS4/PS5 FX TOOLKIT"
+                                  titleView.text = "⚡ PS PKG MANAGER"
+                                  subtitleView.text = "ENGINE v2.3.1 • PS3/PS4/PS5 FX TOOLKIT"
                                   section1Title.text = "1. SOURCE FILES (PKG / PARTS)"
                                   goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
@@ -612,7 +681,11 @@ jobs:
                               true
                           }
                           2 -> {
-                              toast("PS PKG Cyber Manager v2.2.1")
+                              showThemeDialog()
+                              true
+                          }
+                          3 -> {
+                              toast("PS PKG Cyber Manager v2.3.1")
                               true
                           }
                           else -> false
@@ -621,19 +694,32 @@ jobs:
                   popup.show()
               }
 
+              private fun showThemeDialog() {
+                  val themes = arrayOf("🟣 Cyberpunk Néon", "🔵 Sombre Classique")
+                  val checkedItem = if (currentTheme == "CYBERPUNK") 0 else 1
+
+                  AlertDialog.Builder(this)
+                      .setTitle("Choisir un Thème")
+                      .setSingleChoiceItems(themes, checkedItem) { dialog, which ->
+                          currentTheme = if (which == 0) "CYBERPUNK" else "CLASSIC"
+                          prefs.edit().putString("theme", currentTheme).apply()
+                          applyTheme()
+                          dialog.dismiss()
+                      }
+                      .setNegativeButton("Annuler", null)
+                      .show()
+              }
+
               private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) }
               private fun lpCard() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12); bottomMargin = dp(4) }
 
               private fun createCard(): LinearLayout {
-                  return LinearLayout(this).apply {
+                  val card = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
                       setPadding(dp(16), dp(16), dp(16), dp(16))
-                      background = GradientDrawable().apply {
-                          setColor(cardCyber)
-                          cornerRadius = dp(8).toFloat()
-                          setStroke(dp(2), Color.parseColor(borderCyber))
-                      }
                   }
+                  cardViews.add(card)
+                  return card
               }
 
               private fun text(t: String, size: Float, color: Int, bold: Boolean = false) =
@@ -848,7 +934,7 @@ jobs:
 
                           var iconBitmap: Bitmap? = null
                           try {
-                              val iconBuf = ByteArray(64 * 1024)
+                              val iconBuf = ByteArray(128 * 1024)
                               val iconRead = input.read(iconBuf)
                               if (iconRead > 0) {
                                   for (i in 0 until iconRead - 8) {
@@ -871,8 +957,14 @@ jobs:
                   if (!::listContainer.isInitialized) return
                   listContainer.removeAllViews()
 
+                  val isCyber = currentTheme == "CYBERPUNK"
+                  val borderHex = if (isCyber) "#00F0FF" else "#334155"
+                  val rowBgHex = if (isCyber) "#0D0814" else "#0F172A"
+                  val dim = if (isCyber) cyberDim else classicDim
+                  val primaryText = if (isCyber) cyberPink else Color.WHITE
+
                   if (uris.isEmpty()) {
-                      listContainer.addView(text("NO FILES SELECTED", 11f, dimText).apply { typeface = Typeface.MONOSPACE })
+                      listContainer.addView(text("AUCUN FICHIER SÉLECTIONNÉ", 11f, dim).apply { typeface = Typeface.MONOSPACE })
                       checkView.text = ""
                       pkgIconView.visibility = View.GONE
                       return
@@ -882,7 +974,7 @@ jobs:
                   val total = order.sumOf { sizes[it] }
                   val info = analyzePkg(uris[order[0]])
 
-                  val summaryView = text("${order.size} parte(s) • ${fmt(total)} • Ordre ${if (reversed) "inversé" else "croissant"}", 12f, pinkNeon, true).apply { typeface = Typeface.MONOSPACE }
+                  val summaryView = text("${order.size} partie(s) • ${fmt(total)} • Ordre ${if (reversed) "inversé" else "croissant"}", 12f, primaryText, true).apply { typeface = Typeface.MONOSPACE }
                   listContainer.addView(summaryView)
 
                   order.forEachIndexed { i, idx ->
@@ -891,9 +983,9 @@ jobs:
                           setPadding(dp(12), dp(8), dp(12), dp(8))
                           gravity = Gravity.CENTER_VERTICAL
                           background = GradientDrawable().apply {
-                              setColor(Color.parseColor("#0D0814"))
-                              cornerRadius = dp(4).toFloat()
-                              setStroke(dp(1), Color.parseColor("#00F0FF"))
+                              setColor(Color.parseColor(rowBgHex))
+                              cornerRadius = dp(6).toFloat()
+                              setStroke(dp(1), Color.parseColor(borderHex))
                           }
                       }
 
@@ -1283,12 +1375,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.2.1
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.2.1.apk
+      - name: Renommer l'APK v2.3.1
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.3.1.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.2.1-apk
-          path: PkgMerger-v2.2.1.apk
+          name: pkg-merger-v2.3.1-apk
+          path: PkgMerger-v2.3.1.apk
           if-no-files-found: error
