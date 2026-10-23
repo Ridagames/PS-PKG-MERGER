@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.52
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.53
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.52
+      - name: Générer le projet Android v2.9.53
         env:
           FORCE: '1'
         run: |
@@ -120,7 +120,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2952
+                  versionCode = 2953
                   versionName = "2.1.0"
               }
 
@@ -196,7 +196,7 @@ jobs:
                       <meta-data
                           android:name="android.support.FILE_PROVIDER_PATHS"
                           android:resource="@xml/file_paths" />
-                  </provider>
+                  </meta-data>
               </application>
           </manifest>
           EOF
@@ -499,20 +499,33 @@ jobs:
                       "universe" to mapOf("fr" to "UNIVERS", "en" to "UNIVERSE", "es" to "UNIVERSO", "it" to "UNIVERSO", "pt" to "UNIVERSO", "de" to "UNIVERSUM"),
                       "mode_btn" to mapOf("fr" to "⚙️ MODE", "en" to "⚙️ MODE", "es" to "⚙️ MODO", "it" to "⚙️ MODO", "pt" to "⚙️ MODO", "de" to "⚙️ MODUS"),
                       "sec1" to mapOf("fr" to "1. FICHIERS SOURCE (PKG / PARTIES)", "en" to "1. SOURCE FILES (PKG / PARTS)", "es" to "1. ARCHIVOS DE ORIGEN (PKG / PARTES)", "it" to "1. FILE SORGENTE (PKG / PARTI)", "pt" to "1. ARQUIVOS DE ORIGEM (PKG / PARTES)", "de" to "1. QUELLDATEIEN (PKG / TEILE)"),
+                      "sec1_split" to mapOf("fr" to "1. FICHIER SOURCE UNIQUE (.PKG)", "en" to "1. SINGLE SOURCE FILE (.PKG)", "es" to "1. ARCHIVO DE ORIGEN ÚNICO (.PKG)", "it" to "1. FILE SORGENTE SINGOLO (.PKG)", "pt" to "1. ARQUIVO DE ORIGEM ÚNICO (.PKG)", "de" to "1. EINZELNE QUELLDATEI (.PKG)"),
                       "btn_pick" to mapOf("fr" to "CHOISIR LES FICHIERS", "en" to "CHOOSE FILES", "es" to "ELEGIR ARCHIVOS", "it" to "SCEGLI FILE", "pt" to "ESCOLHER ARQUIVOS", "de" to "DATEIEN WÄHLEN"),
                       "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER", "es" to "ELEGIR CARPETA", "it" to "SCEGLI CARTELLA", "pt" to "ESCOLHER PASTA", "de" to "ORDNER WÄHLEN"),
                       "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER", "es" to "INVERTIR ORDEN DE PARTES", "it" to "INVERTI ORDINE PARTI", "pt" to "INVERTER ORDEM DAS PARTES", "de" to "TEILEREIHENFOLGE UMKEHREN"),
                       "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING", "es" to "2. SALIDA Y PROCESAMIENTO", "it" to "2. USCITA & ELABORAZIONE", "pt" to "2. SAÍDA & PROCESSAMENTO", "de" to "2. AUSGABE & VERARBEITUNG"),
                       "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION", "es" to "DEFINIR UBICACIÓN DE SALIDA", "it" to "IMPOSTA DESTINAZIONE", "pt" to "IMPOSTA DESTINAZIONE", "de" to "AUSGABEZIEL FESTLEGEN"),
                       "out_lbl" to mapOf("fr" to "Sortie : —", "en" to "Output : —", "es" to "Salida : —", "it" to "Uscita : —", "pt" to "Saída : —", "de" to "Ausgabe : —"),
-                      "btn_go" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE", "es" to "▶️ INICIAR FUSIÓN", "it" to "▶️ AVVIA UNIONE", "pt" to "▶️ INICIAR FUSÃO", "de" to "▶️ ZUSAMMENFÜHRUNG STARTEN"),
+                      "out_dir_lbl" to mapOf("fr" to "Dossier de sortie : Dossier sélectionné", "en" to "Output folder : Selected folder", "es" to "Carpeta de salida : Carpeta seleccionada", "it" to "Cartella di uscita : Cartella selezionata", "pt" to "Pasta de saída : Pasta selecionada", "de" to "Ausgabeordner : Ausgewählter Ordner"),
+                      "btn_go_merge" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE", "es" to "▶️ INICIAR FUSIÓN", "it" to "▶️ AVVIA UNIONE", "pt" to "▶️ INICIAR FUSÃO", "de" to "▶️ ZUSAMMENFÜHRUNG STARTEN"),
+                      "btn_go_split" to mapOf("fr" to "▶️ LANCER LE DÉCOUPAGE", "en" to "▶️ START SPLITTING", "es" to "▶️ INICIAR CORTE", "it" to "▶️ AVVIA DIVISIONE", "pt" to "▶️ INICIAR DIVISÃO", "de" to "▶️ TEILUNG STARTEN"),
                       "btn_cancel" to mapOf("fr" to "❌ ANNULER", "en" to "❌ CANCEL", "es" to "❌ CANCELAR", "it" to "❌ ANNULLA", "pt" to "❌ CANCELAR", "de" to "❌ ABBRECHEN"),
                       "status_ready" to mapOf("fr" to "Prêt.", "en" to "Ready.", "es" to "Listo.", "it" to "Pronto.", "pt" to "Pronto.", "de" to "Bereit."),
+                      "status_split_ready" to mapOf("fr" to "Prêt à découper.", "en" to "Ready to split.", "es" to "Listo para dividir.", "it" to "Pronto per dividere.", "pt" to "Pronto para dividir.", "de" to "Bereit zum Teilen."),
                       "sec3" to mapOf("fr" to "3. SÉCURITÉ & VÉRIFICATION", "en" to "3. SECURITY & CHECKSUM", "es" to "3. SEGURIDAD Y VERIFICACIÓN", "it" to "3. SICUREZZA & VERIFICA", "pt" to "3. SEGURANÇA & VERIFICAÇÃO", "de" to "3. SICHERHEIT & PRÜFUNG"),
                       "chk_verify" to mapOf("fr" to "Contrôle d'intégrité après écriture", "en" to "Integrity check after write", "es" to "Control de integridad tras escritura", "it" to "Controllo integrità dopo scrittura", "pt" to "Controle de integridade após gravação", "de" to "Integritätsprüfung nach Schreiben"),
                       "chk_delete" to mapOf("fr" to "Supprimer les sources après succès", "en" to "Delete sources after success", "es" to "Eliminar fuentes tras éxito", "it" to "Elimina sorgenti dopo il successo", "pt" to "Excluir fontes após sucesso", "de" to "Quellen nach Erfolg löschen"),
                       "hash_hint" to mapOf("fr" to "Coller un hash SHA-256 de contrôle", "en" to "Paste control SHA-256 hash", "es" to "Pegar hash SHA-256 de control", "it" to "Incolla hash SHA-256 di controllo", "pt" to "Colar hash SHA-256 de controle", "de" to "SHA-256 Prüf-Hash einfügen"),
-                      "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256", "es" to "📋 Copiar SHA-256", "it" to "📋 Copia SHA-256", "pt" to "📋 Copiar SHA-256", "de" to "📋 SHA-256 kopieren")
+                      "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256", "es" to "📋 Copiar SHA-256", "it" to "📋 Copia SHA-256", "pt" to "📋 Copiar SHA-256", "de" to "📋 SHA-256 kopieren"),
+                      "menu_options" to mapOf("fr" to "⚙️ OPTIONS & MENU", "en" to "⚙️ OPTIONS & MENU", "es" to "⚙️ OPCIONES Y MENÚ", "it" to "⚙️ OPZIONI & MENU", "pt" to "⚙️ OPÇÕES & MENU", "de" to "⚙️ OPTIONEN & MENÜ"),
+                      "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode", "es" to "📂 Cambiar a Modo Divisor", "it" to "📂 Passa a Modalità Divisione", "pt" to "📂 Alternar para Modo Divisor", "de" to "📂 Zu Splitter-Modus wechseln"),
+                      "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode", "es" to "🔗 Cambiar a Modo Fusión", "it" to "🔗 Passa a Modalità Unione", "pt" to "🔗 Alternar para Modo Fusão", "de" to "🔗 Zu Zusammenführungs-Modus wechseln"),
+                      "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe", "es" to "🎨 Cambiar Universo", "it" to "🎨 Cambia Universo", "pt" to "🎨 Mudar Universo", "de" to "🎨 Universum wechseln"),
+                      "menu_lang" to mapOf("fr" to "🌐 Changer la Langue / Language", "en" to "🌐 Change Language", "es" to "🌐 Cambiar Idioma", "it" to "🌐 Cambia Lingua", "pt" to "🌐 Mudar Idioma", "de" to "🌐 Sprache ändern"),
+                      "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates", "es" to "🔄 Buscar actualizaciones", "it" to "🔄 Controlla aggiornamenti", "pt" to "🔄 Verificar atualizações", "de" to "🔄 Nach Updates suchen"),
+                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.0)", "en" to "ℹ️ About (v2.1.0)", "es" to "ℹ️ Acerca de (v2.1.0)", "it" to "ℹ️ Informazioni (v2.1.0)", "pt" to "ℹ️ Sobre (v2.1.0)", "de" to "ℹ️ Über (v2.1.0)"),
+                      "dialog_universe_title" to mapOf("fr" to "🌟 CHOISIS TON UNIVERS GAMING", "en" to "🌟 CHOOSE YOUR GAMING UNIVERSE", "es" to "🌟 ELIGE TU UNIVERSO DE JUEGO", "it" to "🌟 SCEGLI IL TUO UNIVERSO DI GIOCO", "pt" to "🌟 ESCOLHA SEU UNIVERSO DE JOGOS", "de" to "🌟 WÄHLE DEIN GAMING-UNIVERSUM"),
+                      "dialog_lang_title" to mapOf("fr" to "🌐 CHOISIR LA LANGUE / LANGUAGE", "en" to "🌐 CHOOSE LANGUAGE", "es" to "🌐 ELEGIR IDIOMA", "it" to "🌐 SCEGLI LINGUA", "pt" to "🌐 ESCOLHER IDIOMA", "de" to "🌐 SPRACHE WÄHLEN")
                   )
                   return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
               }
@@ -535,12 +548,48 @@ jobs:
                   val isFirstRun = prefs.getBoolean("is_first_run", true)
                   if (isFirstRun) {
                       prefs.edit().putBoolean("is_first_run", false).apply()
-                      AlertDialog.Builder(this)
-                          .setTitle("🎉 NOUVEAUX UNIVERS DISPONIBLES !")
-                          .setMessage("Bienvenue dans PS PKG Freedom Hub !\n\nDes thèmes immersifs (God of War, Fortnite, Genshin, GTA V...) sont désormais disponibles !\n\nPour les essayer, clique sur ⚙️ MODE > 🎨 Changer d'Univers.")
-                          .setPositiveButton("COMPRIS !") { dialog, _ -> dialog.dismiss() }
+                      val cfg = getThemeConfig(currentTheme)
+                      val dialogView = LinearLayout(this).apply {
+                          orientation = LinearLayout.VERTICAL
+                          setPadding(dp(16), dp(16), dp(16), dp(16))
+                          background = GradientDrawable().apply {
+                              setColor(cfg.card)
+                              cornerRadius = dp(10).toFloat()
+                              setStroke(dp(2), Color.parseColor(cfg.border))
+                          }
+                      }
+                      val tvTitle = TextView(this).apply {
+                          text = "🎉 NOUVEAUX UNIVERS DISPONIBLES !"
+                          textSize = 14f
+                          setTextColor(cfg.primaryText)
+                          setTypeface(null, Typeface.BOLD)
+                          setPadding(0, 0, 0, dp(8))
+                      }
+                      dialogView.addView(tvTitle)
+
+                      val tvMsg = TextView(this).apply {
+                          text = "Bienvenue dans PS PKG Freedom Hub !\n\nDes thèmes immersifs (God of War, Fortnite, Genshin, GTA V...) sont désormais disponibles !\n\nPour les essayer, clique sur ⚙️ MODE > 🎨 Changer d'Univers."
+                          textSize = 12f
+                          setTextColor(Color.WHITE)
+                          setPadding(0, 0, 0, dp(12))
+                      }
+                      dialogView.addView(tvMsg)
+
+                      val btnOk = Button(this).apply {
+                          text = "COMPRIS !"
+                          setTextColor(Color.WHITE)
+                          textSize = 12f
+                          setBackgroundColor(Color.TRANSPARENT)
+                      }
+                      dialogView.addView(btnOk)
+
+                      val dialog = AlertDialog.Builder(this)
+                          .setView(dialogView)
                           .setCancelable(false)
-                          .show()
+                          .create()
+                      dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                      btnOk.setOnClickListener { dialog.dismiss() }
+                      dialog.show()
                   }
               }
 
@@ -851,7 +900,8 @@ jobs:
                   dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2) { pickFolder() }
                   revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1) { reversed = !reversed; refresh() }
                   outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2) { pickOutput() }
-                  goBtnLayout = createCustomButton(tr("btn_go"), cfg.btnGo.first, cfg.btnGo.second, 0) { executeAction() }
+                  val goTextKey = if (appMode == "SPLIT") "btn_go_split" else "btn_go_merge"
+                  goBtnLayout = createCustomButton(tr(goTextKey), cfg.btnGo.first, cfg.btnGo.second, 0) { executeAction() }
                   cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0) {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
@@ -1074,7 +1124,8 @@ jobs:
                       orientation = LinearLayout.HORIZONTAL
                       gravity = Gravity.CENTER_VERTICAL
                   }
-                  goBtnLayout = createCustomButton(tr("btn_go"), cfg.btnGo.first, cfg.btnGo.second, 0) { executeAction() }
+                  val goInitialText = if (appMode == "SPLIT") tr("btn_go_split") else tr("btn_go_merge")
+                  goBtnLayout = createCustomButton(goInitialText, cfg.btnGo.first, cfg.btnGo.second, 0) { executeAction() }
                   actionLayout.addView(goBtnLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
                   cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0) {
@@ -1181,7 +1232,7 @@ jobs:
                   }
 
                   val titleMenu = TextView(this).apply {
-                      text = "⚙️ OPTIONS & MENU"
+                      text = tr("menu_options")
                       textSize = 14f
                       setTextColor(cfg.primaryText)
                       setTypeface(null, Typeface.BOLD)
@@ -1207,13 +1258,14 @@ jobs:
                       dialogView.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)))
                   }
 
-                  addMenuOption(if (appMode == "MERGE") "📂 Basculer en Mode Splitter" else "🔗 Basculer en Mode Fusion") {
+                  val toggleModeText = if (appMode == "MERGE") tr("mode_split") else tr("mode_merge")
+                  addMenuOption(toggleModeText) {
                       dialog.dismiss()
                       appMode = if (appMode == "MERGE") "SPLIT" else "MERGE"
                       if (appMode == "SPLIT") {
                           titleView.text = "⚡ PKG SPLITTER"
-                          section1Title.text = "1. FICHIER SOURCE UNIQUE (.PKG)"
-                          statusView.text = "Prêt à découper."
+                          section1Title.text = tr("sec1_split")
+                          statusView.text = tr("status_split_ready")
                       } else {
                           titleView.text = tr("app_title")
                           section1Title.text = tr("sec1")
@@ -1224,22 +1276,22 @@ jobs:
                       rebuildButtons()
                   }
 
-                  addMenuOption("🎨 Changer d'Univers") {
+                  addMenuOption(tr("menu_universe")) {
                       dialog.dismiss()
                       showThemeDialog()
                   }
 
-                  addMenuOption("🌐 Changer la Langue / Language") {
+                  addMenuOption(tr("menu_lang")) {
                       dialog.dismiss()
                       showLanguageDialog()
                   }
 
-                  addMenuOption("🔄 Vérifier les mises à jour") {
+                  addMenuOption(tr("menu_update")) {
                       dialog.dismiss()
                       checkForUpdates()
                   }
 
-                  addMenuOption("ℹ️ À propos (v2.1.0)") {
+                  addMenuOption(tr("menu_about")) {
                       dialog.dismiss()
                       toast("PS PKG Freedom Hub v2.1.0")
                   }
@@ -1302,14 +1354,64 @@ jobs:
               }
 
               private fun showUpdateDialog(newVersion: String, apkUrl: String) {
-                  AlertDialog.Builder(this)
-                      .setTitle("🎉 Nouvelle mise à jour dispo (v$newVersion) !")
-                      .setMessage("Une nouvelle version de PS PKG Freedom Hub est disponible sur ton dépôt GitHub.\n\nVeux-tu la télécharger et l'installer maintenant ?")
-                      .setPositiveButton("Mettre à jour") { _, _ ->
-                          downloadAndInstallApk(apkUrl)
+                  val cfg = getThemeConfig(currentTheme)
+                  val dialogView = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply {
+                          setColor(cfg.card)
+                          cornerRadius = dp(10).toFloat()
+                          setStroke(dp(2), Color.parseColor(cfg.border))
                       }
-                      .setNegativeButton("Plus tard", null)
-                      .show()
+                  }
+                  val titleTv = TextView(this).apply {
+                      text = "🎉 Nouvelle mise à jour dispo (v$newVersion) !"
+                      textSize = 14f
+                      setTextColor(cfg.primaryText)
+                      setTypeface(null, Typeface.BOLD)
+                      setPadding(0, 0, 0, dp(8))
+                  }
+                  dialogView.addView(titleTv)
+
+                  val msgTv = TextView(this).apply {
+                      text = "Une nouvelle version de PS PKG Freedom Hub est disponible sur ton dépôt GitHub.\n\nVeux-tu la télécharger et l'installer maintenant ?"
+                      textSize = 12f
+                      setTextColor(Color.WHITE)
+                      setPadding(0, 0, 0, dp(12))
+                  }
+                  dialogView.addView(msgTv)
+
+                  val btnLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.END
+                  }
+                  val btnLater = Button(this).apply {
+                      text = "Plus tard"
+                      setTextColor(Color.WHITE)
+                      textSize = 12f
+                      setBackgroundColor(Color.TRANSPARENT)
+                  }
+                  val btnUpdate = Button(this).apply {
+                      text = "Mettre à jour"
+                      setTextColor(cfg.primaryText)
+                      textSize = 12f
+                      setTypeface(null, Typeface.BOLD)
+                      setBackgroundColor(Color.TRANSPARENT)
+                  }
+                  btnLayout.addView(btnLater)
+                  btnLayout.addView(btnUpdate)
+                  dialogView.addView(btnLayout)
+
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .create()
+                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                  btnLater.setOnClickListener { dialog.dismiss() }
+                  btnUpdate.setOnClickListener {
+                      dialog.dismiss()
+                      downloadAndInstallApk(apkUrl)
+                  }
+                  dialog.show()
               }
 
               private fun downloadAndInstallApk(apkUrl: String) {
@@ -1382,7 +1484,7 @@ jobs:
                   }
 
                   val titleViewDialog = TextView(this).apply {
-                      text = "🌟 CHOISIS TON UNIVERS GAMING"
+                      text = tr("dialog_universe_title")
                       textSize = 14f
                       setTextColor(cfg.primaryText)
                       setTypeface(null, Typeface.BOLD)
@@ -1438,7 +1540,7 @@ jobs:
                   }
 
                   val titleViewDialog = TextView(this).apply {
-                      text = "🌐 CHOISIR LA LANGUE / LANGUAGE"
+                      text = tr("dialog_lang_title")
                       textSize = 14f
                       setTextColor(cfg.primaryText)
                       setTypeface(null, Typeface.BOLD)
@@ -1478,6 +1580,7 @@ jobs:
               }
 
               private fun showRestartPrompt() {
+                  val cfg = getThemeConfig(currentTheme)
                   val restartMsg = when (currentLang) {
                       "en" -> "Please restart the application to fully apply the language change."
                       "es" -> "Por favor, reinicie la aplicación para aplicar completamente el cambio de idioma."
@@ -1503,21 +1606,71 @@ jobs:
                       else -> "Plus tard"
                   }
 
-                  AlertDialog.Builder(this)
-                      .setTitle("🌐 ${tr("mode_btn")}")
-                      .setMessage(restartMsg)
-                      .setPositiveButton(restartBtn) { _, _ ->
-                          val intent = baseContext.packageManager.getLaunchIntentForPackage(baseContext.packageName)
-                          intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                          startActivity(intent)
-                          finish()
+                  val dialogView = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply {
+                          setColor(cfg.card)
+                          cornerRadius = dp(10).toFloat()
+                          setStroke(dp(2), Color.parseColor(cfg.border))
                       }
-                      .setNegativeButton(cancelBtn) { dialog, _ ->
-                          dialog.dismiss()
-                          applyTheme()
-                      }
+                  }
+
+                  val titleTv = TextView(this).apply {
+                      text = "🌐 ${tr("mode_btn")}"
+                      textSize = 14f
+                      setTextColor(cfg.primaryText)
+                      setTypeface(null, Typeface.BOLD)
+                      setPadding(0, 0, 0, dp(8))
+                  }
+                  dialogView.addView(titleTv)
+
+                  val msgTv = TextView(this).apply {
+                      text = restartMsg
+                      textSize = 12f
+                      setTextColor(Color.WHITE)
+                      setPadding(0, 0, 0, dp(12))
+                  }
+                  dialogView.addView(msgTv)
+
+                  val btnLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.END
+                  }
+                  val btnCancel = Button(this).apply {
+                      text = cancelBtn
+                      setTextColor(Color.WHITE)
+                      textSize = 12f
+                      setBackgroundColor(Color.TRANSPARENT)
+                  }
+                  val btnRestart = Button(this).apply {
+                      text = restartBtn
+                      setTextColor(cfg.primaryText)
+                      textSize = 12f
+                      setTypeface(null, Typeface.BOLD)
+                      setBackgroundColor(Color.TRANSPARENT)
+                  }
+                  btnLayout.addView(btnCancel)
+                  btnLayout.addView(btnRestart)
+                  dialogView.addView(btnLayout)
+
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
                       .setCancelable(false)
-                      .show()
+                      .create()
+                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+                  btnCancel.setOnClickListener {
+                      dialog.dismiss()
+                      applyTheme()
+                  }
+                  btnRestart.setOnClickListener {
+                      val intent = baseContext.packageManager.getLaunchIntentForPackage(baseContext.packageName)
+                      intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                      startActivity(intent)
+                      finish()
+                  }
+                  dialog.show()
               }
 
               private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) }
@@ -1622,7 +1775,7 @@ jobs:
                       } catch (_: Exception) {}
                       output = tree
                       if (::outView.isInitialized) {
-                          outView.text = "Dossier de sortie : Dossier sélectionné"
+                          outView.text = tr("out_dir_lbl")
                       }
                   }
               }
@@ -1773,7 +1926,15 @@ jobs:
                   val cfg = getThemeConfig(currentTheme)
 
                   if (uris.isEmpty()) {
-                      listContainer.addView(text("AUCUN FICHIER SÉLECTIONNÉ", 11f, cfg.dim).apply { typeface = Typeface.MONOSPACE })
+                      val emptyMsg = when (currentLang) {
+                          "en" -> "NO FILES SELECTED"
+                          "es" -> "NINGÚN ARCHIVO SELECCIONADO"
+                          "it" -> "NESSUN FILE SELEZIONATO"
+                          "pt" -> "NENHUM ARQUIVO SELECIONADO"
+                          "de" -> "KEINE DATEIEN AUSGEWÄHLT"
+                          else -> "AUCUN FICHIER SÉLECTIONNÉ"
+                      }
+                      listContainer.addView(text(emptyMsg, 11f, cfg.dim).apply { typeface = Typeface.MONOSPACE })
                       checkView.text = ""
                       pkgIconView.visibility = View.GONE
                       return
@@ -1783,7 +1944,24 @@ jobs:
                   val total = order.sumOf { sizes[it] }
                   val info = analyzePkg(uris[order[0]])
 
-                  val summaryView = text("${order.size} partie(s) • ${fmt(total)} • Ordre ${if (reversed) "inversé" else "croissant"}", 12f, cfg.primaryText, true).apply { typeface = Typeface.MONOSPACE }
+                  val orderWord = when (currentLang) {
+                      "en" -> if (reversed) "reversed" else "ascending"
+                      "es" -> if (reversed) "invertido" else "creciente"
+                      "it" -> if (reversed) "invertito" else "crescente"
+                      "pt" -> if (reversed) "invertido" else "crescente"
+                      "de" -> if (reversed) "umgekehrt" else "aufsteigend"
+                      else -> if (reversed) "inversé" else "croissant"
+                  }
+                  val partsWord = when (currentLang) {
+                      "en" -> "part(s)"
+                      "es" -> "parte(s)"
+                      "it" -> "parte/i"
+                      "pt" -> "parte(s)"
+                      "de" -> "Teil(e)"
+                      else -> "partie(s)"
+                  }
+
+                  val summaryView = text("${order.size} $partsWord • ${fmt(total)} • Order $orderWord", 12f, cfg.primaryText, true).apply { typeface = Typeface.MONOSPACE }
                   listContainer.addView(summaryView)
 
                   order.forEachIndexed { i, idx ->
@@ -2183,15 +2361,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.52
+      - name: Build APK v2.9.53
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.52
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.52.apk
+      - name: Renommer l'APK v2.9.53
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.53.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.52-apk
-          path: PkgMerger-v2.9.52.apk
+          name: pkg-merger-v2.9.53-apk
+          path: PkgMerger-v2.9.53.apk
           if-no-files-found: error
