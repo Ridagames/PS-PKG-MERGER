@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources v2.9.19
+      - name: Nettoyage et Normalisation des Ressources v2.9.21
         run: |
           echo "Nettoyage et correction des extensions de fichiers..."
           for dir in app/src/main/res/drawable app/src/main/res/raw; do
@@ -53,7 +53,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.19
+      - name: Générer le projet Android v2.9.21
         env:
           FORCE: '1'
         run: |
@@ -117,8 +117,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2919
-                  versionName = "2.9.19"
+                  versionCode = 2921
+                  versionName = "2.9.21"
               }
 
               compileOptions {
@@ -1045,7 +1045,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.19")
+                              toast("PS PKG Freedom Hub v2.9.21")
                               true
                           }
                           else -> false
@@ -1584,7 +1584,7 @@ jobs:
                           try {
                               val os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
                               val buf = ByteArray(1 shl 20)
-                              var bytesRead: Int
+                              var bytesRead = 0 // Initialisation correcte pour Kotlin
                               for (u in list) {
                                   if (cancelled) throw InterruptedException("Annulé.")
                                   contentResolver.openInputStream(u)?.use { input ->
@@ -1737,15 +1737,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK
+      - name: Build APK v2.9.21
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.19
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.19.apk
+      - name: Renommer l'APK v2.9.21
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.21.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.19-apk
-          path: PkgMerger-v2.9.19.apk
+          name: pkg-merger-v2.9.21-apk
+          path: PkgMerger-v2.9.21.apk
           if-no-files-found: error
