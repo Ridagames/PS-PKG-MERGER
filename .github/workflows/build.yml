@@ -31,28 +31,36 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Sécurité Noms de Ressources Android v2.9.17
+      - name: Correction Anti-Doublons Extensions v2.9.18
         run: |
-          echo "Vérification des dossiers res/drawable et res/raw..."
+          echo "Nettoyage et correction des extensions de fichiers..."
           for dir in app/src/main/res/drawable app/src/main/res/raw; do
             if [ -d "$dir" ]; then
               for f in "$dir"/*; do
                 if [ -f "$f" ]; then
                   filename=$(basename "$f")
-                  clean_name=$(echo "$filename" | tr '[:upper:]' '[:lower:]' | tr '-' '_' | tr -cd 'a-z0-9_.-')
+                  
+                  # Corriger les doubles extensions courantes (.png.png -> .png, .mp3.mp3 -> .mp3)
+                  clean_name=$(echo "$filename" | sed 's/\.png\.png$/\.png/g' | sed 's/\.mp3\.mp3$/\.mp3/g')
+                  
+                  # Nettoyer les caractères spéciaux
+                  clean_name=$(echo "$clean_name" | tr '[:upper:]' '[:lower:]' | tr '-' '_' | tr -cd 'a-z0-9_.-')
+                  
+                  # S'assurer que le nom commence par une lettre
                   if ! echo "$clean_name" | grep -q '^[a-z]'; then
                     clean_name="img_${clean_name}"
                   fi
+
                   if [ "$filename" != "$clean_name" ]; then
                     mv "$f" "$dir/$clean_name"
-                    echo "Renommé : '$filename' -> '$clean_name'"
+                    echo "Corrigé : '$filename' -> '$clean_name'"
                   fi
                 fi
               done
             fi
           done
 
-      - name: Générer le projet Android v2.9.17
+      - name: Générer le projet Android v2.9.18
         env:
           FORCE: '1'
         run: |
@@ -116,8 +124,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2917
-                  versionName = "2.9.17"
+                  versionCode = 2918
+                  versionName = "2.9.18"
               }
 
               compileOptions {
@@ -1044,7 +1052,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.17")
+                              toast("PS PKG Freedom Hub v2.9.18")
                               true
                           }
                           else -> false
@@ -1739,12 +1747,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.17
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.17.apk
+      - name: Renommer l'APK v2.9.18
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.18.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.17-apk
-          path: PkgMerger-v2.9.17.apk
+          name: pkg-merger-v2.9.18-apk
+          path: PkgMerger-v2.9.18.apk
           if-no-files-found: error
