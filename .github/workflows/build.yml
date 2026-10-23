@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.41
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.42
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.41
+      - name: Générer le projet Android v2.9.42
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2941
-                  versionName = "2.9.41"
+                  versionCode = 2942
+                  versionName = "2.9.42"
               }
 
               compileOptions {
@@ -466,24 +466,24 @@ jobs:
 
               private fun tr(key: String): String {
                   val map = mapOf(
-                      "app_title" to mapOf("fr" to "⚡ PS PKG FREEDOM HUB", "en" to "⚡ PS PKG FREEDOM HUB", "es" to "⚡ PS PKG FREEDOM HUB"),
-                      "universe" to mapOf("fr" to "UNIVERS", "en" to "UNIVERSE", "es" to "UNIVERSO"),
-                      "mode_btn" to mapOf("fr" to "⚙️ MODE", "en" to "⚙️ MODE", "es" to "⚙️ MODO"),
-                      "sec1" to mapOf("fr" to "1. FICHIERS SOURCE (PKG / PARTIES)", "en" to "1. SOURCE FILES (PKG / PARTS)", "es" to "1. ARCHIVOS DE ORIGEN (PKG / PARTES)"),
-                      "btn_pick" to mapOf("fr" to "CHOISIR LES FICHIERS", "en" to "CHOOSE FILES", "es" to "ELEGIR ARCHIVOS"),
-                      "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER", "es" to "ELEGIR CARPETA"),
-                      "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER", "es" to "INVERTIR ORDEN DE PARTES"),
-                      "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING", "es" to "2. SALIDA Y PROCESAMIENTO"),
-                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION", "es" to "DEFINIR UBICACIÓN DE SALIDA"),
-                      "out_lbl" to mapOf("fr" to "Sortie : —", "en" to "Output : —", "es" to "Salida : —"),
-                      "btn_go" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE", "es" to "▶️ INICIAR FUSIÓN"),
-                      "btn_cancel" to mapOf("fr" to "❌ ANNULER", "en" to "❌ CANCEL", "es" to "❌ CANCELAR"),
-                      "status_ready" to mapOf("fr" to "Prêt.", "en" to "Ready.", "es" to "Listo."),
-                      "sec3" to mapOf("fr" to "3. SÉCURITÉ & VÉRIFICATION", "en" to "3. SECURITY & CHECKSUM", "es" to "3. SEGURIDAD Y VERIFICACIÓN"),
-                      "chk_verify" to mapOf("fr" to "Contrôle d'intégrité après écriture", "en" to "Integrity check after write", "es" to "Control de integridad tras escritura"),
-                      "chk_delete" to mapOf("fr" to "Supprimer les sources après succès", "en" to "Delete sources after success", "es" to "Eliminar fuentes tras éxito"),
-                      "hash_hint" to mapOf("fr" to "Coller un hash SHA-256 de contrôle", "en" to "Paste control SHA-256 hash", "es" to "Pegar hash SHA-256 de control"),
-                      "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256", "es" to "📋 Copiar SHA-256")
+                      "app_title" to mapOf("fr" to "⚡ PS PKG FREEDOM HUB", "en" to "⚡ PS PKG FREEDOM HUB", "es" to "⚡ PS PKG FREEDOM HUB", "it" to "⚡ PS PKG FREEDOM HUB", "pt" to "⚡ PS PKG FREEDOM HUB", "de" to "⚡ PS PKG FREEDOM HUB"),
+                      "universe" to mapOf("fr" to "UNIVERS", "en" to "UNIVERSE", "es" to "UNIVERSO", "it" to "UNIVERSO", "pt" to "UNIVERSO", "de" to "UNIVERSUM"),
+                      "mode_btn" to mapOf("fr" to "⚙️ MODE", "en" to "⚙️ MODE", "es" to "⚙️ MODO", "it" to "⚙️ MODO", "pt" to "⚙️ MODO", "de" to "⚙️ MODUS"),
+                      "sec1" to mapOf("fr" to "1. FICHIERS SOURCE (PKG / PARTIES)", "en" to "1. SOURCE FILES (PKG / PARTS)", "es" to "1. ARCHIVOS DE ORIGEN (PKG / PARTES)", "it" to "1. FILE SORGENTE (PKG / PARTI)", "pt" to "1. ARQUIVOS DE ORIGEM (PKG / PARTES)", "de" to "1. QUELLDATEIEN (PKG / TEILE)"),
+                      "btn_pick" to mapOf("fr" to "CHOISIR LES FICHIERS", "en" to "CHOOSE FILES", "es" to "ELEGIR ARCHIVOS", "it" to "SCEGLI FILE", "pt" to "ESCOLHER ARQUIVOS", "de" to "DATEIEN WÄHLEN"),
+                      "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER", "es" to "ELEGIR CARPETA", "it" to "SCEGLI CARTELLA", "pt" to "ESCOLHER PASTA", "de" to "ORDNER WÄHLEN"),
+                      "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER", "es" to "INVERTIR ORDEN DE PARTES", "it" to "INVERTI ORDINE PARTI", "pt" to "INVERTER ORDEM DAS PARTES", "de" to "TEILEREIHENFOLGE UMKEHREN"),
+                      "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING", "es" to "2. SALIDA Y PROCESAMIENTO", "it" to "2. USCITA & ELABORAZIONE", "pt" to "2. SAÍDA & PROCESSAMENTO", "de" to "2. AUSGABE & VERARBEITUNG"),
+                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION", "es" to "DEFINIR UBICACIÓN DE SALIDA", "it" to "IMPOSTA DESTINAZIONE", "pt" to "DEFINIR LOCAL DE SAÍDA", "de" to "AUSGABEZIEL FESTLEGEN"),
+                      "out_lbl" to mapOf("fr" to "Sortie : —", "en" to "Output : —", "es" to "Salida : —", "it" to "Uscita : —", "pt" to "Saída : —", "de" to "Ausgabe : —"),
+                      "btn_go" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE", "es" to "▶️ INICIAR FUSIÓN", "it" to "▶️ AVVIA UNIONE", "pt" to "▶️ INICIAR FUSÃO", "de" to "▶️ ZUSAMMENFÜHRUNG STARTEN"),
+                      "btn_cancel" to mapOf("fr" to "❌ ANNULER", "en" to "❌ CANCEL", "es" to "❌ CANCELAR", "it" to "❌ ANNULLA", "pt" to "❌ CANCELAR", "de" to "❌ ABBRECHEN"),
+                      "status_ready" to mapOf("fr" to "Prêt.", "en" to "Ready.", "es" to "Listo.", "it" to "Pronto.", "pt" to "Pronto.", "de" to "Bereit."),
+                      "sec3" to mapOf("fr" to "3. SÉCURITÉ & VÉRIFICATION", "en" to "3. SECURITY & CHECKSUM", "es" to "3. SEGURIDAD Y VERIFICACIÓN", "it" to "3. SICUREZZA & VERIFICA", "pt" to "3. SEGURANÇA & VERIFICAÇÃO", "de" to "3. SICHERHEIT & PRÜFUNG"),
+                      "chk_verify" to mapOf("fr" to "Contrôle d'intégrité après écriture", "en" to "Integrity check after write", "es" to "Control de integridad tras escritura", "it" to "Controllo integrità dopo scrittura", "pt" to "Controle de integridade após gravação", "de" to "Integritätsprüfung nach Schreiben"),
+                      "chk_delete" to mapOf("fr" to "Supprimer les sources après succès", "en" to "Delete sources after success", "es" to "Eliminar fuentes tras éxito", "it" to "Elimina sorgenti dopo il successo", "pt" to "Excluir fontes após sucesso", "de" to "Quellen nach Erfolg löschen"),
+                      "hash_hint" to mapOf("fr" to "Coller un hash SHA-256 de contrôle", "en" to "Paste control SHA-256 hash", "es" to "Pegar hash SHA-256 de control", "it" to "Incolla hash SHA-256 di controllo", "pt" to "Colar hash SHA-256 de controle", "de" to "SHA-256 Prüf-Hash einfügen"),
+                      "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256", "es" to "📋 Copiar SHA-256", "it" to "📋 Copia SHA-256", "pt" to "📋 Copiar SHA-256", "de" to "📋 SHA-256 kopieren")
                   )
                   return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
               }
@@ -529,8 +529,8 @@ jobs:
                               setImageResource(treeRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val treeLp = FrameLayout.LayoutParams(dp(42), dp(64), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
-                              if (treeSide == 1) leftMargin = dp(2) else rightMargin = dp(2)
+                          val treeLp = FrameLayout.LayoutParams(dp(65), dp(95), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
+                              if (treeSide == 1) leftMargin = -dp(18) else rightMargin = -dp(18)
                           }
                           outerFrame.addView(treeIv, treeLp)
                       }
@@ -565,9 +565,9 @@ jobs:
                   buttonContent.addView(tv, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
 
                   val contentLp = FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                      topMargin = dp(12)
-                      leftMargin = dp(16)
-                      rightMargin = dp(16)
+                      topMargin = dp(16)
+                      leftMargin = dp(12)
+                      rightMargin = dp(12)
                   }
                   outerFrame.addView(buttonContent, contentLp)
 
@@ -580,8 +580,8 @@ jobs:
                               setImageResource(closedRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val chestLp = FrameLayout.LayoutParams(dp(30), dp(30), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
-                              topMargin = dp(0)
+                          val chestLp = FrameLayout.LayoutParams(dp(32), dp(32), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
+                              topMargin = -dp(14)
                           }
                           outerFrame.addView(chestIv, chestLp)
 
@@ -1104,6 +1104,7 @@ jobs:
                           gravity = Gravity.TOP or Gravity.START
                       }
                       rootFrameLayout.addView(busImageView, busLp)
+                      busImageView?.bringToFront()
                   }
 
                   setContentView(rootFrameLayout)
@@ -1146,7 +1147,7 @@ jobs:
                               true
                           }
                           4 -> {
-                              toast("PS PKG Freedom Hub v2.9.41")
+                              toast("PS PKG Freedom Hub v2.9.42")
                               true
                           }
                           else -> false
@@ -1181,19 +1182,63 @@ jobs:
               }
 
               private fun showLanguageDialog() {
-                  val langs = arrayOf("Français 🇫🇷", "English 🇺🇸", "Español 🇪🇸")
-                  val codes = arrayOf("fr", "en", "es")
+                  val langs = arrayOf("Français 🇫🇷", "English 🇺🇸", "Español 🇪🇸", "Italiano 🇮🇹", "Português 🇵🇹", "Deutsch 🇩🇪")
+                  val codes = arrayOf("fr", "en", "es", "it", "pt", "de")
                   val checkedItem = codes.indexOf(currentLang).coerceAtLeast(0)
 
                   AlertDialog.Builder(this)
                       .setTitle("🌐 Choisir la langue / Language")
                       .setSingleChoiceItems(langs, checkedItem) { dialog, which ->
-                          currentLang = codes[which]
-                          prefs.edit().putString("lang", currentLang).apply()
-                          applyTheme()
+                          val selectedLang = codes[which]
+                          prefs.edit().putString("lang", selectedLang).apply()
+                          currentLang = selectedLang
                           dialog.dismiss()
+                          showRestartPrompt()
                       }
                       .setNegativeButton("Fermer", null)
+                      .show()
+              }
+
+              private fun showRestartPrompt() {
+                  val restartMsg = when (currentLang) {
+                      "en" -> "Please restart the application to fully apply the language change."
+                      "es" -> "Por favor, reinicie la aplicación para aplicar completamente el cambio de idioma."
+                      "it" -> "Riavvia l'applicazione per applicare completamente il cambio di lingua."
+                      "pt" -> "Por favor, reinicie o aplicativo para aplicar totalmente a alteração de idioma."
+                      "de" -> "Bitte starten Sie die Anwendung neu, um die Sprachänderung vollständig anzuwenden."
+                      else -> "Veuillez redémarrer l'application pour appliquer entièrement le changement de langue."
+                  }
+                  val restartBtn = when (currentLang) {
+                      "en" -> "Restart"
+                      "es" -> "Reiniciar"
+                      "it" -> "Riavvia"
+                      "pt" -> "Reiniciar"
+                      "de" -> "Neu starten"
+                      else -> "Redémarrer"
+                  }
+                  val cancelBtn = when (currentLang) {
+                      "en" -> "Later"
+                      "es" -> "Más tarde"
+                      "it" -> "Più tardi"
+                      "pt" -> "Mais tarde"
+                      "de" -> "Später"
+                      else -> "Plus tard"
+                  }
+
+                  AlertDialog.Builder(this)
+                      .setTitle("🌐 ${tr("mode_btn")}")
+                      .setMessage(restartMsg)
+                      .setPositiveButton(restartBtn) { _, _ ->
+                          val intent = baseContext.packageManager.getLaunchIntentForPackage(baseContext.packageName)
+                          intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                          startActivity(intent)
+                          finish()
+                      }
+                      .setNegativeButton(cancelBtn) { dialog, _ ->
+                          dialog.dismiss()
+                          applyTheme()
+                      }
+                      .setCancelable(false)
                       .show()
               }
 
@@ -1853,15 +1898,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.41
+      - name: Build APK v2.9.42
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.41
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.41.apk
+      - name: Renommer l'APK v2.9.42
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.42.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.41-apk
-          path: PkgMerger-v2.9.41.apk
+          name: pkg-merger-v2.9.42-apk
+          path: PkgMerger-v2.9.42.apk
           if-no-files-found: error
