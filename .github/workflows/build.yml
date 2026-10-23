@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.9.2 Full Immersive Freedom
+      - name: Générer le projet Android v2.9.3 Total Screen Immersive Freedom
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 292
-                  versionName = "2.9.2"
+                  versionCode = 293
+                  versionName = "2.9.3"
               }
 
               compileOptions {
@@ -139,9 +139,10 @@ jobs:
               <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
               <uses-permission android:name="android.permission.WAKE_LOCK" />
               <uses-permission android:name="android.permission.VIBRATE" />
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
               <application
-                  android:label="PS PKG Immersive Hub"
+                  android:label="PS PKG Total Freedom"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -150,7 +151,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Immersive Hub">
+                      android:label="PS PKG Total Freedom">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -183,6 +184,9 @@ jobs:
           import android.graphics.Paint
           import android.graphics.Typeface
           import android.graphics.drawable.GradientDrawable
+          import android.media.AudioAttributes
+          import android.media.AudioFormat
+          import android.media.AudioTrack
           import android.net.Uri
           import android.os.Build
           import android.os.Bundle
@@ -202,6 +206,7 @@ jobs:
           import android.widget.Button
           import android.widget.CheckBox
           import android.widget.EditText
+          import android.widget.FrameLayout
           import android.widget.ImageView
           import android.widget.LinearLayout
           import android.widget.PopupMenu
@@ -218,26 +223,26 @@ jobs:
           import kotlin.math.sin
           import kotlin.random.Random
 
-          class FreeRoamingAnimationView(context: Context) : View(context) {
+          class FullScreenBackgroundAnimationView(context: Context) : View(context) {
               private var animProgress = 0f
               private val paint = Paint().apply { isAntiAlias = true }
               var currentTheme = "FORTNITE"
               
-              private var busX = 0f
-              private var busY = 100f
-              private var targetY = 200f
+              private var busX = -200f
+              private var busY = 300f
+              private var targetY = 400f
 
               private val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-                  duration = 7000
+                  duration = 8000
                   repeatCount = ValueAnimator.INFINITE
                   addUpdateListener {
                       animProgress = it.animatedValue as Float
                       if (width > 0 && height > 0) {
-                          busX = animProgress * (width + 300f) - 150f
+                          busX = animProgress * (width + 400f) - 200f
                           if (animProgress < 0.05f) {
-                              targetY = Random.nextFloat() * (height - 100f).coerceAtLeast(50f)
+                              targetY = Random.nextFloat() * (height - 300f).coerceAtLeast(100f)
                           }
-                          busY += (targetY - busY) * 0.04f
+                          busY += (targetY - busY) * 0.03f
                       }
                       invalidate()
                   }
@@ -255,55 +260,100 @@ jobs:
 
                   when (currentTheme) {
                       "FORTNITE" -> {
-                          // Le Bus de Combat se déplace librement partout sur l'écran
+                          // Le Bus de combat traverse TOUT l'écran librement de haut en bas et en largeur
                           paint.color = Color.parseColor("#0099FF")
-                          canvas.drawRect(busX, busY - 14f, busX + 90f, busY + 14f, paint)
+                          canvas.drawRect(busX, busY - 18f, busX + 110f, busY + 18f, paint)
                           paint.color = Color.parseColor("#FFE600")
-                          canvas.drawRect(busX + 15f, busY - 10f, busX + 35f, busY - 2f, paint)
-                          canvas.drawRect(busX + 45f, busY - 10f, busX + 75f, busY - 2f, paint)
+                          canvas.drawRect(busX + 20f, busY - 12f, busX + 45f, busY - 2f, paint)
+                          canvas.drawRect(busX + 60f, busY - 12f, busX + 95f, busY - 2f, paint)
                           paint.color = Color.parseColor("#B800FF")
-                          canvas.drawCircle(busX + 45f, busY - 35f, 18f, paint)
+                          canvas.drawCircle(busX + 60f, busY - 45f, 22f, paint)
 
                           paint.color = Color.parseColor("#00D9FF")
-                          paint.textSize = 14f
-                          canvas.drawText("🚌 BATTLE BUS EN VOL", busX - 10f, busY - 45f, paint)
+                          paint.textSize = 16f
+                          canvas.drawText("🚌 BATTLE BUS", busX, busY - 55f, paint)
                       }
                       "GOW" -> {
-                          // Les orbes rouges de Kratos flottent et bougent partout sur l'écran
-                          for (i in 0..6) {
+                          // Les orbes rouges de Kratos flottent et tourbillonnent PARTOUT sur l'écran
+                          for (i in 0..8) {
                               val angle = animProgress * 6.28f + i
-                              val cx = (w / 7f) * (i + 1) + sin(angle) * 40f
-                              val cy = (h / 2f) + cos(angle * 1.5f) * (h / 3f)
+                              val cx = (w / 9f) * (i + 1) + sin(angle * 1.2f) * 60f
+                              val cy = (h * 0.15f) + ((i * 120f) % (h * 0.7f)) + cos(angle) * 40f
                               paint.color = Color.parseColor("#FF0000")
-                              canvas.drawCircle(cx, cy, 12f, paint)
+                              canvas.drawCircle(cx, cy, 14f, paint)
                               paint.color = Color.parseColor("#FFD700")
-                              canvas.drawCircle(cx, cy, 5f, paint)
+                              canvas.drawCircle(cx, cy, 6f, paint)
                           }
                       }
                       "TLOU" -> {
                           paint.color = Color.parseColor("#7FA98B")
-                          for (i in 0..6) {
-                              val sx = (w / 7f) * (i + 1) + sin(animProgress * 6.28f + i) * 20f
-                              val sy = (h * 0.2f) + (i * 80f) + cos(animProgress * 4f + i) * 30f
-                              canvas.drawCircle(sx, sy, 7f, paint)
+                          for (i in 0..7) {
+                              val sx = (w / 8f) * (i + 1) + sin(animProgress * 6.28f + i) * 30f
+                              val sy = (h * 0.1f) + (i * 100f) + cos(animProgress * 3f + i) * 40f
+                              canvas.drawCircle(sx, sy, 8f, paint)
                           }
                       }
                       "GENSHIN" -> {
                           paint.color = Color.parseColor("#4CC9F0")
                           val starX = w * animProgress
-                          val starY = h * 0.5f + sin(animProgress * 15f) * 100f
-                          canvas.drawCircle(starX, starY, 10f, paint)
+                          val starY = h * 0.2f + (animProgress * 600f) % (h * 0.8f)
+                          canvas.drawCircle(starX, starY, 12f, paint)
                       }
                       "GTA" -> {
                           paint.color = Color.parseColor("#00FF66")
                           val carX = w * animProgress
-                          val carY = h * 0.3f + (animProgress * 200f) % h
-                          canvas.drawRect(carX - 30f, carY - 10f, carX + 30f, carY + 10f, paint)
+                          val carY = h * 0.2f + (animProgress * 500f) % (h * 0.8f)
+                          canvas.drawRect(carX - 40f, carY - 12f, carX + 40f, carY + 12f, paint)
                       }
                       else -> {
                           paint.color = Color.parseColor("#38BDF8")
-                          canvas.drawCircle(w * animProgress, h * 0.5f, 10f, paint)
+                          canvas.drawCircle(w * animProgress, h * 0.5f, 12f, paint)
                       }
+                  }
+              }
+          }
+
+          class SoundFX {
+              companion5 object {
+                  fun playSound(theme: String) {
+                      Thread {
+                          try {
+                              val sampleRate = 22050
+                              val numSamples = if (theme == "GOW") sampleRate * 3 / 10 else sampleRate * 1 / 10
+                              val generatedSnd = ByteArray(numSamples * 2)
+                              var freq = if (theme == "GOW") 110.0 else 440.0 // Son grave pour Kratos, aigu pour Fortnite
+
+                              for (i in 0 until numSamples) {
+                                  val angle = i / (sampleRate / freq) * 2.0 * Math.PI
+                                  val valSample = (sin(angle) * 32767.0).toInt().toShort()
+                                  generatedSnd[2 * i] = (valSample.toInt() and 0x00ff).toByte()
+                                  generatedSnd[2 * i + 1] = ((valSample.toInt() and 0xff00) ushr 8).toByte()
+                              }
+
+                              val audioTrack = AudioTrack.Builder()
+                                  .setAudioAttributes(
+                                      AudioAttributes.Builder()
+                                          .setUsage(AudioAttributes.USAGE_GAME)
+                                          .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                          .build()
+                                  )
+                                  .setAudioFormat(
+                                      AudioFormat.Builder()
+                                          .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                          .setSampleRate(sampleRate)
+                                          .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                          .build()
+                                  )
+                                  .setBufferSizeInBytes(numSamples * 2)
+                                  .setTransferMode(AudioTrack.MODE_STATIC)
+                                  .build()
+
+                              audioTrack.write(generatedSnd, 0, numSamples * 2)
+                              audioTrack.play()
+                              Thread.sleep(300)
+                              audioTrack.release()
+                          } catch (_: Exception) {}
+                      }.start()
                   }
               }
           }
@@ -326,6 +376,7 @@ jobs:
               private var lastNotifTime = 0L
 
               private lateinit var prefs: SharedPreferences
+              private lateinit var rootFrameLayout: FrameLayout
               private lateinit var rootLayout: ScrollView
               private lateinit var mainCol: LinearLayout
               private lateinit var listContainer: LinearLayout
@@ -347,7 +398,7 @@ jobs:
               private lateinit var menuBtn: Button
               private lateinit var titleView: TextView
               private lateinit var subtitleView: TextView
-              private lateinit var roamingView: FreeRoamingAnimationView
+              private lateinit var backgroundAnimView: FullScreenBackgroundAnimationView
               private lateinit var section1Title: TextView
               private lateinit var section2Title: TextView
               private lateinit var section3Title: TextView
@@ -507,7 +558,7 @@ jobs:
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
               @SuppressLint("ClickableViewAccessibility")
-              private fun styleImmersiveButton(b: Button, bgHex: String, borderHexStr: String, textHex: String = "#FFFFFF", onClickAction: () -> Unit) {
+              private fun styleFreedomButton(b: Button, bgHex: String, borderHexStr: String, textHex: String = "#FFFFFF", onClickAction: () -> Unit) {
                   val cfg = getThemeConfig(currentTheme)
                   
                   val normalBg = GradientDrawable().apply {
@@ -531,11 +582,11 @@ jobs:
                   b.setOnClickListener {
                       val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                       if (currentTheme == "GOW") {
-                          // Vibration puissante et longue pour God of War (rugissement spartiate)
-                          vibrator?.vibrate(VibrationEffect.createOneShot(180, VibrationEffect.DEFAULT_AMPLITUDE))
+                          vibrator?.vibrate(VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE))
+                          SoundFX.playSound("GOW")
                       } else if (currentTheme == "FORTNITE") {
-                          // Vibration rapide et sèche (clic de menu Fortnite)
                           vibrator?.vibrate(VibrationEffect.createOneShot(35, VibrationEffect.DEFAULT_AMPLITUDE))
+                          SoundFX.playSound("FORTNITE")
                       } else {
                           vibrator?.vibrate(VibrationEffect.createOneShot(40, VibrationEffect.DEFAULT_AMPLITUDE))
                       }
@@ -560,15 +611,16 @@ jobs:
               private fun applyTheme() {
                   val cfg = getThemeConfig(currentTheme)
 
-                  rootLayout.setBackgroundColor(cfg.bg)
-                  mainCol.setBackgroundColor(cfg.bg)
+                  rootFrameLayout.setBackgroundColor(cfg.bg)
+                  rootLayout.setBackgroundColor(Color.TRANSPARENT)
+                  mainCol.setBackgroundColor(Color.TRANSPARENT)
 
                   titleView.setTextColor(cfg.primaryText)
                   subtitleView.setTextColor(cfg.secondaryText)
-                  subtitleView.text = "IMMERSIVE UNIVERSE : ${cfg.name.uppercase()}"
+                  subtitleView.text = "TOTAL FREEDOM UNIVERSE : ${cfg.name.uppercase()}"
 
-                  roamingView.currentTheme = currentTheme
-                  roamingView.invalidate()
+                  backgroundAnimView.currentTheme = currentTheme
+                  backgroundAnimView.invalidate()
 
                   section1Title.setTextColor(cfg.secondaryText)
                   section2Title.setTextColor(cfg.secondaryText)
@@ -590,16 +642,16 @@ jobs:
                       }
                   }
 
-                  styleImmersiveButton(pickBtn, cfg.btnPick.first, cfg.btnPick.second) { pick() }
-                  styleImmersiveButton(dirBtn, cfg.btnDir.first, cfg.btnDir.second) { pickFolder() }
-                  styleImmersiveButton(revBtn, cfg.btnRev.first, cfg.btnRev.second) { reversed = !reversed; refresh() }
-                  styleImmersiveButton(outBtn, cfg.btnOut.first, cfg.btnOut.second) { pickOutput() }
-                  styleImmersiveButton(goBtn, cfg.btnGo.first, cfg.btnGo.second) { executeAction() }
-                  styleImmersiveButton(cancelBtn, cfg.btnCancel.first, cfg.btnCancel.second) {
+                  styleFreedomButton(pickBtn, cfg.btnPick.first, cfg.btnPick.second) { pick() }
+                  styleFreedomButton(dirBtn, cfg.btnDir.first, cfg.btnDir.second) { pickFolder() }
+                  styleFreedomButton(revBtn, cfg.btnRev.first, cfg.btnRev.second) { reversed = !reversed; refresh() }
+                  styleFreedomButton(outBtn, cfg.btnOut.first, cfg.btnOut.second) { pickOutput() }
+                  styleFreedomButton(goBtn, cfg.btnGo.first, cfg.btnGo.second) { executeAction() }
+                  styleFreedomButton(cancelBtn, cfg.btnCancel.first, cfg.btnCancel.second) {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
-                  styleImmersiveButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
-                  styleImmersiveButton(menuBtn, cfg.btnRev.first, cfg.btnRev.second, cfg.secondaryText.toHex()) { showMenu(menuBtn) }
+                  styleFreedomButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
+                  styleFreedomButton(menuBtn, cfg.btnRev.first, cfg.btnRev.second, cfg.secondaryText.toHex()) { showMenu(menuBtn) }
 
                   refresh()
               }
@@ -646,7 +698,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS PKG Immersive Hub")
+                          .setContentTitle("⚡ PS PKG Total Freedom")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -680,6 +732,11 @@ jobs:
               }
 
               private fun showMergerScreen() {
+                  rootFrameLayout = FrameLayout(this)
+
+                  backgroundAnimView = FullScreenBackgroundAnimationView(this)
+                  rootFrameLayout.addView(backgroundAnimView, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+
                   val pad = dp(16)
                   mainCol = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
@@ -695,7 +752,7 @@ jobs:
                       orientation = LinearLayout.VERTICAL
                   }
                   titleView = TextView(this).apply {
-                      text = "⚡ PS PKG IMMERSIVE HUB"
+                      text = "⚡ PS PKG FREEDOM HUB"
                       textSize = 20f
                       setTypeface(null, Typeface.BOLD)
                   }
@@ -716,26 +773,17 @@ jobs:
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
                   mainCol.addView(headerLayout)
 
-                  roamingView = FreeRoamingAnimationView(this)
-                  mainCol.addView(roamingView, LinearLayout.LayoutParams(MATCH_PARENT, dp(45)).apply { bottomMargin = dp(10) })
-
                   val card1 = createCard()
                   section1Title = text("1. SOURCE FILES (PKG / PARTS)", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(section1Title)
                   
-                  pickBtn = Button(this).apply {
-                      text = "📁 CHOISIR LES FICHIERS"
-                  }
+                  pickBtn = Button(this).apply { text = "📁 CHOISIR LES FICHIERS" }
                   card1.addView(pickBtn, lp())
 
-                  dirBtn = Button(this).apply {
-                      text = "📂 CHOISIR UN DOSSIER COMPLET"
-                  }
+                  dirBtn = Button(this).apply { text = "📂 CHOISIR UN DOSSIER COMPLET" }
                   card1.addView(dirBtn, lp())
 
-                  revBtn = Button(this).apply {
-                      text = "🔀 INVERSER L'ORDRE DES PARTIES"
-                  }
+                  revBtn = Button(this).apply { text = "🔀 INVERSER L'ORDRE DES PARTIES" }
                   card1.addView(revBtn, lp())
 
                   listContainer = LinearLayout(this).apply {
@@ -767,9 +815,7 @@ jobs:
                   section2Title = text("2. OUTPUT & PROCESSING", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card2.addView(section2Title)
 
-                  outBtn = Button(this).apply {
-                      text = "💾 DÉFINIR EMPLACEMENT DE SORTIE"
-                  }
+                  outBtn = Button(this).apply { text = "💾 DÉFINIR EMPLACEMENT DE SORTIE" }
                   card2.addView(outBtn, lp())
 
                   outView = text("Sortie : —", 11f, Color.GRAY).apply { 
@@ -781,9 +827,7 @@ jobs:
                   val actionLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
                   }
-                  goBtn = Button(this).apply {
-                      text = "▶️ LANCER LA FUSION"
-                  }
+                  goBtn = Button(this).apply { text = "▶️ LANCER LA FUSION" }
                   actionLayout.addView(goBtn, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
                   cancelBtn = Button(this).apply {
@@ -841,10 +885,12 @@ jobs:
                   card3.addView(copyBtn, lp())
                   mainCol.addView(card3, lpCard())
 
-                  rootLayout = ScrollView(this).apply { 
-                      addView(mainCol) 
+                  rootLayout = ScrollView(this).apply {
+                      addView(mainCol)
                   }
-                  setContentView(rootLayout)
+
+                  rootFrameLayout.addView(rootLayout, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+                  setContentView(rootFrameLayout)
               }
 
               private fun showMenu(v: View) {
@@ -866,7 +912,7 @@ jobs:
                                   goBtn.text = "▶️ DÉCOUPER"
                                   statusView.text = "Prêt à découper."
                               } else {
-                                  titleView.text = "⚡ PS PKG IMMERSIVE HUB"
+                                  titleView.text = "⚡ PS PKG FREEDOM HUB"
                                   section1Title.text = "1. SOURCE FILES (PKG / PARTS)"
                                   goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
@@ -880,7 +926,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Immersive Hub v2.9.2")
+                              toast("PS PKG Total Freedom v2.9.3")
                               true
                           }
                           else -> false
@@ -1558,7 +1604,7 @@ jobs:
                       }
                       if (c != 0) return c
                   }
-                  return ca.size - cb.size
+                  return ca.size - sys.size
               }
 
               private fun suggestName(): String {
@@ -1575,12 +1621,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.2
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.2.apk
+      - name: Renommer l'APK v2.9.3
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.3.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.2-apk
-          path: PkgMerger-v2.9.2.apk
+          name: pkg-merger-v2.9.3-apk
+          path: PkgMerger-v2.9.3.apk
           if-no-files-found: error
