@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.9.5 Foreground Freedom
+      - name: Générer le projet Android v2.9.6 Clean Foreground Freedom
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 295
-                  versionName = "2.9.5"
+                  versionCode = 296
+                  versionName = "2.9.6"
               }
 
               compileOptions {
@@ -142,7 +142,7 @@ jobs:
               <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
               <application
-                  android:label="PS PKG Foreground Freedom"
+                  android:label="PS PKG Clean Freedom"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -151,7 +151,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Foreground Freedom">
+                      android:label="PS PKG Clean Freedom">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -258,12 +258,8 @@ jobs:
                   val h = height.toFloat()
                   if (w <= 0 || h <= 0) return
 
-                  // IMPORTANT : setClickable(false) et isEnabled(false) garantissent que les clics traversent
-                  // cette vue pour atteindre les boutons, mais les graphismes s'affichent bien au PREMIER PLAN.
-                  
                   when (currentTheme) {
                       "FORTNITE" -> {
-                          // Bus de combat qui traverse TOUT l'écran de part en part en premier plan
                           paint.color = Color.parseColor("#0099FF")
                           canvas.drawRect(busX, busY - 20f, busX + 120f, busY + 20f, paint)
                           paint.color = Color.parseColor("#FFE600")
@@ -277,7 +273,6 @@ jobs:
                           canvas.drawText("🚌 BATTLE BUS", busX, busY - 60f, paint)
                       }
                       "GOW" -> {
-                          // Orbes de rage de Kratos éparpillées et flottant partout sur l'écran au premier plan
                           for (i in 0..10) {
                               val angle = animProgress * 6.28f + i
                               val cx = (w / 11f) * (i + 1) + sin(angle * 1.5f) * 80f
@@ -324,7 +319,7 @@ jobs:
                               val sampleRate = 22050
                               val numSamples = if (theme == "GOW") sampleRate * 4 / 10 else sampleRate * 2 / 10
                               val generatedSnd = ByteArray(numSamples * 2)
-                              val freq = if (theme == "GOW") 95.0 else 523.25 // Fréquence grave percutante pour Kratos, note aiguë pour Fortnite
+                              val freq = if (theme == "GOW") 95.0 else 523.25
 
                               for (i in 0 until numSamples) {
                                   val angle = i / (sampleRate / freq) * 2.0 * Math.PI
@@ -620,7 +615,7 @@ jobs:
 
                   titleView.setTextColor(cfg.primaryText)
                   subtitleView.setTextColor(cfg.secondaryText)
-                  subtitleView.text = "FOREGROUND FREEDOM : ${cfg.name.uppercase()}"
+                  subtitleView.text = "CLEAN FREEDOM : ${cfg.name.uppercase()}"
 
                   foregroundAnimView.currentTheme = currentTheme
                   foregroundAnimView.invalidate()
@@ -701,7 +696,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS PKG Foreground Freedom")
+                          .setContentTitle("⚡ PS PKG Clean Freedom")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -889,11 +884,8 @@ jobs:
                       addView(mainCol)
                   }
 
-                  // 1. D'abord on ajoute l'interface (en arrière-plan du FrameLayout)
                   rootFrameLayout.addView(rootLayout, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
 
-                  // 2. Ensuite on ajoute l'animation PAR-DESSUS (foreground) avec isClickable = false 
-                  // pour que les clics traversent directement l'animation et touchent les boutons !
                   foregroundAnimView = ForegroundAnimationView(this).apply {
                       isClickable = false
                       isFocusable = false
@@ -936,7 +928,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Foreground Freedom v2.9.5")
+                              toast("PS PKG Clean Freedom v2.9.6")
                               true
                           }
                           else -> false
@@ -1610,7 +1602,7 @@ jobs:
                               if (xs.length != ys.length) xs.length - ys.length else xs.compareTo(ys)
                           }
                           dx != dy -> if (dx) 1 else -1
-                          else -> x.compareTo(y, ignoreCasey = true)
+                          else -> x.compareTo(y, ignoreCase = true)
                       }
                       if (c != 0) return c
                   }
@@ -1631,12 +1623,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.5
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.5.apk
+      - name: Renommer l'APK v2.9.6
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.6.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.5-apk
-          path: PkgMerger-v2.9.5.apk
+          name: pkg-merger-v2.9.6-apk
+          path: PkgMerger-v2.9.6.apk
           if-no-files-found: error
