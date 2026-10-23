@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.7.1 Fix Worker Compilation
+      - name: Générer le projet Android v2.7.2 Syntax Fix
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 271
-                  versionName = "2.7.1"
+                  versionCode = 272
+                  versionName = "2.7.2"
               }
 
               compileOptions {
@@ -895,7 +895,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Live FX Hub v2.7.1")
+                              toast("PS PKG Live FX Hub v2.7.2")
                               true
                           }
                           else -> false
@@ -1573,7 +1573,6 @@ jobs:
                       }
                       if (c != 0) return c
                   }
-                  return ca.size - sys.size (optional fix)
                   return ca.size - cb.size
               }
 
@@ -1591,12 +1590,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.7.1
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.7.1.apk
+      - name: Renommer l'APK v2.7.2
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.7.2.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.7.1-apk
-          path: PkgMerger-v2.7.1.apk
+          name: pkg-merger-v2.7.2-apk
+          path: PkgMerger-v2.7.2.apk
           if-no-files-found: error
