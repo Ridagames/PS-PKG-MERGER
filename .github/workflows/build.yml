@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.57
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.58
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.57
+      - name: Générer le projet Android v2.9.58
         env:
           FORCE: '1'
         run: |
@@ -120,7 +120,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2957
+                  versionCode = 2958
                   versionName = "2.1.0"
               }
 
@@ -720,6 +720,18 @@ jobs:
 
               private fun setupBackgroundMedia() {
                   try {
+                      // Réinitialisation complète des médias pour éviter les mélanges d'univers
+                      bgVideoView?.stopPlayback()
+                      bgVideoView?.visibility = View.GONE
+                      
+                      try {
+                          musicPlayer?.stop()
+                      } catch (_: Exception) {}
+                      musicPlayer?.release()
+                      musicPlayer = null
+
+                      stopFortniteBusAnimation()
+
                       if (currentTheme == "GOW") {
                           bgVideoView?.visibility = View.VISIBLE
                           val videoResId = resources.getIdentifier("gow_bg", "raw", packageName)
@@ -736,35 +748,18 @@ jobs:
 
                           val musicResId = resources.getIdentifier("gow_music", "raw", packageName)
                           if (musicResId != 0) {
-                              if (musicPlayer == null) {
-                                  musicPlayer = MediaPlayer.create(this, musicResId)
-                                  musicPlayer?.isLooping = true
-                              }
-                              if (musicPlayer?.isPlaying == false) {
-                                  musicPlayer?.start()
-                              }
+                              musicPlayer = MediaPlayer.create(this, musicResId)
+                              musicPlayer?.isLooping = true
+                              musicPlayer?.start()
                           }
-                          stopFortniteBusAnimation()
                       } else if (currentTheme == "FORTNITE") {
-                          bgVideoView?.stopPlayback()
-                          bgVideoView?.visibility = View.GONE
-                          
                           val fnMusicRes = resources.getIdentifier("fn_music", "raw", packageName)
                           if (fnMusicRes != 0) {
-                              if (musicPlayer == null) {
-                                  musicPlayer = MediaPlayer.create(this, fnMusicRes)
-                                  musicPlayer?.isLooping = true
-                              }
-                              if (musicPlayer?.isPlaying == false) {
-                                  musicPlayer?.start()
-                              }
+                              musicPlayer = MediaPlayer.create(this, fnMusicRes)
+                              musicPlayer?.isLooping = true
+                              musicPlayer?.start()
                           }
                           startFortniteBusAnimation()
-                      } else {
-                          bgVideoView?.stopPlayback()
-                          bgVideoView?.visibility = View.GONE
-                          musicPlayer?.pause()
-                          stopFortniteBusAnimation()
                       }
                   } catch (_: Exception) {}
               }
@@ -782,6 +777,7 @@ jobs:
               }
 
               private fun scheduleNextBusRun() {
+                  if (currentTheme != "FORTNITE") return
                   val delay = (5000 + random.nextInt(3500)).toLong()
                   busHandler.postDelayed({
                       runFortniteBus()
@@ -790,6 +786,7 @@ jobs:
 
               @SuppressLint("ClickableViewAccessibility")
               private fun runFortniteBus() {
+                  if (currentTheme != "FORTNITE") return
                   val bus = busImageView ?: return
                   val parentWidth = rootFrameLayout.width
                   val screenWidth = if (parentWidth > 0) parentWidth.toFloat() else resources.displayMetrics.widthPixels.toFloat()
@@ -817,15 +814,17 @@ jobs:
                   }
 
                   busHandler.postDelayed({
-                      try {
-                          var busSoundRes = resources.getIdentifier("fn_bus", "raw", packageName)
-                          if (busSoundRes == 0) busSoundRes = resources.getIdentifier("img_fn_bus", "raw", packageName)
-                          if (busSoundRes != 0) {
-                              fnBusPlayer?.release()
-                              fnBusPlayer = MediaPlayer.create(this, busSoundRes)
-                              fnBusPlayer?.start()
-                          }
-                      } catch (_: Exception) {}
+                      if (currentTheme == "FORTNITE") {
+                          try {
+                              var busSoundRes = resources.getIdentifier("fn_bus", "raw", packageName)
+                              if (busSoundRes == 0) busSoundRes = resources.getIdentifier("img_fn_bus", "raw", packageName)
+                              if (busSoundRes != 0) {
+                                  fnBusPlayer?.release()
+                                  fnBusPlayer = MediaPlayer.create(this, busSoundRes)
+                                  fnBusPlayer?.start()
+                              }
+                          } catch (_: Exception) {}
+                      }
                   }, 300)
 
                   bus.animate()
@@ -877,25 +876,19 @@ jobs:
 
               override fun onResume() {
                   super.onResume()
-                  if (currentTheme == "GOW" || currentTheme == "FORTNITE") {
-                      bgVideoView?.start()
-                      musicPlayer?.start()
-                  }
-                  if (currentTheme == "FORTNITE") {
-                      startFortniteBusAnimation()
-                  }
+                  setupBackgroundMedia()
               }
 
               override fun onPause() {
                   super.onPause()
                   bgVideoView?.pause()
-                  musicPlayer?.pause()
+                  try { musicPlayer?.pause() } catch (_: Exception) {}
                   stopFortniteBusAnimation()
               }
 
               override fun onDestroy() {
                   super.onDestroy()
-                  musicPlayer?.release()
+                  try { musicPlayer?.release() } catch (_: Exception) {}
                   clickPlayer?.release()
                   fnBusPlayer?.release()
                   stopFortniteBusAnimation()
@@ -2441,15 +2434,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.57
+      - name: Build APK v2.9.58
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.57
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.57.apk
+      - name: Renommer l'APK v2.9.58
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.58.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.57-apk
-          path: PkgMerger-v2.9.57.apk
+          name: pkg-merger-v2.9.58-apk
+          path: PkgMerger-v2.9.58.apk
           if-no-files-found: error
