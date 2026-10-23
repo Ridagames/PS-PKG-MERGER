@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.3.1 Fix Icon View
+      - name: Générer le projet Android v2.4.0 Game Themes
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 231
-                  versionName = "2.3.1"
+                  versionCode = 240
+                  versionName = "2.4.0"
               }
 
               compileOptions {
@@ -256,20 +256,124 @@ jobs:
 
               private val cardViews = ArrayList<LinearLayout>()
 
-              // Couleurs Thème CYBERPUNK
-              private val cyberBg = Color.parseColor("#0D0814")
-              private val cyberCard = Color.parseColor("#170F26")
-              private val cyberBorder = "#FF007F"
-              private val cyberCyan = Color.parseColor("#00F0FF")
-              private val cyberPink = Color.parseColor("#FF007F")
-              private val cyberDim = Color.parseColor("#A899C2")
+              // Définition des palettes de thèmes
+              private data class ThemePalette(
+                  val bg: Int,
+                  val card: Int,
+                  val border: String,
+                  val primaryText: Int,
+                  val secondaryText: Int,
+                  val dim: Int,
+                  val btnPick: Pair<String, String>,
+                  val btnDir: Pair<String, String>,
+                  val btnRev: Pair<String, String>,
+                  val btnOut: Pair<String, String>,
+                  val btnGo: Pair<String, String>,
+                  val btnCancel: Pair<String, String>
+              )
 
-              // Couleurs Thème CLASSIC DARK
-              private val classicBg = Color.parseColor("#0F172A")
-              private val classicCard = Color.parseColor("#1E293B")
-              private val classicBorder = "#334155"
-              private val classicAccent = Color.parseColor("#38BDF8")
-              private val classicDim = Color.parseColor("#94A3B8")
+              private fun getPalette(themeKey: String): ThemePalette {
+                  return when (themeKey) {
+                      "FORTNITE" -> ThemePalette(
+                          bg = Color.parseColor("#0B0E28"),
+                          card = Color.parseColor("#171D4A"),
+                          border = "#00D2FF",
+                          primaryText = Color.parseColor("#FFE600"),
+                          secondaryText = Color.parseColor("#00D2FF"),
+                          dim = Color.parseColor("#8E99CC"),
+                          btnPick = Pair("#1E2978", "#00D2FF"),
+                          btnDir = Pair("#1E2978", "#00D2FF"),
+                          btnRev = Pair("#2D1D6B", "#B800FF"),
+                          btnOut = Pair("#0F5E6B", "#00FFF0"),
+                          btnGo = Pair("#198038", "#00FF66"),
+                          btnCancel = Pair("#801935", "#FF0055")
+                      )
+                      "TLOU" -> ThemePalette(
+                          bg = Color.parseColor("#0A0F0D"),
+                          card = Color.parseColor("#14211A"),
+                          border = "#4A6B53",
+                          primaryText = Color.parseColor("#D4A359"),
+                          secondaryText = Color.parseColor("#7FA98B"),
+                          dim = Color.parseColor("#8C9E91"),
+                          btnPick = Pair("#1C3325", "#7FA98B"),
+                          btnDir = Pair("#1C3325", "#7FA98B"),
+                          btnRev = Pair("#3A3020", "#D4A359"),
+                          btnOut = Pair("#243D31", "#7FA98B"),
+                          btnGo = Pair("#2B4D21", "#52A336"),
+                          btnCancel = Pair("#4D2121", "#A33636")
+                      )
+                      "GOW" -> ThemePalette(
+                          bg = Color.parseColor("#120A0A"),
+                          card = Color.parseColor("#241212"),
+                          border = "#8B0000",
+                          primaryText = Color.parseColor("#FFD700"),
+                          secondaryText = Color.parseColor("#FF4500"),
+                          dim = Color.parseColor("#B8860B"),
+                          btnPick = Pair("#3D1414", "#FF4500"),
+                          btnDir = Pair("#3D1414", "#FF4500"),
+                          btnRev = Pair("#4A3B12", "#FFD700"),
+                          btnOut = Pair("#291321", "#FF1493"),
+                          btnGo = Pair("#1C3D14", "#32CD32"),
+                          btnCancel = Pair("#5E0F0F", "#FF0000")
+                      )
+                      "GENSHIN" -> ThemePalette(
+                          bg = Color.parseColor("#0B132B"),
+                          card = Color.parseColor("#1C2541"),
+                          border = "#5BC0BE",
+                          primaryText = Color.parseColor("#F72585"),
+                          secondaryText = Color.parseColor("#4CC9F0"),
+                          dim = Color.parseColor("#8093F1"),
+                          btnPick = Pair("#22223B", "#4CC9F0"),
+                          btnDir = Pair("#22223B", "#4CC9F0"),
+                          btnRev = Pair("#4A4E69", "#F72585"),
+                          btnOut = Pair("#1C2541", "#5BC0BE"),
+                          btnGo = Pair("#1A4314", "#38B000"),
+                          btnCancel = Pair("#5A189A", "#E0115F")
+                      )
+                      "GTA" -> ThemePalette(
+                          bg = Color.parseColor("#050B05"),
+                          card = Color.parseColor("#0D1A0E"),
+                          border = "#00FF66",
+                          primaryText = Color.parseColor("#FF007F"),
+                          secondaryText = Color.parseColor("#00FF66"),
+                          dim = Color.parseColor("#7FA98B"),
+                          btnPick = Pair("#123015", "#00FF66"),
+                          btnDir = Pair("#123015", "#00FF66"),
+                          btnRev = Pair("#3B0D29", "#FF007F"),
+                          btnOut = Pair("#0D2E2B", "#00FFFF"),
+                          btnGo = Pair("#16521A", "#00FF00"),
+                          btnCancel = Pair("#521616", "#FF0033")
+                      )
+                      "CLASSIC" -> ThemePalette(
+                          bg = Color.parseColor("#0F172A"),
+                          card = Color.parseColor("#1E293B"),
+                          border = "#334155",
+                          primaryText = Color.WHITE,
+                          secondaryText = Color.parseColor("#38BDF8"),
+                          dim = Color.parseColor("#94A3B8"),
+                          btnPick = Pair("#0284C7", "#38BDF8"),
+                          btnDir = Pair("#0369A1", "#38BDF8"),
+                          btnRev = Pair("#334155", "#64748B"),
+                          btnOut = Pair("#0D9488", "#14B8A6"),
+                          btnGo = Pair("#16A34A", "#22C55E"),
+                          btnCancel = Pair("#DC2626", "#EF4444")
+                      )
+                      else -> ThemePalette( // CYBERPUNK
+                          bg = Color.parseColor("#0D0814"),
+                          card = Color.parseColor("#170F26"),
+                          border = "#FF007F",
+                          primaryText = Color.parseColor("#FF007F"),
+                          secondaryText = Color.parseColor("#00F0FF"),
+                          dim = Color.parseColor("#A899C2"),
+                          btnPick = Pair("#182045", "#00F0FF"),
+                          btnDir = Pair("#182045", "#00F0FF"),
+                          btnRev = Pair("#2A1845", "#FF007F"),
+                          btnOut = Pair("#0D3838", "#00F0FF"),
+                          btnGo = Pair("#0F4D2A", "#00FF66"),
+                          btnCancel = Pair("#4D0F1A", "#FF0055")
+                      )
+                  }
+              }
 
               private val NOTIF_ID_PROGRESS = 101
               private val NOTIF_ID_RESULT = 102
@@ -325,62 +429,47 @@ jobs:
               }
 
               private fun applyTheme() {
-                  val isCyber = currentTheme == "CYBERPUNK"
-                  val bg = if (isCyber) cyberBg else classicBg
-                  val cardColor = if (isCyber) cyberCard else classicCard
-                  val border = if (isCyber) cyberBorder else classicBorder
-                  val primaryText = if (isCyber) cyberPink else Color.WHITE
-                  val secondaryText = if (isCyber) cyberCyan else classicAccent
-                  val dim = if (isCyber) cyberDim else classicDim
+                  val p = getPalette(currentTheme)
 
-                  rootLayout.setBackgroundColor(bg)
-                  mainCol.setBackgroundColor(bg)
+                  rootLayout.setBackgroundColor(p.bg)
+                  mainCol.setBackgroundColor(p.bg)
 
-                  titleView.setTextColor(primaryText)
-                  subtitleView.setTextColor(secondaryText)
+                  titleView.setTextColor(p.primaryText)
+                  subtitleView.setTextColor(p.secondaryText)
 
-                  section1Title.setTextColor(secondaryText)
-                  section2Title.setTextColor(secondaryText)
-                  section3Title.setTextColor(secondaryText)
+                  section1Title.setTextColor(p.secondaryText)
+                  section2Title.setTextColor(p.secondaryText)
+                  section3Title.setTextColor(p.secondaryText)
 
-                  checkView.setTextColor(secondaryText)
-                  statusView.setTextColor(primaryText)
-                  hashView.setTextColor(secondaryText)
+                  checkView.setTextColor(p.secondaryText)
+                  statusView.setTextColor(p.primaryText)
+                  hashView.setTextColor(p.secondaryText)
 
-                  verifyBox.setTextColor(dim)
-                  deleteBox.setTextColor(dim)
-                  outView.setTextColor(dim)
+                  verifyBox.setTextColor(p.dim)
+                  deleteBox.setTextColor(p.dim)
+                  outView.setTextColor(p.dim)
 
                   cardViews.forEach { card ->
                       card.background = GradientDrawable().apply {
-                          setColor(cardColor)
-                          cornerRadius = dp(if (isCyber) 8 else 12).toFloat()
-                          setStroke(dp(2), Color.parseColor(border))
+                          setColor(p.card)
+                          cornerRadius = dp(8).toFloat()
+                          setStroke(dp(2), Color.parseColor(p.border))
                       }
                   }
 
-                  if (isCyber) {
-                      styleButton(pickBtn, "#182045", "#00F0FF")
-                      styleButton(dirBtn, "#182045", "#00F0FF")
-                      styleButton(revBtn, "#2A1845", "#FF007F")
-                      styleButton(outBtn, "#0D3838", "#00F0FF")
-                      styleButton(goBtn, "#0F4D2A", "#00FF66")
-                      styleButton(cancelBtn, "#4D0F1A", "#FF0055")
-                      styleButton(copyBtn, "#2A1845", "#FF007F")
-                      styleButton(menuBtn, "#2A1845", "#FF007F", "#00F0FF")
-                  } else {
-                      styleButton(pickBtn, "#0284C7", "#38BDF8")
-                      styleButton(dirBtn, "#0369A1", "#38BDF8")
-                      styleButton(revBtn, "#334155", "#64748B")
-                      styleButton(outBtn, "#0D9488", "#14B8A6")
-                      styleButton(goBtn, "#16A34A", "#22C55E")
-                      styleButton(cancelBtn, "#DC2626", "#EF4444")
-                      styleButton(copyBtn, "#334155", "#64748B")
-                      styleButton(menuBtn, "#334155", "#64748B")
-                  }
+                  styleButton(pickBtn, p.btnPick.first, p.btnPick.second)
+                  styleButton(dirBtn, p.btnDir.first, p.btnDir.second)
+                  styleButton(revBtn, p.btnRev.first, p.btnRev.second)
+                  styleButton(outBtn, p.btnOut.first, p.btnOut.second)
+                  styleButton(goBtn, p.btnGo.first, p.btnGo.second)
+                  styleButton(cancelBtn, p.btnCancel.first, p.btnCancel.second)
+                  styleButton(copyBtn, p.btnRev.first, p.btnRev.second)
+                  styleButton(menuBtn, p.btnRev.first, p.btnRev.second, p.secondaryText.toHex())
 
                   refresh()
               }
+
+              private fun Int.toHex(): String = String.format("#%06X", 0xFFFFFF and this)
 
               private fun createNotificationChannel() {
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -478,7 +567,7 @@ jobs:
                   titlesLayout.addView(titleView)
                   
                   subtitleView = TextView(this).apply {
-                      text = "ENGINE v2.3.1 • PS3/PS4/PS5 FX TOOLKIT"
+                      text = "ENGINE v2.4.0 • GAMING MULTI-THEME"
                       textSize = 10f
                       typeface = Typeface.MONOSPACE
                       setPadding(0, dp(2), 0, 0)
@@ -494,7 +583,7 @@ jobs:
                   mainCol.addView(headerLayout)
 
                   val card1 = createCard()
-                  section1Title = text("1. SOURCE FILES (PKG / PARTS)", 13f, cyberCyan, true).apply { typeface = Typeface.MONOSPACE }
+                  section1Title = text("1. SOURCE FILES (PKG / PARTS)", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(section1Title)
                   
                   pickBtn = Button(this).apply {
@@ -539,22 +628,18 @@ jobs:
                   pkgIconView = ImageView(this).apply {
                       visibility = View.GONE
                       scaleType = ImageView.ScaleType.FIT_CENTER
-                      background = GradientDrawable().apply {
-                          setColor(Color.parseColor("#0D0814"))
-                          cornerRadius = dp(8).toFloat()
-                          setStroke(dp(1), Color.parseColor("#00F0FF"))
-                      }
+                      adjustViewBounds = true
                   }
-                  infoLayout.addView(pkgIconView, LinearLayout.LayoutParams(dp(72), dp(72)).apply { rightMargin = dp(12) })
+                  infoLayout.addView(pkgIconView, LinearLayout.LayoutParams(dp(80), WRAP_CONTENT).apply { rightMargin = dp(12) })
 
-                  checkView = text("", 11f, cyberCyan).apply { typeface = Typeface.MONOSPACE }
+                  checkView = text("", 11f, Color.CYAN).apply { typeface = Typeface.MONOSPACE }
                   infoLayout.addView(checkView, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
                   
                   card1.addView(infoLayout, lp())
                   mainCol.addView(card1, lpCard())
 
                   val card2 = createCard()
-                  section2Title = text("2. OUTPUT & PROCESSING", 13f, cyberCyan, true).apply { typeface = Typeface.MONOSPACE }
+                  section2Title = text("2. OUTPUT & PROCESSING", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card2.addView(section2Title)
 
                   outBtn = Button(this).apply {
@@ -566,7 +651,7 @@ jobs:
                   }
                   card2.addView(outBtn, lp())
 
-                  outView = text("Sortie : —", 11f, cyberDim).apply { 
+                  outView = text("Sortie : —", 11f, Color.GRAY).apply { 
                       typeface = Typeface.MONOSPACE
                       setPadding(0, dp(6), 0, dp(8))
                   }
@@ -602,12 +687,12 @@ jobs:
                   }
                   card2.addView(bar, lp())
 
-                  statusView = text("Prêt.", 13f, cyberPink).apply { setTypeface(Typeface.MONOSPACE, Typeface.BOLD) }
+                  statusView = text("Prêt.", 13f, Color.MAGENTA).apply { setTypeface(Typeface.MONOSPACE, Typeface.BOLD) }
                   card2.addView(statusView, lp())
                   mainCol.addView(card2, lpCard())
 
                   val card3 = createCard()
-                  section3Title = text("3. SECURITY & CHECKSUM", 13f, cyberCyan, true).apply { typeface = Typeface.MONOSPACE }
+                  section3Title = text("3. SECURITY & CHECKSUM", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(section3Title)
 
                   verifyBox = CheckBox(this).apply {
@@ -627,13 +712,13 @@ jobs:
                   hashField = EditText(this).apply {
                       hint = "Coller un hash SHA-256 de contrôle"
                       setTextColor(Color.WHITE)
-                      setHintTextColor(cyberDim)
+                      setHintTextColor(Color.GRAY)
                       textSize = 11f
                       typeface = Typeface.MONOSPACE
                   }
                   card3.addView(hashField, lp())
 
-                  hashView = text("", 11f, cyberCyan).apply { typeface = Typeface.MONOSPACE }
+                  hashView = text("", 11f, Color.CYAN).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(hashView, lp())
 
                   copyBtn = Button(this).apply {
@@ -671,7 +756,7 @@ jobs:
                                   statusView.text = "Prêt à découper."
                               } else {
                                   titleView.text = "⚡ PS PKG MANAGER"
-                                  subtitleView.text = "ENGINE v2.3.1 • PS3/PS4/PS5 FX TOOLKIT"
+                                  subtitleView.text = "ENGINE v2.4.0 • GAMING MULTI-THEME"
                                   section1Title.text = "1. SOURCE FILES (PKG / PARTS)"
                                   goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
@@ -685,7 +770,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Cyber Manager v2.3.1")
+                              toast("PS PKG Cyber Manager v2.4.0")
                               true
                           }
                           else -> false
@@ -695,18 +780,27 @@ jobs:
               }
 
               private fun showThemeDialog() {
-                  val themes = arrayOf("🟣 Cyberpunk Néon", "🔵 Sombre Classique")
-                  val checkedItem = if (currentTheme == "CYBERPUNK") 0 else 1
+                  val themes = arrayOf(
+                      "🟣 Cyberpunk Néon", 
+                      "🔵 Sombre Classique", 
+                      "⚡ Fortnite Edition", 
+                      "🌿 The Last of Us", 
+                      "🪓 God of War", 
+                      "🌌 Genshin Anime", 
+                      "🚗 GTA Los Santos"
+                  )
+                  val keys = arrayOf("CYBERPUNK", "CLASSIC", "FORTNITE", "TLOU", "GOW", "GENSHIN", "GTA")
+                  val checkedItem = keys.indexOf(currentTheme).coerceAtLeast(0)
 
                   AlertDialog.Builder(this)
-                      .setTitle("Choisir un Thème")
+                      .setTitle("🎨 Sélectionne ton Thème")
                       .setSingleChoiceItems(themes, checkedItem) { dialog, which ->
-                          currentTheme = if (which == 0) "CYBERPUNK" else "CLASSIC"
+                          currentTheme = keys[which]
                           prefs.edit().putString("theme", currentTheme).apply()
                           applyTheme()
                           dialog.dismiss()
                       }
-                      .setNegativeButton("Annuler", null)
+                      .setNegativeButton("Fermer", null)
                       .show()
               }
 
@@ -934,7 +1028,7 @@ jobs:
 
                           var iconBitmap: Bitmap? = null
                           try {
-                              val iconBuf = ByteArray(128 * 1024)
+                              val iconBuf = ByteArray(256 * 1024)
                               val iconRead = input.read(iconBuf)
                               if (iconRead > 0) {
                                   for (i in 0 until iconRead - 8) {
@@ -957,14 +1051,10 @@ jobs:
                   if (!::listContainer.isInitialized) return
                   listContainer.removeAllViews()
 
-                  val isCyber = currentTheme == "CYBERPUNK"
-                  val borderHex = if (isCyber) "#00F0FF" else "#334155"
-                  val rowBgHex = if (isCyber) "#0D0814" else "#0F172A"
-                  val dim = if (isCyber) cyberDim else classicDim
-                  val primaryText = if (isCyber) cyberPink else Color.WHITE
+                  val p = getPalette(currentTheme)
 
                   if (uris.isEmpty()) {
-                      listContainer.addView(text("AUCUN FICHIER SÉLECTIONNÉ", 11f, dim).apply { typeface = Typeface.MONOSPACE })
+                      listContainer.addView(text("AUCUN FICHIER SÉLECTIONNÉ", 11f, p.dim).apply { typeface = Typeface.MONOSPACE })
                       checkView.text = ""
                       pkgIconView.visibility = View.GONE
                       return
@@ -974,7 +1064,7 @@ jobs:
                   val total = order.sumOf { sizes[it] }
                   val info = analyzePkg(uris[order[0]])
 
-                  val summaryView = text("${order.size} partie(s) • ${fmt(total)} • Ordre ${if (reversed) "inversé" else "croissant"}", 12f, primaryText, true).apply { typeface = Typeface.MONOSPACE }
+                  val summaryView = text("${order.size} partie(s) • ${fmt(total)} • Ordre ${if (reversed) "inversé" else "croissant"}", 12f, p.primaryText, true).apply { typeface = Typeface.MONOSPACE }
                   listContainer.addView(summaryView)
 
                   order.forEachIndexed { i, idx ->
@@ -983,9 +1073,9 @@ jobs:
                           setPadding(dp(12), dp(8), dp(12), dp(8))
                           gravity = Gravity.CENTER_VERTICAL
                           background = GradientDrawable().apply {
-                              setColor(Color.parseColor(rowBgHex))
+                              setColor(p.bg)
                               cornerRadius = dp(6).toFloat()
-                              setStroke(dp(1), Color.parseColor(borderHex))
+                              setStroke(dp(1), Color.parseColor(p.border))
                           }
                       }
 
@@ -1375,12 +1465,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.3.1
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.3.1.apk
+      - name: Renommer l'APK v2.4.0
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.4.0.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.3.1-apk
-          path: PkgMerger-v2.3.1.apk
+          name: pkg-merger-v2.4.0-apk
+          path: PkgMerger-v2.4.0.apk
           if-no-files-found: error
