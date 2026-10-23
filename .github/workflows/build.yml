@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.9.3 Total Screen Immersive Freedom
+      - name: Générer le projet Android v2.9.4 Corrected & Bulletproof
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 293
-                  versionName = "2.9.3"
+                  versionCode = 294
+                  versionName = "2.9.4"
               }
 
               compileOptions {
@@ -142,7 +142,7 @@ jobs:
               <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
               <application
-                  android:label="PS PKG Total Freedom"
+                  android:label="PS PKG Ultimate Freedom"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -151,7 +151,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Total Freedom">
+                      android:label="PS PKG Ultimate Freedom">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -260,7 +260,6 @@ jobs:
 
                   when (currentTheme) {
                       "FORTNITE" -> {
-                          // Le Bus de combat traverse TOUT l'écran librement de haut en bas et en largeur
                           paint.color = Color.parseColor("#0099FF")
                           canvas.drawRect(busX, busY - 18f, busX + 110f, busY + 18f, paint)
                           paint.color = Color.parseColor("#FFE600")
@@ -274,7 +273,6 @@ jobs:
                           canvas.drawText("🚌 BATTLE BUS", busX, busY - 55f, paint)
                       }
                       "GOW" -> {
-                          // Les orbes rouges de Kratos flottent et tourbillonnent PARTOUT sur l'écran
                           for (i in 0..8) {
                               val angle = animProgress * 6.28f + i
                               val cx = (w / 9f) * (i + 1) + sin(angle * 1.2f) * 60f
@@ -314,14 +312,14 @@ jobs:
           }
 
           class SoundFX {
-              companion5 object {
+              companion object {
                   fun playSound(theme: String) {
                       Thread {
                           try {
                               val sampleRate = 22050
                               val numSamples = if (theme == "GOW") sampleRate * 3 / 10 else sampleRate * 1 / 10
                               val generatedSnd = ByteArray(numSamples * 2)
-                              var freq = if (theme == "GOW") 110.0 else 440.0 // Son grave pour Kratos, aigu pour Fortnite
+                              val freq = if (theme == "GOW") 110.0 else 440.0
 
                               for (i in 0 until numSamples) {
                                   val angle = i / (sampleRate / freq) * 2.0 * Math.PI
@@ -617,7 +615,7 @@ jobs:
 
                   titleView.setTextColor(cfg.primaryText)
                   subtitleView.setTextColor(cfg.secondaryText)
-                  subtitleView.text = "TOTAL FREEDOM UNIVERSE : ${cfg.name.uppercase()}"
+                  subtitleView.text = "ULTIMATE FREEDOM : ${cfg.name.uppercase()}"
 
                   backgroundAnimView.currentTheme = currentTheme
                   backgroundAnimView.invalidate()
@@ -698,7 +696,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS PKG Total Freedom")
+                          .setContentTitle("⚡ PS PKG Ultimate Freedom")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -926,7 +924,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Total Freedom v2.9.3")
+                              toast("PS PKG Ultimate Freedom v2.9.4")
                               true
                           }
                           else -> false
@@ -1604,7 +1602,7 @@ jobs:
                       }
                       if (c != 0) return c
                   }
-                  return ca.size - sys.size
+                  return ca.size - cb.size
               }
 
               private fun suggestName(): String {
@@ -1621,12 +1619,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.3
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.3.apk
+      - name: Renommer l'APK v2.9.4
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.4.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.3-apk
-          path: PkgMerger-v2.9.3.apk
+          name: pkg-merger-v2.9.4-apk
+          path: PkgMerger-v2.9.4.apk
           if-no-files-found: error
