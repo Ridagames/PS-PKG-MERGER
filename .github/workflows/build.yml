@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.49
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.50
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.49
+      - name: Générer le projet Android v2.9.50
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2949
-                  versionName = "2.9.49"
+                  versionCode = 2950
+                  versionName = "2.9.50"
               }
 
               compileOptions {
@@ -134,6 +134,10 @@ jobs:
               buildTypes {
                   release { isMinifyEnabled = false }
               }
+          }
+
+          dependencies {
+              implementation("androidx.core:core-ktx:1.12.0")
           }
           EOF
 
@@ -183,8 +187,26 @@ jobs:
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
                   </activity>
+
+                  <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="${applicationId}.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/file_paths" />
+                  </provider>
               </application>
           </manifest>
+          EOF
+
+          mkdir -p app/src/main/res/xml
+          write app/src/main/res/xml/file_paths.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <paths xmlns:android="http://schemas.android.com/apk/res/android">
+              <external-files-path name="internal_updates" path="." />
+          </paths>
           EOF
 
           write app/src/main/java/com/venice/pkgmerger/MainActivity.kt <<'EOF'
@@ -690,7 +712,6 @@ jobs:
               }
 
               private fun scheduleNextBusRun() {
-                  // Cadence réduite : entre 5 et 8 secondes d'attente
                   val delay = (5000 + random.nextInt(3500)).toLong()
                   busHandler.postDelayed({
                       runFortniteBus()
@@ -725,7 +746,6 @@ jobs:
                       }
                   } catch (_: Exception) {}
 
-                  // Vitesse réduite : 5500ms pour traverser l'écran tout doucement
                   bus.animate()
                       .translationX(endX)
                       .setDuration(5500)
@@ -1141,7 +1161,6 @@ jobs:
                   setContentView(rootFrameLayout)
               }
 
-              // Menu Stylisé au lieu du Popup par défaut
               private fun showCustomMenu(anchor: View) {
                   if (processing) {
                       toast("⚠️ Traitement en cours !")
@@ -1220,20 +1239,18 @@ jobs:
                       checkForUpdates()
                   }
 
-                  addMenuOption("ℹ️ À propos (v2.9.49)") {
+                  addMenuOption("ℹ️ À propos (v2.9.50)") {
                       dialog.dismiss()
-                      toast("PS PKG Freedom Hub v2.9.49")
+                      toast("PS PKG Freedom Hub v2.9.50")
                   }
 
                   dialog.show()
               }
 
-              // Vérification automatique des mises à jour sur GitHub (Releases)
               private fun checkForUpdates() {
                   toast("🔍 Recherche de mises à jour...")
                   Thread {
                       try {
-                          // Remplace "ton-pseudo" et "ton-repo" par ton nom d'utilisateur et ton dépôt GitHub réel
                           val repoUrl = "https://api.github.com/repos/ton-pseudo/ton-repo/releases/latest"
                           val url = URL(repoUrl)
                           val conn = url.openConnection() as HttpURLConnection
@@ -1243,16 +1260,12 @@ jobs:
 
                           if (conn.responseCode == 200) {
                               val response = conn.inputStream.bufferedReader().use { it.readText() }
-                              
-                              // Analyse simple pour extraire le tag_name (ex: "v2.1.1" ou "2.2.0") et l'URL de l'APK
                               val tagMatch = Regex("\"tag_name\"\\s*:\\s*\"([^\"]+)\"").find(response)
                               val apkUrlMatch = Regex("\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.apk)\"").find(response)
 
                               if (tagMatch != null && apkUrlMatch != null) {
                                   val latestTag = tagMatch.groupValues[1].replace("v", "")
                                   val apkUrl = apkUrlMatch.groupValues[1]
-
-                                  // Version actuelle de l'app (au-dessus de 2.1.0)
                                   val currentVersion = "2.1.0"
 
                                   ui.post {
@@ -2094,15 +2107,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.49
+      - name: Build APK v2.9.50
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.49
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.49.apk
+      - name: Renommer l'APK v2.9.50
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.50.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.49-apk
-          path: PkgMerger-v2.9.49.apk
+          name: pkg-merger-v2.9.50-apk
+          path: PkgMerger-v2.9.50.apk
           if-no-files-found: error
