@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.44
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.45
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.44
+      - name: Générer le projet Android v2.9.45
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2944
-                  versionName = "2.9.44"
+                  versionCode = 2945
+                  versionName = "2.9.45"
               }
 
               compileOptions {
@@ -288,7 +288,6 @@ jobs:
               private var rewardChestView: ImageView? = null
 
               private val busHandler = Handler(Looper.getMainLooper())
-              private val animationHandler = Handler(Looper.getMainLooper())
               private val random = Random()
 
               private val NOTIF_ID_PROGRESS = 101
@@ -531,8 +530,8 @@ jobs:
                               setImageResource(treeRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val treeLp = FrameLayout.LayoutParams(dp(70), dp(100), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
-                              if (treeSide == 1) leftMargin = -dp(20) else rightMargin = -dp(20)
+                          val treeLp = FrameLayout.LayoutParams(dp(54), dp(80), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
+                              if (treeSide == 1) leftMargin = -dp(12) else rightMargin = -dp(12)
                           }
                           outerFrame.addView(treeIv, treeLp)
                       }
@@ -653,7 +652,7 @@ jobs:
 
               private fun startFortniteBusAnimation() {
                   stopFortniteBusAnimation()
-                  scheduleNextBusRun(200)
+                  scheduleNextBusRun(300)
               }
 
               private fun stopFortniteBusAnimation() {
@@ -662,7 +661,7 @@ jobs:
               }
 
               private fun scheduleNextBusRun(initialDelay: Long = 0) {
-                  val delay = if (initialDelay > 0) initialDelay else (1000 + random.nextInt(1500)).toLong()
+                  val delay = if (initialDelay > 0) initialDelay else (1200 + random.nextInt(1500)).toLong()
                   busHandler.postDelayed({
                       runFortniteBus()
                   }, delay)
@@ -674,14 +673,14 @@ jobs:
                   val screenHeight = resources.displayMetrics.heightPixels.toFloat()
 
                   val goRight = random.nextBoolean()
-                  val startX = if (goRight) -dp(200).toFloat() else screenWidth + dp(200).toFloat()
-                  val endX = if (goRight) screenWidth + dp(200).toFloat() else -dp(200).toFloat()
-                  val randomY = dp(10) + random.nextFloat() * (screenHeight * 0.45f)
+                  val startX = if (goRight) -dp(220).toFloat() else screenWidth + dp(220).toFloat()
+                  val endX = if (goRight) screenWidth + dp(220).toFloat() else -dp(220).toFloat()
+                  val randomY = dp(30) + random.nextFloat() * (screenHeight * 0.4f)
 
                   bus.translationY = randomY
                   bus.translationX = startX
-                  bus.scaleX = if (goRight) 1.2f else -1.2f
-                  bus.scaleY = 1.2f
+                  bus.scaleX = if (goRight) 1.15f else -1.15f
+                  bus.scaleY = 1.15f
                   bus.visibility = View.VISIBLE
                   bus.bringToFront()
 
@@ -696,7 +695,7 @@ jobs:
 
                   bus.animate()
                       .translationX(endX)
-                      .setDuration(3000)
+                      .setDuration(3200)
                       .withEndAction {
                           bus.visibility = View.GONE
                           scheduleNextBusRun()
@@ -1095,7 +1094,7 @@ jobs:
                           setImageResource(busRes)
                           visibility = View.GONE
                       }
-                      val busLp = FrameLayout.LayoutParams(dp(160), dp(100)).apply {
+                      val busLp = FrameLayout.LayoutParams(dp(180), dp(110)).apply {
                           gravity = Gravity.TOP or Gravity.START
                       }
                       rootFrameLayout.addView(busImageView, busLp)
@@ -1142,7 +1141,7 @@ jobs:
                               true
                           }
                           4 -> {
-                              toast("PS PKG Freedom Hub v2.9.44")
+                              toast("PS PKG Freedom Hub v2.9.45")
                               true
                           }
                           else -> false
@@ -1901,15 +1900,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.44
+      - name: Build APK v2.9.45
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.44
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.44.apk
+      - name: Renommer l'APK v2.9.45
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.45.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.44-apk
-          path: PkgMerger-v2.9.44.apk
+          name: pkg-merger-v2.9.45-apk
+          path: PkgMerger-v2.9.45.apk
           if-no-files-found: error
