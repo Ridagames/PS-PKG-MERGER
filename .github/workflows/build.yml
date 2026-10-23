@@ -129,19 +129,24 @@ jobs:
           export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
           set -eo pipefail
 
-          # Nettoyage direct et securise
           rm -f source/main.o ps3_kernel_reader.elf ps3_kernel_reader.self ps3_kernel_reader.pkg
 
+          echo "1. Compilation..."
           make
+
+          echo "2. Nettoyage des symboles superflus (evite le segfault)..."
+          ppu-strip ps3_kernel_reader.elf
+
+          echo "3. Generation du fichier SELF..."
           make_self_npdrm ps3_kernel_reader.elf ps3_kernel_reader.self UP0001-KRNLRDR01_00-0000000000000000
 
-          echo "Preparation des fichiers du package..."
+          echo "4. Preparation des fichiers du package..."
           mkdir -p pkg_build/USRDIR
           cp ps3_kernel_reader.self pkg_build/USRDIR/EBOOT.BIN
           cp ICON0.PNG pkg_build/
           cp PIC1.PNG pkg_build/
 
-          echo "Generation du PARAM.SFO et empaquetage..."
+          echo "5. Generation du PARAM.SFO et empaquetage..."
           python3 -c '
           import struct, os, shutil
 
