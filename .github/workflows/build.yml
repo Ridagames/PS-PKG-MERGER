@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.9.10 Ragnarök Fixed
+      - name: Générer le projet Android v2.9.11 All-Themes & Fullscreen
         env:
           FORCE: '1'
         run: |
@@ -97,8 +97,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2910
-                  versionName = "2.9.10"
+                  versionCode = 2911
+                  versionName = "2.9.11"
               }
 
               compileOptions {
@@ -142,7 +142,7 @@ jobs:
               <uses-permission android:name="android.permission.VIBRATE" />
 
               <application
-                  android:label="PS PKG Ragnarok Edition"
+                  android:label="PS PKG Freedom Hub"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -151,7 +151,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Ragnarok Edition">
+                      android:label="PS PKG Freedom Hub">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -216,6 +216,14 @@ jobs:
           import java.security.MessageDigest
           import java.util.Locale
 
+          class FullscreenVideoView(context: Context) : VideoView(context) {
+              override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                  val width = getDefaultSize(0, widthMeasureSpec)
+                  val height = getDefaultSize(0, heightMeasureSpec)
+                  setMeasuredDimension(width, height)
+              }
+          }
+
           class MainActivity : Activity() {
 
               private val uris = ArrayList<Uri>()
@@ -226,9 +234,9 @@ jobs:
               private var reversed = false
               private var lastHash: String? = null
               private var appMode = "MERGE"
-              private var currentTheme = "GOW"
+              private var currentTheme = "FORTNITE"
 
-              private var bgVideoView: VideoView? = null
+              private var bgVideoView: FullscreenVideoView? = null
               private var musicPlayer: MediaPlayer? = null
               private var clickPlayer: MediaPlayer? = null
 
@@ -289,28 +297,126 @@ jobs:
               )
 
               private fun getThemeConfig(key: String): ThemeConfig {
-                  return ThemeConfig(
-                      name = "God of War Ragnarök",
-                      bg = Color.parseColor("#120A0A"),
-                      card = Color.parseColor("#80241212"),
-                      border = "#FF4500",
-                      primaryText = Color.parseColor("#FFD700"),
-                      secondaryText = Color.parseColor("#FF4500"),
-                      dim = Color.parseColor("#B8860B"),
-                      pressColor = "#FF0000",
-                      btnPick = Pair("#3D1414", "#FF4500"),
-                      btnDir = Pair("#3D1414", "#FF4500"),
-                      btnRev = Pair("#4A3B12", "#FFD700"),
-                      btnOut = Pair("#291321", "#FF1493"),
-                      btnGo = Pair("#1C3D14", "#32CD32"),
-                      btnCancel = Pair("#5E0F0F", "#FF0000")
-                  )
+                  return when (key) {
+                      "FORTNITE" -> ThemeConfig(
+                          name = "Fortnite Battle Royale",
+                          bg = Color.parseColor("#090C1F"),
+                          card = Color.parseColor("#131B3E"),
+                          border = "#00D9FF",
+                          primaryText = Color.parseColor("#FFE600"),
+                          secondaryText = Color.parseColor("#00D9FF"),
+                          dim = Color.parseColor("#8A99D1"),
+                          pressColor = "#FFE600",
+                          btnPick = Pair("#1E2D6E", "#00D9FF"),
+                          btnDir = Pair("#1E2D6E", "#00D9FF"),
+                          btnRev = Pair("#3A1E6E", "#B800FF"),
+                          btnOut = Pair("#0F5E6B", "#00FFF0"),
+                          btnGo = Pair("#198038", "#00FF66"),
+                          btnCancel = Pair("#801935", "#FF0055")
+                      )
+                      "GOW" -> ThemeConfig(
+                          name = "God of War Ragnarök",
+                          bg = Color.parseColor("#120A0A"),
+                          card = Color.parseColor("#80241212"),
+                          border = "#FF4500",
+                          primaryText = Color.parseColor("#FFD700"),
+                          secondaryText = Color.parseColor("#FF4500"),
+                          dim = Color.parseColor("#B8860B"),
+                          pressColor = "#FF0000",
+                          btnPick = Pair("#3D1414", "#FF4500"),
+                          btnDir = Pair("#3D1414", "#FF4500"),
+                          btnRev = Pair("#4A3B12", "#FFD700"),
+                          btnOut = Pair("#291321", "#FF1493"),
+                          btnGo = Pair("#1C3D14", "#32CD32"),
+                          btnCancel = Pair("#5E0F0F", "#FF0000")
+                      )
+                      "TLOU" -> ThemeConfig(
+                          name = "The Last of Us Part II",
+                          bg = Color.parseColor("#0A0F0D"),
+                          card = Color.parseColor("#14211A"),
+                          border = "#4A6B53",
+                          primaryText = Color.parseColor("#D4A359"),
+                          secondaryText = Color.parseColor("#7FA98B"),
+                          dim = Color.parseColor("#8C9E91"),
+                          pressColor = "#D4A359",
+                          btnPick = Pair("#1C3325", "#7FA98B"),
+                          btnDir = Pair("#1C3325", "#7FA98B"),
+                          btnRev = Pair("#3A3020", "#D4A359"),
+                          btnOut = Pair("#243D31", "#7FA98B"),
+                          btnGo = Pair("#2B4D21", "#52A336"),
+                          btnCancel = Pair("#4D2121", "#A33636")
+                      )
+                      "GENSHIN" -> ThemeConfig(
+                          name = "Genshin Impact Teyvat",
+                          bg = Color.parseColor("#0B132B"),
+                          card = Color.parseColor("#1C2541"),
+                          border = "#5BC0BE",
+                          primaryText = Color.parseColor("#F72585"),
+                          secondaryText = Color.parseColor("#4CC9F0"),
+                          dim = Color.parseColor("#8093F1"),
+                          pressColor = "#F72585",
+                          btnPick = Pair("#22223B", "#4CC9F0"),
+                          btnDir = Pair("#22223B", "#4CC9F0"),
+                          btnRev = Pair("#4A4E69", "#F72585"),
+                          btnOut = Pair("#1C2541", "#5BC0BE"),
+                          btnGo = Pair("#1A4314", "#38B000"),
+                          btnCancel = Pair("#5A189A", "#E0115F")
+                      )
+                      "GTA" -> ThemeConfig(
+                          name = "GTA V Los Santos",
+                          bg = Color.parseColor("#050B05"),
+                          card = Color.parseColor("#0D1A0E"),
+                          border = "#00FF66",
+                          primaryText = Color.parseColor("#FF007F"),
+                          secondaryText = Color.parseColor("#00FF66"),
+                          dim = Color.parseColor("#7FA98B"),
+                          pressColor = "#00FF66",
+                          btnPick = Pair("#123015", "#00FF66"),
+                          btnDir = Pair("#123015", "#00FF66"),
+                          btnRev = Pair("#3B0D29", "#FF007F"),
+                          btnOut = Pair("#0D2E2B", "#00FFFF"),
+                          btnGo = Pair("#16521A", "#00FF00"),
+                          btnCancel = Pair("#521616", "#FF0033")
+                      )
+                      "CLASSIC" -> ThemeConfig(
+                          name = "Sombre Classique",
+                          bg = Color.parseColor("#0F172A"),
+                          card = Color.parseColor("#1E293B"),
+                          border = "#334155",
+                          primaryText = Color.WHITE,
+                          secondaryText = Color.parseColor("#38BDF8"),
+                          dim = Color.parseColor("#94A3B8"),
+                          pressColor = "#38BDF8",
+                          btnPick = Pair("#0284C7", "#38BDF8"),
+                          btnDir = Pair("#0369A1", "#38BDF8"),
+                          btnRev = Pair("#334155", "#64748B"),
+                          btnOut = Pair("#0D9488", "#14B8A6"),
+                          btnGo = Pair("#16A34A", "#22C55E"),
+                          btnCancel = Pair("#DC2626", "#EF4444")
+                      )
+                      else -> ThemeConfig(
+                          name = "Cyberpunk Neo Hub",
+                          bg = Color.parseColor("#0D0814"),
+                          card = Color.parseColor("#170F26"),
+                          border = "#FF007F",
+                          primaryText = Color.parseColor("#FF007F"),
+                          secondaryText = Color.parseColor("#00F0FF"),
+                          dim = Color.parseColor("#A899C2"),
+                          pressColor = "#00F0FF",
+                          btnPick = Pair("#182045", "#00F0FF"),
+                          btnDir = Pair("#182045", "#00F0FF"),
+                          btnRev = Pair("#2A1845", "#FF007F"),
+                          btnOut = Pair("#0D3838", "#00F0FF"),
+                          btnGo = Pair("#0F4D2A", "#00FF66"),
+                          btnCancel = Pair("#4D0F1A", "#FF0055")
+                      )
+                  }
               }
 
               override fun onCreate(state: Bundle?) {
                   super.onCreate(state)
                   prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
-                  currentTheme = prefs.getString("theme", "GOW") ?: "GOW"
+                  currentTheme = prefs.getString("theme", "FORTNITE") ?: "FORTNITE"
                   
                   createNotificationChannel()
                   checkPermissions()
@@ -346,7 +452,9 @@ jobs:
                       val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                       vibrator?.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
                       
-                      playClickSound()
+                      if (currentTheme == "GOW") {
+                          playClickSound()
+                      }
                       onClickAction()
                   }
 
@@ -378,32 +486,43 @@ jobs:
 
               private fun setupBackgroundMedia() {
                   try {
-                      val videoResId = resources.getIdentifier("gow_bg", "raw", packageName)
-                      if (videoResId != 0 && bgVideoView != null) {
-                          val uri = Uri.parse("android.resource://$packageName/$videoResId")
-                          bgVideoView?.setVideoURI(uri)
-                          bgVideoView?.setOnPreparedListener { mp ->
-                              mp.isLooping = true
-                              mp.setVolume(0f, 0f)
-                              bgVideoView?.start()
+                      if (currentTheme == "GOW") {
+                          bgVideoView?.visibility = View.VISIBLE
+                          val videoResId = resources.getIdentifier("gow_bg", "raw", packageName)
+                          if (videoResId != 0 && bgVideoView != null) {
+                              val uri = Uri.parse("android.resource://$packageName/$videoResId")
+                              bgVideoView?.setVideoURI(uri)
+                              bgVideoView?.setOnPreparedListener { mp ->
+                                  mp.isLooping = true
+                                  mp.setVolume(0f, 0f)
+                                  bgVideoView?.start()
+                              }
                           }
-                      }
 
-                      val musicResId = resources.getIdentifier("gow_music", "raw", packageName)
-                      if (musicResId != 0) {
-                          if (musicPlayer == null) {
-                              musicPlayer = MediaPlayer.create(this, musicResId)
-                              musicPlayer?.isLooping = true
-                              musicPlayer?.start()
+                          val musicResId = resources.getIdentifier("gow_music", "raw", packageName)
+                          if (musicResId != 0) {
+                              if (musicPlayer == null) {
+                                  musicPlayer = MediaPlayer.create(this, musicResId)
+                                  musicPlayer?.isLooping = true
+                              }
+                              if (musicPlayer?.isPlaying == false) {
+                                  musicPlayer?.start()
+                              }
                           }
+                      } else {
+                          bgVideoView?.stopPlayback()
+                          bgVideoView?.visibility = View.GONE
+                          musicPlayer?.pause()
                       }
                   } catch (_: Exception) {}
               }
 
               override fun onResume() {
                   super.onResume()
-                  bgVideoView?.start()
-                  musicPlayer?.start()
+                  if (currentTheme == "GOW") {
+                      bgVideoView?.start()
+                      musicPlayer?.start()
+                  }
               }
 
               override fun onPause() {
@@ -427,7 +546,7 @@ jobs:
 
                   titleView.setTextColor(cfg.primaryText)
                   subtitleView.setTextColor(cfg.secondaryText)
-                  subtitleView.text = "GOD OF WAR : RAGNARÖK EDITION"
+                  subtitleView.text = "UNIVERSE : ${cfg.name.uppercase()}"
 
                   section1Title.setTextColor(cfg.secondaryText)
                   section2Title.setTextColor(cfg.secondaryText)
@@ -506,7 +625,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS PKG Ragnarök")
+                          .setContentTitle("⚡ PS PKG Hub")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -542,8 +661,8 @@ jobs:
               private fun showMergerScreen() {
                   rootFrameLayout = FrameLayout(this)
 
-                  bgVideoView = VideoView(this).apply {
-                      layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                  bgVideoView = FullscreenVideoView(this).apply {
+                      layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT, Gravity.CENTER)
                   }
                   rootFrameLayout.addView(bgVideoView)
 
@@ -711,6 +830,7 @@ jobs:
                   }
                   val popup = PopupMenu(this, v)
                   popup.menu.add(0, 1, 0, if (appMode == "MERGE") "📂 Mode Splitter" else "🔗 Mode Fusion")
+                  popup.menu.add(0, 2, 1, "🎨 Changer d'Univers")
                   popup.menu.add(0, 3, 2, "ℹ️ À propos")
                   popup.setOnMenuItemClickListener { item ->
                       when (item.itemId) {
@@ -731,14 +851,43 @@ jobs:
                               outView.text = "Sortie : —"
                               true
                           }
+                          2 -> {
+                              showThemeDialog()
+                              true
+                          }
                           3 -> {
-                              toast("PS PKG Ragnarök Edition v2.9.10")
+                              toast("PS PKG Freedom Hub v2.9.11")
                               true
                           }
                           else -> false
                       }
                   }
                   popup.show()
+              }
+
+              private fun showThemeDialog() {
+                  val themes = arrayOf(
+                      "⚡ Fortnite Battle Royale", 
+                      "🪓 God of War Ragnarök", 
+                      "🌿 The Last of Us Part II", 
+                      "🌌 Genshin Impact Teyvat", 
+                      "🚗 GTA V Los Santos",
+                      "🔵 Sombre Classique",
+                      "🌐 Cyberpunk Neo Hub"
+                  )
+                  val keys = arrayOf("FORTNITE", "GOW", "TLOU", "GENSHIN", "GTA", "CLASSIC", "CYBERPUNK")
+                  val checkedItem = keys.indexOf(currentTheme).coerceAtLeast(0)
+
+                  AlertDialog.Builder(this)
+                      .setTitle("🌟 Choisis ton Univers Gaming")
+                      .setSingleChoiceItems(themes, checkedItem) { dialog, which ->
+                          currentTheme = keys[which]
+                          prefs.edit().putString("theme", currentTheme).apply()
+                          applyTheme()
+                          dialog.dismiss()
+                      }
+                      .setNegativeButton("Fermer", null)
+                      .show()
               }
 
               private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) }
@@ -1402,12 +1551,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.10
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.10.apk
+      - name: Renommer l'APK v2.9.11
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.11.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.10-apk
-          path: PkgMerger-v2.9.10.apk
+          name: pkg-merger-v2.9.11-apk
+          path: PkgMerger-v2.9.11.apk
           if-no-files-found: error
