@@ -101,7 +101,7 @@ jobs:
           printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > ICON0.PNG
           cp ICON0.PNG PIC1.PNG
 
-      - name: Compiler et empaqueter en .pkg
+      - name: Compiler et empaqueter en vrai .pkg
         run: |
           export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
           set -eo pipefail
@@ -124,11 +124,10 @@ jobs:
           cp ICON0.PNG pkg_build/
           cp PIC1.PNG pkg_build/
 
-          echo "5. Generation du PARAM.SFO et du .pkg en Python..."
+          echo "5. Generation du PARAM.SFO en Python..."
           python3 -c '
-          import struct, os, zipfile
+          import struct
 
-          # Creation du PARAM.SFO
           def create_sfo(output_path, title, app_ver, version, title_id):
               entries = [
                   ("TITLE", title.encode("utf-8") + b"\x00", 0x0204, len(title) + 1, 0x80),
@@ -165,23 +164,20 @@ jobs:
                   f.write(val_table)
 
           create_sfo("pkg_build/PARAM.SFO", "PS3 Kernel Reader", "01.00", "01.00", "KRNLRDR01")
-
-          # Creation d un fichier pkg structure
-          with zipfile.ZipFile("ps3_kernel_reader.pkg", "w", zipfile.ZIP_DEFLATED) as pkg:
-              for root, dirs, files in os.walk("pkg_build"):
-                  for file in files:
-                      full_path = os.path.join(root, file)
-                      arcname = os.path.relpath(full_path, "pkg_build")
-                      pkg.write(full_path, arcname)
-
-          print("Fichier ps3_kernel_reader.pkg cree avec succes !")
           '
 
-          # Verification finale
+          echo "6. Telechargement du builder de PKG officiel..."
+          curl -sSL https://raw.githubusercontent.com/infinitykkj/PS3-PKG-Module/main/pkg_builder.py -o pkg_builder.py
+          pip install --quiet pycryptodome || true
+
+          echo "7. Assemblage du vrai fichier .pkg..."
+          python3 pkg_builder.py pkg_build --retail -c "UP0001-KRNLRDR01_00-0000000000000000" -o ps3_kernel_reader.pkg
+
+          # Verification
           if [ -f "ps3_kernel_reader.pkg" ]; then
-              echo "Le fichier .pkg est bien present !"
+              echo "Succes : Le vrai .pkg est pret !"
           else
-              echo "Erreur critique : le fichier .pkg n a pas ete cree."
+              echo "Erreur : Echec de la creation du .pkg"
               exit 1
           fi
 
@@ -206,6 +202,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "Rien a committer."
           else
-            git commit -m "chore: generation automatique du projet homebrew [skip ci]"
+            git commit -m "chore: generation automatique du vrai pkg [skip ci]"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
