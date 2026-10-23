@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.2.0 Cyber FX
+      - name: Générer le projet Android v2.2.1 Fix Visibility
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 220
-                  versionName = "2.2.0"
+                  versionCode = 221
+                  versionName = "2.2.1"
               }
 
               compileOptions {
@@ -188,6 +188,7 @@ jobs:
           import android.provider.Settings
           import android.view.Gravity
           import android.view.MotionEvent
+          import android.view.View
           import android.view.ViewGroup.LayoutParams.MATCH_PARENT
           import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
           import android.widget.Button
@@ -398,7 +399,7 @@ jobs:
                   titlesLayout.addView(titleView)
                   
                   subtitleView = TextView(this).apply {
-                      text = "ENGINE v2.2.0 • PS3/PS4/PS5 FX TOOLKIT"
+                      text = "ENGINE v2.2.1 • PS3/PS4/PS5 FX TOOLKIT"
                       textSize = 10f
                       setTextColor(cyanNeon)
                       typeface = Typeface.MONOSPACE
@@ -462,7 +463,7 @@ jobs:
                   }
 
                   pkgIconView = ImageView(this).apply {
-                      visibility = GONE
+                      visibility = View.GONE
                       adjustViewBounds = true
                       background = GradientDrawable().apply {
                           setColor(Color.parseColor("#0D0814"))
@@ -601,7 +602,7 @@ jobs:
                                   statusView.text = "Prêt à découper."
                               } else {
                                   titleView.text = "⚡ CYBER PKG MANAGER"
-                                  subtitleView.text = "ENGINE v2.2.0 • PS3/PS4/PS5 FX TOOLKIT"
+                                  subtitleView.text = "ENGINE v2.2.1 • PS3/PS4/PS5 FX TOOLKIT"
                                   section1Title.text = "1. SOURCE FILES (PKG / PARTS)"
                                   goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
@@ -611,7 +612,7 @@ jobs:
                               true
                           }
                           2 -> {
-                              toast("PS PKG Cyber Manager v2.2.0")
+                              toast("PS PKG Cyber Manager v2.2.1")
                               true
                           }
                           else -> false
@@ -873,7 +874,7 @@ jobs:
                   if (uris.isEmpty()) {
                       listContainer.addView(text("NO FILES SELECTED", 11f, dimText).apply { typeface = Typeface.MONOSPACE })
                       checkView.text = ""
-                      pkgIconView.visibility = GONE
+                      pkgIconView.visibility = View.GONE
                       return
                   }
 
@@ -924,9 +925,9 @@ jobs:
 
                   if (info.icon != null) {
                       pkgIconView.setImageBitmap(info.icon)
-                      pkgIconView.visibility = VISIBLE
+                      pkgIconView.visibility = View.VISIBLE
                   } else {
-                      pkgIconView.visibility = GONE
+                      pkgIconView.visibility = View.GONE
                   }
 
                   checkView.text = if (info.valid) {
@@ -1282,12 +1283,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.2.0
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.2.0.apk
+      - name: Renommer l'APK v2.2.1
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.2.1.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.2.0-apk
-          path: PkgMerger-v2.2.0.apk
+          name: pkg-merger-v2.2.1-apk
+          path: PkgMerger-v2.2.1.apk
           if-no-files-found: error
