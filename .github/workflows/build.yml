@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.42
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.43
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.42
+      - name: Générer le projet Android v2.9.43
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2942
-                  versionName = "2.9.42"
+                  versionCode = 2943
+                  versionName = "2.9.43"
               }
 
               compileOptions {
@@ -285,6 +285,8 @@ jobs:
               private var fnBusPlayer: MediaPlayer? = null
 
               private var busImageView: ImageView? = null
+              private var rewardChestView: ImageView? = null
+
               private val busHandler = Handler(Looper.getMainLooper())
               private val animationHandler = Handler(Looper.getMainLooper())
               private val random = Random()
@@ -518,23 +520,9 @@ jobs:
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
               @SuppressLint("ClickableViewAccessibility")
-              private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, treeSide: Int, showChest: Boolean, onClickAction: () -> Unit): View {
+              private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, onClickAction: () -> Unit): View {
                   val cfg = getThemeConfig(currentTheme)
                   val outerFrame = FrameLayout(this)
-
-                  if (currentTheme == "FORTNITE" && treeSide != 0) {
-                      val treeRes = resources.getIdentifier(if (treeSide == 1) "fn_tree1" else "fn_tree2", "drawable", packageName)
-                      if (treeRes != 0) {
-                          val treeIv = ImageView(this).apply {
-                              setImageResource(treeRes)
-                              scaleType = ImageView.ScaleType.FIT_CENTER
-                          }
-                          val treeLp = FrameLayout.LayoutParams(dp(65), dp(95), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
-                              if (treeSide == 1) leftMargin = -dp(18) else rightMargin = -dp(18)
-                          }
-                          outerFrame.addView(treeIv, treeLp)
-                      }
-                  }
 
                   val buttonContent = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
@@ -565,56 +553,19 @@ jobs:
                   buttonContent.addView(tv, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
 
                   val contentLp = FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                      topMargin = dp(16)
-                      leftMargin = dp(12)
-                      rightMargin = dp(12)
+                      topMargin = dp(8)
+                      leftMargin = dp(8)
+                      rightMargin = dp(8)
                   }
                   outerFrame.addView(buttonContent, contentLp)
 
-                  if (currentTheme == "FORTNITE" && showChest) {
-                      val closedRes = resources.getIdentifier("fn_chest_closed", "drawable", packageName)
-                      val openRes = resources.getIdentifier("fn_chest_open", "drawable", packageName)
-
-                      if (closedRes != 0) {
-                          val chestIv = ImageView(this).apply {
-                              setImageResource(closedRes)
-                              scaleType = ImageView.ScaleType.FIT_CENTER
-                          }
-                          val chestLp = FrameLayout.LayoutParams(dp(32), dp(32), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
-                              topMargin = -dp(14)
-                          }
-                          outerFrame.addView(chestIv, chestLp)
-
-                          buttonContent.setOnClickListener {
-                              val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                              vibrator?.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
-                              playClickSound("fn_chest_open")
-
-                              if (openRes != 0) {
-                                  chestIv.setImageResource(openRes)
-                                  animationHandler.removeCallbacksAndMessages(null)
-                                  animationHandler.postDelayed({
-                                      try { chestIv.setImageResource(closedRes) } catch (_: Exception) {}
-                                  }, 1500)
-                              }
-                              onClickAction()
-                          }
-                      } else {
-                          buttonContent.setOnClickListener {
-                              val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                              vibrator?.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
-                              onClickAction()
-                          }
+                  buttonContent.setOnClickListener {
+                      val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                      vibrator?.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
+                      if (currentTheme == "GOW") {
+                          playClickSound("gow_click")
                       }
-                  } else {
-                      buttonContent.setOnClickListener {
-                          val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                          vibrator?.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
-                          if (currentTheme == "GOW") {
-                              playClickSound("gow_click")
-                          }
-                          onClickAction()
-                      }
+                      onClickAction()
                   }
 
                   buttonContent.setOnTouchListener { view, event ->
@@ -688,7 +639,7 @@ jobs:
 
               private fun startFortniteBusAnimation() {
                   stopFortniteBusAnimation()
-                  scheduleNextBusRun(200)
+                  scheduleNextBusRun(300)
               }
 
               private fun stopFortniteBusAnimation() {
@@ -827,15 +778,15 @@ jobs:
 
                   val actionContainer = goBtnLayout.parent as? LinearLayout
 
-                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1, true) { pick() }
-                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2, false) { pickFolder() }
-                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1, false) { reversed = !reversed; refresh() }
-                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2, true) { pickOutput() }
-                  goBtnLayout = createCustomButton(tr("btn_go"), cfg.btnGo.first, cfg.btnGo.second, 0, true) { executeAction() }
-                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0, false) {
+                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second) { pick() }
+                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second) { pickFolder() }
+                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second) { reversed = !reversed; refresh() }
+                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second) { pickOutput() }
+                  goBtnLayout = createCustomButton(tr("btn_go"), cfg.btnGo.first, cfg.btnGo.second) { executeAction() }
+                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second) {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
-                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 1, false) { copyHash() }
+                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
 
                   if (parentCard1 != null && idxPick != -1) {
                       parentCard1.removeViewAt(idxPick); parentCard1.addView(pickBtnLayout, idxPick, lp())
@@ -932,6 +883,21 @@ jobs:
                   } catch (_: Exception) {}
               }
 
+              private fun triggerSuccessReward() {
+                  if (currentTheme == "FORTNITE") {
+                      playClickSound("fn_chest_open")
+                      val closedRes = resources.getIdentifier("fn_chest_closed", "drawable", packageName)
+                      if (closedRes != 0 && rewardChestView != null) {
+                          rewardChestView?.setImageResource(closedRes)
+                          rewardChestView?.visibility = View.VISIBLE
+                          rewardChestView?.bringToFront()
+                          rewardChestView?.animate()?.scaleX(1.2f)?.scaleY(1.2f)?.setDuration(200)?.withEndAction {
+                              rewardChestView?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(200)?.start()
+                          }?.start()
+                      }
+                  }
+              }
+
               private fun showMergerScreen() {
                   rootFrameLayout = FrameLayout(this)
 
@@ -987,13 +953,13 @@ jobs:
                   section1Title = text(tr("sec1"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(section1Title)
                   
-                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1, true) { pick() }
+                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second) { pick() }
                   card1.addView(pickBtnLayout, lp())
 
-                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2, false) { pickFolder() }
+                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second) { pickFolder() }
                   card1.addView(dirBtnLayout, lp())
 
-                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1, false) { reversed = !reversed; refresh() }
+                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second) { reversed = !reversed; refresh() }
                   card1.addView(revBtnLayout, lp())
 
                   listContainer = LinearLayout(this).apply {
@@ -1025,7 +991,7 @@ jobs:
                   section2Title = text(tr("sec2"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card2.addView(section2Title)
 
-                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2, true) { pickOutput() }
+                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second) { pickOutput() }
                   card2.addView(outBtnLayout, lp())
 
                   outView = text(tr("out_lbl"), 11f, Color.GRAY).apply { 
@@ -1036,15 +1002,29 @@ jobs:
 
                   val actionLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.CENTER_VERTICAL
                   }
-                  goBtnLayout = createCustomButton(tr("btn_go"), cfg.btnGo.first, cfg.btnGo.second, 0, true) { executeAction() }
+                  goBtnLayout = createCustomButton(tr("btn_go"), cfg.btnGo.first, cfg.btnGo.second) { executeAction() }
                   actionLayout.addView(goBtnLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
-                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0, false) {
+                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second) {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
                   actionLayout.addView(cancelBtnLayout, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
-                  card2.addView(actionLayout, lp())
+                  
+                  val actionRowLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.CENTER_VERTICAL
+                  }
+                  actionRowLayout.addView(actionLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+
+                  rewardChestView = ImageView(this).apply {
+                      visibility = View.GONE
+                      scaleType = ImageView.ScaleType.FIT_CENTER
+                  }
+                  actionRowLayout.addView(rewardChestView, LinearLayout.LayoutParams(dp(44), dp(44)).apply { leftMargin = dp(8) })
+
+                  card2.addView(actionRowLayout, lp())
 
                   bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
                       max = 1000
@@ -1087,7 +1067,7 @@ jobs:
                   hashView = text("", 11f, Color.CYAN).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(hashView, lp())
 
-                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 1, false) { copyHash() }
+                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
                   card3.addView(copyBtnLayout, lp())
                   mainCol.addView(card3, lpCard())
 
@@ -1147,7 +1127,7 @@ jobs:
                               true
                           }
                           4 -> {
-                              toast("PS PKG Freedom Hub v2.9.42")
+                              toast("PS PKG Freedom Hub v2.9.43")
                               true
                           }
                           else -> false
@@ -1174,6 +1154,7 @@ jobs:
                       .setSingleChoiceItems(themes, checkedItem) { dialog, which ->
                           currentTheme = keys[which]
                           prefs.edit().putString("theme", currentTheme).apply()
+                          rewardChestView?.visibility = View.GONE
                           applyTheme()
                           dialog.dismiss()
                       }
@@ -1322,6 +1303,7 @@ jobs:
                           data?.data?.let { u -> if (isPkgFile(getFileName(u))) add(u) }
                       }
                       reversed = false
+                      rewardChestView?.visibility = View.GONE
                       refresh()
                   } else if (req == 2) {
                       val u = data?.data ?: return
@@ -1394,6 +1376,7 @@ jobs:
                       toast("Erreur lecture dossier : ${e.message}")
                   }
                   reversed = false
+                  rewardChestView?.visibility = View.GONE
                   refresh()
                   if (uris.isEmpty()) toast("Aucun fichier .pkg valide trouvé.")
               }
@@ -1418,6 +1401,7 @@ jobs:
                       uris.removeAt(index)
                       names.removeAt(index)
                       sizes.removeAt(index)
+                      rewardChestView?.visibility = View.GONE
                       refresh()
                   }
               }
@@ -1601,6 +1585,7 @@ jobs:
                   cancelled = false
                   goBtnLayout.isEnabled = false
                   cancelBtnLayout.isEnabled = true
+                  rewardChestView?.visibility = View.GONE
                   bar.progress = 0
                   statusView.text = "Découpage ${info.console} en cours…"
 
@@ -1710,6 +1695,7 @@ jobs:
                           showResultNotif("PS PKG Manager", "Découpage terminé en ${secs}s !")
                           processing = false
                           doneUi()
+                          triggerSuccessReward()
                       }
                   }.start()
               }
@@ -1730,6 +1716,7 @@ jobs:
                   cancelled = false
                   goBtnLayout.isEnabled = false
                   cancelBtnLayout.isEnabled = true
+                  rewardChestView?.visibility = View.GONE
                   bar.progress = 0
                   statusView.text = "Fusion ${info.console} en cours…"
 
@@ -1829,6 +1816,7 @@ jobs:
                           showResultNotif("PS PKG Manager", "Fusion réussie en ${secs}s !")
                           processing = false
                           doneUi()
+                          triggerSuccessReward()
                       }
                   }.start()
               }
@@ -1898,15 +1886,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.42
+      - name: Build APK v2.9.43
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.42
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.42.apk
+      - name: Renommer l'APK v2.9.43
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.43.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.42-apk
-          path: PkgMerger-v2.9.42.apk
+          name: pkg-merger-v2.9.43-apk
+          path: PkgMerger-v2.9.43.apk
           if-no-files-found: error
