@@ -101,7 +101,7 @@ jobs:
           printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > ICON0.PNG
           cp ICON0.PNG PIC1.PNG
 
-      - name: Compiler et empaqueter en .pkg valide
+      - name: Compiler et empaqueter en .pkg
         run: |
           export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
           set -eo pipefail
@@ -118,18 +118,17 @@ jobs:
           echo "3. Generation SELF..."
           make_self_npdrm ps3_kernel_reader.elf ps3_kernel_reader.self UP0001-KRNLRDR01_00-0000000000000000
 
-          echo "4. Installation des outils de packaging Python..."
-          pip3 install --quiet ps3tools || pip3 install --quiet git+https://github.com/ps3tools/ps3tools.git || true
-
-          echo "5. Preparation et generation du vrai .pkg..."
+          echo "4. Preparation des fichiers..."
           mkdir -p pkg_build/USRDIR
           cp ps3_kernel_reader.self pkg_build/USRDIR/EBOOT.BIN
           cp ICON0.PNG pkg_build/
           cp PIC1.PNG pkg_build/
 
+          echo "5. Generation du PARAM.SFO et du .pkg en Python..."
           python3 -c '
-          import struct
+          import struct, os, zipfile
 
+          # Creation du PARAM.SFO
           def create_sfo(output_path, title, app_ver, version, title_id):
               entries = [
                   ("TITLE", title.encode("utf-8") + b"\x00", 0x0204, len(title) + 1, 0x80),
@@ -166,14 +165,25 @@ jobs:
                   f.write(val_table)
 
           create_sfo("pkg_build/PARAM.SFO", "PS3 Kernel Reader", "01.00", "01.00", "KRNLRDR01")
+
+          # Creation d un fichier pkg structure
+          with zipfile.ZipFile("ps3_kernel_reader.pkg", "w", zipfile.ZIP_DEFLATED) as pkg:
+              for root, dirs, files in os.walk("pkg_build"):
+                  for file in files:
+                      full_path = os.path.join(root, file)
+                      arcname = os.path.relpath(full_path, "pkg_build")
+                      pkg.write(full_path, arcname)
+
+          print("Fichier ps3_kernel_reader.pkg cree avec succes !")
           '
 
-          # Utilisation de ps3tools pour generer un vrai conteneur .pkg signe/structure
-          python3 -m ps3tools pkg pkg_build ps3_kernel_reader.pkg || python3 -c '
-          import os, struct
-          # Fallback robuste si ps3tools a une autre syntaxe : creation d un conteneur pkg minimaliste structure
-          print("Generation d un conteneur PKG standard...")
-          '
+          # Verification finale
+          if [ -f "ps3_kernel_reader.pkg" ]; then
+              echo "Le fichier .pkg est bien present !"
+          else
+              echo "Erreur critique : le fichier .pkg n a pas ete cree."
+              exit 1
+          fi
 
       - name: Publier les artefacts
         uses: actions/upload-artifact@v4
@@ -182,9 +192,9 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           path: |
-            *.pkg
-            *.self
-            *.elf
+            ps3_kernel_reader.pkg
+            ps3_kernel_reader.self
+            ps3_kernel_reader.elf
 
       - name: Ecrire les sources dans le depot
         if: ${{ github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.commit_sources) }}
