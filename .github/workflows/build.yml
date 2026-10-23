@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.47
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.48
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.47
+      - name: Générer le projet Android v2.9.48
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2947
-                  versionName = "2.9.47"
+                  versionCode = 2948
+                  versionName = "2.9.48"
               }
 
               compileOptions {
@@ -219,7 +219,6 @@ jobs:
           import android.view.Gravity
           import android.view.MotionEvent
           import android.view.View
-          import android.view.ViewGroup
           import android.view.ViewGroup.LayoutParams.MATCH_PARENT
           import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
           import android.widget.Button
@@ -476,7 +475,7 @@ jobs:
                       "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER", "es" to "ELEGIR CARPETA", "it" to "SCEGLI CARTELLA", "pt" to "ESCOLHER PASTA", "de" to "ORDNER WÄHLEN"),
                       "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER", "es" to "INVERTIR ORDEN DE PARTES", "it" to "INVERTI ORDINE PARTI", "pt" to "INVERTER ORDEM DAS PARTES", "de" to "TEILEREIHENFOLGE UMKEHREN"),
                       "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING", "es" to "2. SALIDA Y PROCESAMIENTO", "it" to "2. USCITA & ELABORAZIONE", "pt" to "2. SAÍDA & PROCESSAMENTO", "de" to "2. AUSGABE & VERARBEITUNG"),
-                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION", "es" to "DEFINIR UBICACIÓN DE SALIDA", "it" to "IMPOSTA DESTINAZIONE", "pt" to "IMPOSTA DESTINAZIONE", "de" to "AUSGABEZIEL FESTLEGEN"),
+                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION", "es" to "DEFINIR UBICACIÓN DE SALIDA", "it" to "IMPOSTA DESTINAZIONE", "pt" to "DEFINIR LOCAL DE SAÍDA", "de" to "AUSGABEZIEL FESTLEGEN"),
                       "out_lbl" to mapOf("fr" to "Sortie : —", "en" to "Output : —", "es" to "Salida : —", "it" to "Uscita : —", "pt" to "Saída : —", "de" to "Ausgabe : —"),
                       "btn_go" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE", "es" to "▶️ INICIAR FUSIÓN", "it" to "▶️ AVVIA UNIONE", "pt" to "▶️ INICIAR FUSÃO", "de" to "▶️ ZUSAMMENFÜHRUNG STARTEN"),
                       "btn_cancel" to mapOf("fr" to "❌ ANNULER", "en" to "❌ CANCEL", "es" to "❌ CANCELAR", "it" to "❌ ANNULLA", "pt" to "❌ CANCELAR", "de" to "❌ ABBRECHEN"),
@@ -519,31 +518,37 @@ jobs:
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
+              private fun getResId(name: String): Int {
+                  var id = resources.getIdentifier(name, "drawable", packageName)
+                  if (id == 0) id = resources.getIdentifier("img_$name", "drawable", packageName)
+                  return id
+              }
+
               @SuppressLint("ClickableViewAccessibility")
               private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, treeSide: Int, onClickAction: () -> Unit): View {
                   val cfg = getThemeConfig(currentTheme)
-                  val outerFrame = FrameLayout(this).apply {
-                      clipChildren = false
-                      clipToPadding = false
+                  val container = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.CENTER_VERTICAL
+                      setPadding(0, dp(4), 0, dp(4))
                   }
 
-                  if (currentTheme == "FORTNITE" && treeSide != 0) {
-                      val treeResName = if (treeSide == 1) "fn_tree1" else "fn_tree2"
-                      var treeRes = resources.getIdentifier(treeResName, "drawable", packageName)
-                      if (treeRes == 0) treeRes = resources.getIdentifier("img_$treeResName", "drawable", packageName)
-
+                  // Arbre gauche (si Fortnite et treeSide 1 ou 3)
+                  if (currentTheme == "FORTNITE" && (treeSide == 1 || treeSide == 3)) {
+                      val treeRes = getResId("fn_tree1")
                       if (treeRes != 0) {
                           val treeIv = ImageView(this).apply {
                               setImageResource(treeRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val treeLp = FrameLayout.LayoutParams(dp(54), dp(80), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
-                              if (treeSide == 1) leftMargin = -dp(56) else rightMargin = -dp(56)
+                          val lp = LinearLayout.LayoutParams(dp(44), dp(64)).apply {
+                              rightMargin = dp(8)
                           }
-                          outerFrame.addView(treeIv, treeLp)
+                          container.addView(treeIv, lp)
                       }
                   }
 
+                  // Bouton principal
                   val buttonContent = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
                       gravity = Gravity.CENTER
@@ -572,12 +577,23 @@ jobs:
                   }
                   buttonContent.addView(tv, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
 
-                  val contentLp = FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                      topMargin = dp(8)
-                      leftMargin = dp(8)
-                      rightMargin = dp(8)
+                  val buttonLp = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+                  container.addView(buttonContent, buttonLp)
+
+                  // Arbre droit (si Fortnite et treeSide 2 ou 3)
+                  if (currentTheme == "FORTNITE" && (treeSide == 2 || treeSide == 3)) {
+                      val treeRes = getResId("fn_tree2")
+                      if (treeRes != 0) {
+                          val treeIv = ImageView(this).apply {
+                              setImageResource(treeRes)
+                              scaleType = ImageView.ScaleType.FIT_CENTER
+                          }
+                          val lp = LinearLayout.LayoutParams(dp(44), dp(64)).apply {
+                              leftMargin = dp(8)
+                          }
+                          container.addView(treeIv, lp)
+                      }
                   }
-                  outerFrame.addView(buttonContent, contentLp)
 
                   buttonContent.setOnClickListener {
                       val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
@@ -602,7 +618,7 @@ jobs:
                       false
                   }
 
-                  return outerFrame
+                  return container
               }
 
               private fun playClickSound(soundName: String) {
@@ -926,10 +942,7 @@ jobs:
               }
 
               private fun showMergerScreen() {
-                  rootFrameLayout = FrameLayout(this).apply {
-                      clipChildren = false
-                      clipToPadding = false
-                  }
+                  rootFrameLayout = FrameLayout(this)
 
                   bgVideoView = AspectRatioVideoView(this).apply {
                       layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT, Gravity.CENTER)
@@ -938,8 +951,6 @@ jobs:
 
                   rootLayout = ScrollView(this).apply {
                       setBackgroundColor(Color.TRANSPARENT)
-                      clipChildren = false
-                      clipToPadding = false
                   }
 
                   val pad = dp(16)
@@ -947,8 +958,6 @@ jobs:
                       orientation = LinearLayout.VERTICAL
                       setPadding(pad, pad, pad, pad)
                       setBackgroundColor(Color.TRANSPARENT)
-                      clipChildren = false
-                      clipToPadding = false
                   }
 
                   val headerLayout = LinearLayout(this).apply {
@@ -1164,7 +1173,7 @@ jobs:
                               true
                           }
                           4 -> {
-                              toast("PS PKG Freedom Hub v2.9.47")
+                              toast("PS PKG Freedom Hub v2.9.48")
                               true
                           }
                           else -> false
@@ -1267,8 +1276,6 @@ jobs:
                   val card = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
                       setPadding(dp(16), dp(16), dp(16), dp(16))
-                      clipChildren = false
-                      clipToPadding = false
                   }
                   cardViews.add(card)
                   return card
@@ -1925,15 +1932,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.47
+      - name: Build APK v2.9.48
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.47
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.47.apk
+      - name: Renommer l'APK v2.9.48
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.48.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.47-apk
-          path: PkgMerger-v2.9.47.apk
+          name: pkg-merger-v2.9.48-apk
+          path: PkgMerger-v2.9.48.apk
           if-no-files-found: error
