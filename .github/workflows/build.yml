@@ -1,211 +1,1225 @@
-name: Build PS3 homebrew
+name: Build Android APK
 
 on:
   push:
-    branches: [ main, master ]
   workflow_dispatch:
     inputs:
-      commit_sources:
-        description: "Ecrire les sources generees dans le depot"
+      regenerate:
+        description: "Réécrire les sources depuis ce workflow"
         type: boolean
         default: true
 
 permissions:
   contents: write
 
-concurrency:
-  group: ps3-build-${{ github.ref }}
-  cancel-in-progress: false
-
-env:
-  PS3DEV: /usr/local/ps3dev
-  PSL1GHT: /usr/local/ps3dev
-
 jobs:
   build:
-    name: Generer et compiler
     runs-on: ubuntu-latest
-    container:
-      image: hldtux/ps3dev:latest
-      options: --user root
-    defaults:
-      run:
-        shell: bash
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Preparer la toolchain
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.4'
+
+      - name: Générer le projet Android v2.1.7 UI Ultra
+        env:
+          FORCE: '1'
         run: |
-          set -eo pipefail
-          export PSL1GHT="${PSL1GHT:-/usr/local/ps3dev}"
-          export PS3DEV="${PS3DEV:-/usr/local/ps3dev}"
-          export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
+          set -e
+          rm -rf app/src/main/kotlin
+          rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
+          mkdir -p app/src/main/java/com/venice/pkgmerger
+          mkdir -p app/src/main/res/drawable
 
-          echo "PSL1GHT=$PSL1GHT" >> "$GITHUB_ENV"
-          echo "PS3DEV=$PS3DEV"   >> "$GITHUB_ENV"
-
-          command -v ppu-gcc >/dev/null || { echo "::error::ppu-gcc introuvable"; exit 1; }
-          echo "Toolchain OK"
-
-      - name: Generer la structure du projet
-        run: |
-          set -eo pipefail
-          rm -rf source assets Makefile *.elf *.self *.pkg pkg_build
-
-          mkdir -p source
-
-          cat << 'MAIN_C' > source/main.c
-          #include <stdio.h>
-          #include <string.h>
-          #include <stdint.h>
-          #include <unistd.h>
-          #include <fcntl.h>
-          #include <sys/stat.h>
-          #include <sys/process.h>
-          #include <sysutil/sysutil.h>
-
-          SYS_PROCESS_PARAM(1001, 0x20000)
-
-          #define LV2_SYSCALL_LV2_PEEK 8
-
-          static inline uint64_t lv2_peek(uint64_t addr)
-          {
-              register uint64_t r3  __asm__("3")  = addr;
-              register uint64_t r11 __asm__("11") = LV2_SYSCALL_LV2_PEEK;
-              __asm__ volatile("sc"
-                  : "+r"(r3)
-                  : "r"(r11)
-                  : "4","5","6","7","8","9","10","12","memory");
-              return r3;
+          write() {
+            f="$1"
+            echo "  écrit   $f"
+            cat > "$f"
           }
 
-          int main(int argc, char **argv)
-          {
-              (void)argc; (void)argv;
-              printf("PS3 Kernel Reader - Actif !\n");
+          write .gitignore <<'EOF'
+          .gradle/
+          build/
+          local.properties
+          *.apk
+          *.jks
+          *.keystore
+          EOF
 
-              uint64_t val = lv2_peek(0x8000000000000000ULL);
-              printf("Peek 0x8000... : 0x%016llX\n", (unsigned long long)val);
-              fflush(stdout);
+          write settings.gradle.kts <<'EOF'
+          pluginManagement {
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "PkgMerger"
+          include(":app")
+          EOF
 
-              for (;;) {
-                  sysUtilCheckCallback();
-                  usleep(16000);
+          write build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application") version "8.1.1" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.0" apply false
+          }
+          EOF
+
+          write gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx3072m -Dfile.encoding=UTF-8
+          org.gradle.parallel=false
+          android.useAndroidX=true
+          android.nonTransitiveRClass=true
+          kotlin.code.style=official
+          EOF
+
+          write app/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+
+          android {
+              namespace = "com.venice.pkgmerger"
+              compileSdk = 34
+
+              defaultConfig {
+                  applicationId = "com.venice.pkgmerger"
+                  minSdk = 26
+                  targetSdk = 34
+                  versionCode = 217
+                  versionName = "2.1.7"
               }
-              return 0;
+
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+
+              kotlinOptions { jvmTarget = "17" }
+
+              buildTypes {
+                  release { isMinifyEnabled = false }
+              }
           }
-          MAIN_C
+          EOF
 
-          printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > ICON0.PNG
-          cp ICON0.PNG PIC1.PNG
+          write app/src/main/res/drawable/ic_app_logo.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="108"
+              android:viewportHeight="108">
+            <path
+                android:fillColor="#0F172A"
+                android:pathData="M16,0h76c8.8,0 16,7.2 16,16v76c0,8.8 -7.2,16 -16,16H16c-8.8,0 -16,-7.2 -16,-16V16C0,7.2 7.2,0 16,0z"/>
+            <path
+                android:fillColor="#38BDF8"
+                android:pathData="M54,18c19.9,0 36,16.1 36,36s-16.1,36 -36,36s-36,-16.1 -36,-36S34.1,18 54,18z"
+                android:fillAlpha="0.15"/>
+            <path
+                android:fillColor="#38BDF8"
+                android:pathData="M58,32L38,58h14l-4,18l24-30H40L58,32z"/>
+          </vector>
+          EOF
 
-      - name: Compiler et empaqueter en vrai .pkg
-        run: |
-          export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
-          set -eo pipefail
+          write app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-          rm -f main.o ps3_kernel_reader.elf ps3_kernel_reader.self ps3_kernel_reader.pkg
-
-          echo "1. Compilation..."
-          ppu-gcc -O2 -Wall -I/usr/local/ps3dev/ppu/include -c source/main.c -o main.o
-          ppu-gcc -L/usr/local/ps3dev/ppu/lib main.o -lio -lsysutil -llv2 -lm -o ps3_kernel_reader.elf
-
-          echo "2. Nettoyage des symboles..."
-          ppu-strip ps3_kernel_reader.elf
-
-          echo "3. Generation SELF..."
-          make_self_npdrm ps3_kernel_reader.elf ps3_kernel_reader.self UP0001-KRNLRDR01_00-0000000000000000
-
-          echo "4. Preparation des fichiers..."
-          mkdir -p pkg_build/USRDIR
-          cp ps3_kernel_reader.self pkg_build/USRDIR/EBOOT.BIN
-          cp ICON0.PNG pkg_build/
-          cp PIC1.PNG pkg_build/
-
-          echo "5. Generation du PARAM.SFO, telechargement et assemblage en Python..."
-          python3 -c '
-          import struct, urllib.request, os
-
-          # 1. Generation du PARAM.SFO
-          def create_sfo(output_path, title, app_ver, version, title_id):
-              entries = [
-                  ("TITLE", title.encode("utf-8") + b"\x00", 0x0204, len(title) + 1, 0x80),
-                  ("APP_VER", app_ver.encode("utf-8") + b"\x00", 0x0204, len(app_ver) + 1, 8),
-                  ("VERSION", version.encode("utf-8") + b"\x00", 0x0204, len(version) + 1, 8),
-                  ("TITLE_ID", title_id.encode("utf-8") + b"\x00", 0x0204, len(title_id) + 1, 12),
-              ]
-              header_size = 20
-              index_table_size = len(entries) * 16
-              key_table_offset = header_size + index_table_size
-              
-              key_table = bytearray()
-              val_table = bytearray()
-              entry_data = []
-              
-              for key, val, fmt, max_len, _ in entries:
-                  key_offset = len(key_table)
-                  key_table.extend(key.encode("ascii") + b"\x00")
-                  val_offset = len(val_table)
-                  val_table.extend(val)
-                  entry_data.append((key_offset, fmt, len(val), max_len, val_offset))
+              <application
+                  android:label="PS PKG Manager &amp; Analyzer"
+                  android:icon="@drawable/ic_app_logo"
+                  android:roundIcon="@drawable/ic_app_logo"
+                  android:largeHeap="true"
+                  android:theme="@android:style/Theme.Material.NoActionBar">
                   
-              val_table_offset = key_table_offset + len(key_table)
-              
-              with open(output_path, "wb") as f:
-                  f.write(b"\x00PSF")
-                  f.write(struct.pack("<I", 0x00010100))
-                  f.write(struct.pack("<I", key_table_offset))
-                  f.write(struct.pack("<I", val_table_offset))
-                  f.write(struct.pack("<I", len(entries)))
-                  for key_off, fmt, data_len, max_len, val_off in entry_data:
-                      f.write(struct.pack("<HHIHH", key_off, fmt, data_len, max_len, val_table_offset + val_off))
-                  f.write(key_table)
-                  f.write(val_table)
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:label="PS PKG Manager &amp; Analyzer">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
 
-          create_sfo("pkg_build/PARAM.SFO", "PS3 Kernel Reader", "01.00", "01.00", "KRNLRDR01")
+          write app/src/main/java/com/venice/pkgmerger/MainActivity.kt <<'EOF'
+          package com.venice.pkgmerger
 
-          # 2. Telechargement direct du script de packaging via urllib (evite tout conflit de PATH)
-          print("Telechargement du builder de PKG...")
-          url = "https://raw.githubusercontent.com/infinitykkj/PS3-PKG-Module/main/pkg_builder.py"
-          urllib.request.urlretrieve(url, "pkg_builder.py")
-          '
+          import android.Manifest
+          import android.app.Activity
+          import android.app.NotificationChannel
+          import android.app.NotificationManager
+          import android.content.ClipData
+          import android.content.ClipboardManager
+          import android.content.Context
+          import android.content.Intent
+          import android.content.pm.PackageManager
+          import android.graphics.Color
+          import android.graphics.Typeface
+          import android.graphics.drawable.GradientDrawable
+          import android.net.Uri
+          import android.os.Build
+          import android.os.Bundle
+          import android.os.Handler
+          import android.os.Looper
+          import android.os.PowerManager
+          import android.provider.DocumentsContract
+          import android.provider.OpenableColumns
+          import android.provider.Settings
+          import android.view.Gravity
+          import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+          import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+          import android.widget.Button
+          import android.widget.CheckBox
+          import android.widget.EditText
+          import android.widget.LinearLayout
+          import android.widget.PopupMenu
+          import android.widget.ProgressBar
+          import android.widget.ScrollView
+          import android.widget.TextView
+          import android.widget.Toast
+          import java.io.BufferedOutputStream
+          import java.io.FileOutputStream
+          import java.io.OutputStream
+          import java.security.MessageDigest
+          import java.util.Locale
 
-          pip install --quiet pycryptodome || true
+          class MainActivity : Activity() {
 
-          echo "6. Assemblage final du vrai fichier .pkg..."
-          python3 pkg_builder.py pkg_build --retail -c "UP0001-KRNLRDR01_00-0000000000000000" -o ps3_kernel_reader.pkg
+              private val uris = ArrayList<Uri>()
+              private val names = ArrayList<String>()
+              private val sizes = ArrayList<Long>()
 
-          # Verification
-          if [ -f "ps3_kernel_reader.pkg" ]; then
-              echo "Succes : Le vrai .pkg a ete genere avec succes !"
-          else
-              echo "Erreur : Echec de la creation du .pkg"
-              exit 1
-          fi
+              private var output: Uri? = null
+              private var reversed = false
+              private var lastHash: String? = null
+              private var appMode = "MERGE"
+              @Volatile private var processing = false
+              @Volatile private var cancelled = false
+              private val ui = Handler(Looper.getMainLooper())
+              private var lastNotifTime = 0L
 
-      - name: Publier les artefacts
+              private lateinit var listContainer: LinearLayout
+              private lateinit var checkView: TextView
+              private lateinit var outView: TextView
+              private lateinit var statusView: TextView
+              private lateinit var hashView: TextView
+              private lateinit var hashField: EditText
+              private lateinit var verifyBox: CheckBox
+              private lateinit var deleteBox: CheckBox
+              private lateinit var bar: ProgressBar
+              private lateinit var pickBtn: Button
+              private lateinit var dirBtn: Button
+              private lateinit var outBtn: Button
+              private lateinit var goBtn: Button
+              private lateinit var cancelBtn: Button
+              private lateinit var revBtn: Button
+              private lateinit var copyBtn: Button
+              private lateinit var menuBtn: Button
+              private lateinit var titleView: TextView
+              private lateinit var subtitleView: TextView
+              private lateinit var section1Title: TextView
+
+              private val accent = Color.parseColor("#38BDF8")
+              private val dim = Color.parseColor("#94A3B8")
+              private val cardBg = Color.parseColor("#1E293B")
+              private val bgMain = Color.parseColor("#0F172A")
+              private val borderHex = "#334155"
+
+              private val NOTIF_ID_PROGRESS = 101
+              private val NOTIF_ID_RESULT = 102
+
+              override fun onCreate(state: Bundle?) {
+                  super.onCreate(state)
+                  createNotificationChannel()
+                  checkPermissions()
+                  showMergerScreen()
+              }
+
+              private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+
+              private fun styleButton(b: Button, bgHex: String, textHex: String = "#FFFFFF") {
+                  b.setBackgroundDrawable(GradientDrawable().apply {
+                      setColor(Color.parseColor(bgHex))
+                      cornerRadius = dp(12).toFloat()
+                  })
+                  b.setTextColor(Color.parseColor(textHex))
+                  b.setTypeface(null, Typeface.BOLD)
+                  b.textSize = 12f
+                  b.setPadding(dp(12), dp(10), dp(12), dp(10))
+              }
+
+              private fun createNotificationChannel() {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      val channel = NotificationChannel(
+                          "pkg_channel",
+                          "PS PKG Notifications",
+                          NotificationManager.IMPORTANCE_LOW
+                      ).apply { description = "Progression des traitements PKG" }
+                      getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+                  }
+              }
+
+              private fun checkPermissions() {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                      if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                          requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 100)
+                      }
+                  }
+
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                      val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                      if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                          try {
+                              val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                  data = Uri.parse("package:$packageName")
+                              }
+                              startActivity(intent)
+                          } catch (_: Exception) {}
+                      }
+                  }
+              }
+
+              private fun updateProgressNotif(msg: String, pct: Int) {
+                  try {
+                      val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                          android.app.Notification.Builder(this, "pkg_channel")
+                      } else {
+                          @Suppress("DEPRECATION")
+                          android.app.Notification.Builder(this)
+                      }
+                      val notification = builder
+                          .setContentTitle("⚡ PS PKG Manager")
+                          .setContentText(msg)
+                          .setSmallIcon(android.R.drawable.ic_menu_save)
+                          .setProgress(100, pct, false)
+                          .setOngoing(true)
+                          .build()
+
+                      getSystemService(NotificationManager::class.java).notify(NOTIF_ID_PROGRESS, notification)
+                  } catch (_: Exception) {}
+              }
+
+              private fun showResultNotif(title: String, message: String) {
+                  try {
+                      val nm = getSystemService(NotificationManager::class.java)
+                      nm.cancel(NOTIF_ID_PROGRESS)
+
+                      val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                          android.app.Notification.Builder(this, "pkg_channel")
+                      } else {
+                          @Suppress("DEPRECATION")
+                          android.app.Notification.Builder(this)
+                      }
+                      val notification = builder
+                          .setContentTitle(title)
+                          .setContentText(message)
+                          .setSmallIcon(android.R.drawable.ic_menu_save)
+                          .setAutoCancel(true)
+                          .build()
+
+                      nm.notify(NOTIF_ID_RESULT, notification)
+                  } catch (_: Exception) {}
+              }
+
+              private fun showMergerScreen() {
+                  val pad = dp(16)
+                  val col = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(pad, pad, pad, pad)
+                      setBackgroundColor(bgMain)
+                  }
+
+                  val headerLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      setPadding(0, dp(4), 0, dp(14))
+                  }
+                  
+                  val titlesLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                  }
+                  titleView = TextView(this).apply {
+                      text = "⚡ PS PKG MANAGER"
+                      textSize = 22f
+                      setTextColor(Color.WHITE)
+                      setTypeface(null, Typeface.BOLD)
+                  }
+                  titlesLayout.addView(titleView)
+                  
+                  subtitleView = TextView(this).apply {
+                      text = "Fusion, découpage et analyse détaillée de PKG (PS3, PS4, PS5)."
+                      textSize = 11f
+                      setTextColor(dim)
+                      setPadding(0, dp(2), 0, 0)
+                  }
+                  titlesLayout.addView(subtitleView)
+                  headerLayout.addView(titlesLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+
+                  menuBtn = Button(this).apply {
+                      text = "⚙️ Mode"
+                      styleButton(this, "#334155")
+                      setOnClickListener { showMenu(it) }
+                  }
+                  headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
+                  col.addView(headerLayout)
+
+                  val card1 = createCard()
+                  section1Title = text("1. Sélection des parties (.pkg / .pkg.0 ...)", 14f, accent, true)
+                  card1.addView(section1Title)
+                  
+                  pickBtn = Button(this).apply {
+                      text = "📁 CHOISIR LES FICHIERS"
+                      styleButton(this, "#0284C7")
+                      setOnClickListener {
+                          if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
+                          pick()
+                      }
+                  }
+                  card1.addView(pickBtn, lp())
+
+                  dirBtn = Button(this).apply {
+                      text = "📂 CHOISIR UN DOSSIER COMPLET"
+                      styleButton(this, "#0369A1")
+                      setOnClickListener {
+                          if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
+                          pickFolder()
+                      }
+                  }
+                  card1.addView(dirBtn, lp())
+
+                  revBtn = Button(this).apply {
+                      text = "🔀 INVERSER L'ORDRE DES PARTIES"
+                      styleButton(this, "#475569")
+                      setOnClickListener {
+                          if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
+                          reversed = !reversed; refresh()
+                      }
+                  }
+                  card1.addView(revBtn, lp())
+
+                  listContainer = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(0, dp(8), 0, dp(4))
+                  }
+                  card1.addView(listContainer, lp())
+
+                  checkView = text("", 12f, accent).apply { typeface = Typeface.MONOSPACE }
+                  card1.addView(checkView, lp())
+                  col.addView(card1, lpCard())
+
+                  val card2 = createCard()
+                  card2.addView(text("2. Fichier de sortie & Traitement", 14f, accent, true))
+
+                  outBtn = Button(this).apply {
+                      text = "💾 DÉFINIR L'EMPLACEMENT DE SORTIE"
+                      styleButton(this, "#0D9488")
+                      setOnClickListener {
+                          if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
+                          pickOutput()
+                      }
+                  }
+                  card2.addView(outBtn, lp())
+
+                  outView = text("Sortie : —", 12f, dim).apply { 
+                      typeface = Typeface.MONOSPACE
+                      setPadding(0, dp(6), 0, dp(8))
+                  }
+                  card2.addView(outView, lp())
+
+                  val actionLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                  }
+                  goBtn = Button(this).apply {
+                      text = "▶️ LANCER LA FUSION"
+                      styleButton(this, "#16A34A")
+                      setOnClickListener { executeAction() }
+                  }
+                  actionLayout.addView(goBtn, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+
+                  cancelBtn = Button(this).apply {
+                      text = "❌ ANNULER"
+                      styleButton(this, "#DC2626")
+                      isEnabled = false
+                      setOnClickListener {
+                          if (processing) {
+                              cancelled = true
+                              statusView.text = "Annulation en cours..."
+                              toast("Annulation demandée...")
+                          }
+                      }
+                  }
+                  actionLayout.addView(cancelBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
+                  card2.addView(actionLayout, lp())
+
+                  bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+                      max = 1000
+                      progress = 0
+                      setPadding(0, dp(12), 0, dp(4))
+                  }
+                  card2.addView(bar, lp())
+
+                  statusView = text("Prêt à fusionner.", 13f, accent).apply { setTypeface(null, Typeface.BOLD) }
+                  card2.addView(statusView, lp())
+                  col.addView(card2, lpCard())
+
+                  val card3 = createCard()
+                  card3.addView(text("3. Options de sécurité & Hash", 14f, accent, true))
+
+                  verifyBox = CheckBox(this).apply {
+                      text = "Relire le fichier après écriture (contrôle intégrité)"
+                      isChecked = true
+                      setTextColor(dim)
+                      textSize = 12f
+                  }
+                  card3.addView(verifyBox, lp())
+
+                  deleteBox = CheckBox(this).apply {
+                      text = "Supprimer les sources après succès"
+                      isChecked = false
+                      setTextColor(dim)
+                      textSize = 12f
+                  }
+                  card3.addView(deleteBox, lp())
+
+                  hashField = EditText(this).apply {
+                      hint = "Coller un hash pour comparer"
+                      setTextColor(Color.WHITE)
+                      setHintTextColor(dim)
+                      textSize = 11f
+                      typeface = Typeface.MONOSPACE
+                  }
+                  card3.addView(hashField, lp())
+
+                  hashView = text("", 11f, accent).apply { typeface = Typeface.MONOSPACE }
+                  card3.addView(hashView, lp())
+
+                  copyBtn = Button(this).apply {
+                      text = "📋 Copier le SHA-256 produit"
+                      styleButton(this, "#334155")
+                      isEnabled = false
+                      setOnClickListener { copyHash() }
+                  }
+                  card3.addView(copyBtn, lp())
+                  col.addView(card3, lpCard())
+
+                  refresh()
+
+                  setContentView(ScrollView(this).apply { 
+                      setBackgroundColor(bgMain)
+                      addView(col) 
+                  })
+              }
+
+              private fun showMenu(v: android.view.View) {
+                  if (processing) {
+                      toast("⚠️ Traitement en cours !")
+                      return
+                  }
+                  val popup = PopupMenu(this, v)
+                  popup.menu.add(0, 1, 0, if (appMode == "MERGE") "📂 Basculer vers : Mode Splitter" else "🔗 Basculer vers : Mode Fusion")
+                  popup.menu.add(0, 2, 1, "ℹ️ À propos")
+                  popup.setOnMenuItemClickListener { item ->
+                      when (item.itemId) {
+                          1 -> {
+                              appMode = if (appMode == "MERGE") "SPLIT" else "MERGE"
+                              if (appMode == "SPLIT") {
+                                  titleView.text = "⚡ PKG SPLITTER"
+                                  subtitleView.text = "Découpe ton gros fichier .pkg en morceaux de 4 Go."
+                                  section1Title.text = "1. Sélection du fichier .pkg unique à découper"
+                                  goBtn.text = "▶️ LANCER DÉCOUPAGE"
+                                  statusView.text = "Prêt à découper."
+                              } else {
+                                  titleView.text = "⚡ PS PKG MANAGER"
+                                  subtitleView.text = "Fusion, découpage et analyse détaillée de PKG (PS3, PS4, PS5)."
+                                  section1Title.text = "1. Sélection des parties (.pkg / .pkg.0 ...)"
+                                  goBtn.text = "▶️ LANCER LA FUSION"
+                                  statusView.text = "Prêt à fusionner."
+                              }
+                              output = null
+                              outView.text = "Sortie : —"
+                              true
+                          }
+                          2 -> {
+                              toast("PS PKG Manager v2.1.7")
+                              true
+                          }
+                          else -> false
+                      }
+                  }
+                  popup.show()
+              }
+
+              private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) }
+              private fun lpCard() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12); bottomMargin = dp(4) }
+
+              private fun createCard(): LinearLayout {
+                  return LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply {
+                          setColor(cardBg)
+                          cornerRadius = dp(16).toFloat()
+                          setStroke(dp(1), Color.parseColor(borderHex))
+                      }
+                  }
+              }
+
+              private fun text(t: String, size: Float, color: Int, bold: Boolean = false) =
+                  TextView(this).apply {
+                      text = t
+                      textSize = size
+                      setTextColor(color)
+                      if (bold) setTypeface(typeface, Typeface.BOLD)
+                      setPadding(0, dp(2), 0, dp(2))
+                  }
+
+              private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
+
+              private fun pick() {
+                  startActivityForResult(
+                      Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                          addCategory(Intent.CATEGORY_OPENABLE)
+                          type = "*/*"
+                          putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                      }, 1
+                  )
+              }
+
+              private fun pickFolder() {
+                  startActivityForResult(
+                      Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                          addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                      }, 3
+                  )
+              }
+
+              private fun pickOutput() {
+                  if (uris.isEmpty()) {
+                      toast("Choisis d'abord les fichiers sources !")
+                      return
+                  }
+                  if (appMode == "SPLIT") {
+                      startActivityForResult(
+                          Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                              addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                          }, 4
+                      )
+                  } else {
+                      startActivityForResult(
+                          Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                              addCategory(Intent.CATEGORY_OPENABLE)
+                              type = "application/octet-stream"
+                              putExtra(Intent.EXTRA_TITLE, suggestName())
+                          }, 2
+                      )
+                  }
+              }
+
+              @Deprecated("Deprecated in Java")
+              override fun onActivityResult(req: Int, res: Int, data: Intent?) {
+                  super.onActivityResult(req, res, data)
+                  if (res != RESULT_OK) return
+
+                  if (req == 1) {
+                      uris.clear(); names.clear(); sizes.clear()
+                      val clip = data?.clipData
+                      if (clip != null) {
+                          for (i in 0 until clip.itemCount) {
+                              val u = clip.getItemAt(i).uri
+                              if (isPkgFile(getFileName(u))) add(u)
+                          }
+                      } else {
+                          data?.data?.let { u -> if (isPkgFile(getFileName(u))) add(u) }
+                      }
+                      reversed = false
+                      refresh()
+                  } else if (req == 2) {
+                      val u = data?.data ?: return
+                      persist(u, true)
+                      output = u
+                      if (::outView.isInitialized) {
+                          outView.text = "Sortie : ${u.lastPathSegment}"
+                      }
+                  } else if (req == 3) {
+                      val tree = data?.data ?: return
+                      try {
+                          contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                      } catch (_: Exception) {}
+                      loadTree(tree)
+                  } else if (req == 4) {
+                      val tree = data?.data ?: return
+                      try {
+                          contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                      } catch (_: Exception) {}
+                      output = tree
+                      if (::outView.isInitialized) {
+                          outView.text = "Dossier de sortie : Dossier sélectionné"
+                      }
+                  }
+              }
+
+              private fun isPkgFile(name: String): Boolean {
+                  val lower = name.lowercase()
+                  return lower.endsWith(".pkg") || lower.contains(".pkg.")
+              }
+
+              private fun getFileName(u: Uri): String {
+                  var n = "game.pkg"
+                  try {
+                      contentResolver.query(u, null, null, null, null)?.use { c ->
+                          val ni = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                          if (c.moveToFirst() && ni >= 0 && !c.isNull(ni)) c.getString(ni)?.let { if (it.isNotBlank()) n = it }
+                      }
+                  } catch (_: Exception) {}
+                  return n
+              }
+
+              private fun loadTree(tree: Uri) {
+                  uris.clear(); names.clear(); sizes.clear()
+                  try {
+                      val docId = DocumentsContract.getTreeDocumentId(tree)
+                      val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, docId)
+                      val cols = arrayOf(
+                          DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                          DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                          DocumentsContract.Document.COLUMN_SIZE,
+                          DocumentsContract.Document.COLUMN_MIME_TYPE
+                      )
+                      contentResolver.query(children, cols, null, null, null)?.use { c ->
+                          while (c.moveToNext()) {
+                              val id = c.getString(0)
+                              val name = c.getString(1)
+                              val mime = c.getString(3)
+                              if (id != null && name != null && mime != DocumentsContract.Document.MIME_TYPE_DIR) {
+                                  if (isPkgFile(name)) {
+                                      val size = if (c.isNull(2)) 0L else c.getLong(2)
+                                      uris.add(DocumentsContract.buildDocumentUriUsingTree(tree, id))
+                                      names.add(name)
+                                      sizes.add(size)
+                                  }
+                              }
+                          }
+                      }
+                  } catch (e: Exception) {
+                      toast("Erreur lecture dossier : ${e.message}")
+                  }
+                  reversed = false
+                  refresh()
+                  if (uris.isEmpty()) toast("Aucun fichier .pkg valide trouvé.")
+              }
+
+              private fun persist(u: Uri, write: Boolean = false) {
+                  try {
+                      var f = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                      if (write) f = f or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                      contentResolver.takePersistableUriPermission(u, f)
+                  } catch (_: Exception) {}
+              }
+
+              private fun add(u: Uri) {
+                  persist(u)
+                  var n = getFileName(u)
+                  var s = size(u)
+                  uris.add(u); names.add(n); sizes.add(s)
+              }
+
+              private fun removeAt(index: Int) {
+                  if (index in uris.indices) {
+                      uris.removeAt(index)
+                      names.removeAt(index)
+                      sizes.removeAt(index)
+                      refresh()
+                  }
+              }
+
+              private data class PkgInfo(val console: String, val valid: Boolean, val contentId: String, val region: String)
+
+              private fun analyzePkg(u: Uri): PkgInfo {
+                  try {
+                      contentResolver.openInputStream(u)?.use { input ->
+                          val header = ByteArray(256)
+                          val read = input.read(header)
+                          if (read < 128) return PkgInfo("Inconnu", false, "", "Inconnue")
+
+                          val isCnt = (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && 
+                                       header[2] == 'N'.toByte() && header[3] == 'T'.toByte())
+                          val isFih = (header[0] == 0x7F.toByte() && header[1] == 'F'.toByte() && 
+                                       header[2] == 'I'.toByte() && header[3] == 'H'.toByte())
+
+                          if (!isCnt && !isFih) return PkgInfo("Invalide", false, "", "Inconnue")
+
+                          var contentId = ""
+                          for (i in 48 until 200) {
+                              val b = header[i]
+                              if (b in 32..126) {
+                                  contentId += b.toChar()
+                              } else {
+                                  if (contentId.length >= 20 && contentId.contains("-")) break
+                                  contentId = ""
+                              }
+                          }
+                          if (contentId.length < 15) {
+                              contentId = ""
+                              for (i in 0 until read - 20) {
+                                  val possibleId = String(header, i, 36)
+                                  if ((possibleId.startsWith("EP") || possibleId.startsWith("UP") || possibleId.startsWith("JP")) && possibleId.contains("-")) {
+                                      contentId = possibleId
+                                      break
+                                  }
+                              }
+                          }
+
+                          val region = when {
+                              contentId.startsWith("EP", true) || contentId.startsWith("BP", true) -> "🇪🇺 Europe (EP/BP)"
+                              contentId.startsWith("UP", true) || contentId.startsWith("HP", true) -> "🇺🇸 US (UP/HP)"
+                              contentId.startsWith("JP", true) || contentId.startsWith("AP", true) -> "🇯🇵 / Asie (JP/AP)"
+                              else -> "Inconnue"
+                          }
+
+                          val name = getFileName(u).lowercase()
+                          val console = when {
+                              name.contains("ps3") || name.contains("nplb") -> "PS3"
+                              name.contains("ps4") || name.contains("cusa") -> "PS4"
+                              name.contains("ps5") || name.contains("ppsa") || isFih -> "PS5"
+                              else -> "PS5/PS4"
+                          }
+                          return PkgInfo(console, true, contentId.trim(), region)
+                      }
+                  } catch (_: Exception) {}
+                  return PkgInfo("Invalide", false, "", "Inconnue")
+              }
+
+              private fun refresh() {
+                  if (!::listContainer.isInitialized) return
+                  listContainer.removeAllViews()
+
+                  if (uris.isEmpty()) {
+                      listContainer.addView(text("Aucun fichier sélectionné.", 12f, dim))
+                      checkView.text = ""
+                      return
+                  }
+
+                  val order = order()
+                  val total = order.sumOf { sizes[it] }
+                  val info = analyzePkg(uris[order[0]])
+
+                  val summaryView = text("${order.size} partie(s) • ${fmt(total)} • Ordre ${if (reversed) "inversé" else "croissant"}", 12f, Color.WHITE, true)
+                  listContainer.addView(summaryView)
+
+                  order.forEachIndexed { i, idx ->
+                      val row = LinearLayout(this).apply {
+                          orientation = LinearLayout.HORIZONTAL
+                          setPadding(dp(10), dp(6), dp(10), dp(6))
+                          gravity = Gravity.CENTER_VERTICAL
+                          background = GradientDrawable().apply {
+                              setColor(Color.parseColor("#0F172A"))
+                              cornerRadius = dp(8).toFloat()
+                              setStroke(dp(1), Color.parseColor("#334155"))
+                          }
+                      }
+
+                      val itemText = TextView(this).apply {
+                          text = "${i + 1}. ${names[idx]} (${fmt(sizes[idx])})"
+                          textSize = 12f
+                          setTextColor(Color.WHITE)
+                          typeface = Typeface.MONOSPACE
+                      }
+                      row.addView(itemText, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+
+                      val deleteBtn = Button(this).apply {
+                          text = "🚫"
+                          textSize = 12f
+                          setBackgroundColor(Color.TRANSPARENT)
+                          setOnClickListener {
+                              if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
+                              removeAt(idx)
+                          }
+                      }
+                      row.addView(deleteBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
+
+                      val marginLp = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
+                          topMargin = dp(4)
+                          bottomMargin = dp(4)
+                      }
+                      listContainer.addView(row, marginLp)
+                  }
+
+                  checkView.text = if (info.valid) {
+                      buildString {
+                          append("✓ PKG ").append(info.console).append(" détecté\n")
+                          if (info.contentId.isNotEmpty()) append("• ID : ").append(info.contentId).append("\n")
+                          append("• Région : ").append(info.region)
+                      }
+                  } else {
+                      "⚠️ Fichier PKG invalide (En-tête incorrect)"
+                  }
+              }
+
+              private fun order(): List<Int> {
+                  val o = uris.indices.sortedWith { a, b -> naturalCompare(names[a], names[b]) }
+                  return if (reversed) o.reversed() else o
+              }
+
+              private fun executeAction() {
+                  if (uris.isEmpty()) { toast("Sélectionne d'abord des fichiers."); return }
+                  val info = analyzePkg(uris[0])
+                  if (!info.valid) {
+                      toast("Erreur : En-tête PKG invalide !")
+                      statusView.text = "Erreur : En-tête PKG invalide !"
+                      return
+                  }
+
+                  if (appMode == "SPLIT") {
+                      splitPkg()
+                  } else {
+                      mergePkg()
+                  }
+              }
+
+              private fun splitPkg() {
+                  val treeUri = output
+                  if (treeUri == null) { toast("Choisis d'abord le dossier de sortie."); return }
+
+                  val sourceUri = uris[0]
+                  var sourceName = getFileName(sourceUri)
+                  if (sourceName.isBlank() || sourceName == "game.pkg") {
+                      sourceName = "pkg_game.pkg"
+                  }
+                  val info = analyzePkg(sourceUri)
+                  if (!info.valid) {
+                      toast("Erreur : En-tête PKG invalide !")
+                      return
+                  }
+
+                  processing = true
+                  cancelled = false
+                  goBtn.isEnabled = false
+                  cancelBtn.isEnabled = true
+                  bar.progress = 0
+                  statusView.text = "Découpage ${info.console} en cours…"
+
+                  Thread {
+                      val total = size(sourceUri)
+                      var done = 0L
+                      var lastPush = 0L
+                      var success = false
+                      val t0 = System.currentTimeMillis()
+                      val sha256 = if (verifyBox.isChecked) MessageDigest.getInstance("SHA-256") else null
+
+                      try {
+                          val maxPartSize = 4L * 1024L * 1024L * 1024L
+                          var partIndex = 0
+                          val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
+                          val baseDirUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocId)
+                          var currentOutputStream: OutputStream? = null
+
+                          fun openNextPart() {
+                              try { currentOutputStream?.flush(); currentOutputStream?.close() } catch (_: Exception) {}
+
+                              val partName = "$sourceName.${String.format(Locale.US, "%02d", partIndex)}"
+                              val docUri = DocumentsContract.createDocument(contentResolver, baseDirUri, "application/octet-stream", partName)
+                                  ?: throw IllegalStateException("Création de $partName impossible")
+                              
+                              currentOutputStream = BufferedOutputStream(contentResolver.openOutputStream(docUri)
+                                  ?: throw IllegalStateException("Ouverture du flux écriture impossible"), 1 shl 20)
+                              partIndex++
+                          }
+
+                          openNextPart()
+
+                          val buf = ByteArray(1 shl 20)
+                          var currentPartBytes = 0L
+                          contentResolver.openInputStream(sourceUri)?.use { input ->
+                              while (true) {
+                                  if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
+                                  val bytesRead = input.read(buf)
+                                  if (bytesRead <= 0) break
+
+                                  var offset = 0
+                                  while (offset < bytesRead) {
+                                      if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
+                                      if (currentPartBytes >= maxPartSize) {
+                                          openNextPart()
+                                          currentPartBytes = 0L
+                                      }
+                                      val chunkToWrite = minOf(bytesRead - offset, (maxPartSize - currentPartBytes).toInt())
+                                      currentOutputStream!!.write(buf, offset, chunkToWrite)
+                                      sha256?.update(buf, offset, chunkToWrite)
+                                      offset += chunkToWrite
+                                      currentPartBytes += chunkToWrite
+                                      done += chunkToWrite
+
+                                      val now = System.currentTimeMillis()
+                                      if (now - lastPush > 250) {
+                                          lastPush = now
+                                          val elapsedSecs = (now - t0) / 1000.0
+                                          val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
+                                          val speedStr = fmt(speedBps.toLong()) + "/s"
+                                          val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0L
+                                          val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
+                                          
+                                          val pct = if (total > 0) (done * 100 / total).toInt() else 0
+                                          val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
+                                          
+                                          ui.post {
+                                              bar.progress = pct * 10
+                                              statusView.text = msg
+                                          }
+                                          if (now - lastNotifTime > 2000 || pct == 100) {
+                                              lastNotifTime = now
+                                              updateProgressNotif("Découpage : $pct%", pct)
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          try { currentOutputStream?.flush(); currentOutputStream?.close() } catch (_: Exception) {}
+                          success = true
+                      } catch (e: Throwable) {
+                          ui.post {
+                              statusView.text = "Erreur : ${e.message}"
+                              showResultNotif("PS PKG Manager", "Échec : ${e.message}")
+                              processing = false
+                              doneUi()
+                          }
+                          return@Thread
+                      }
+
+                      if (!success) {
+                          processing = false
+                          return@Thread
+                      }
+
+                      val h256 = sha256?.let { hex(it.digest()) }
+                      val secs = (System.currentTimeMillis() - t0) / 1000
+
+                      ui.post {
+                          bar.progress = 1000
+                          lastHash = h256
+                          copyBtn.isEnabled = h256 != null
+                          if (h256 != null) {
+                              hashView.text = "SHA-256 : $h256"
+                          }
+                          statusView.text = "Découpage réussi en ${secs}s !"
+                          showResultNotif("PS PKG Manager", "Découpage terminé en ${secs}s !")
+                          processing = false
+                          doneUi()
+                      }
+                  }.start()
+              }
+
+              private fun mergePkg() {
+                  if (uris.size < 2) { toast("Sélectionne au moins 2 parties."); return }
+                  val out = output
+                  if (out == null) { toast("Choisis d'abord le fichier de sortie."); return }
+
+                  val list = order().map { uris[it] }
+                  val info = analyzePkg(list[0])
+                  if (!info.valid) {
+                      toast("Erreur : En-tête PKG invalide !")
+                      return
+                  }
+
+                  processing = true
+                  cancelled = false
+                  goBtn.isEnabled = false
+                  cancelBtn.isEnabled = true
+                  bar.progress = 0
+                  statusView.text = "Fusion ${info.console} en cours…"
+
+                  Thread {
+                      val total = list.sumOf { size(it) }
+                      val sha256 = MessageDigest.getInstance("SHA-256")
+                      var done = 0L
+                      var lastPush = 0L
+                      var success = false
+                      val t0 = System.currentTimeMillis()
+
+                      try {
+                          val pfd = contentResolver.openFileDescriptor(out, "w")
+                              ?: throw IllegalStateException("Ouverture sortie impossible")
+                          try {
+                              val os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
+                              val buf = ByteArray(1 shl 20)
+                              var bytesRead: Int
+                              for (u in list) {
+                                  if (cancelled) throw InterruptedException("Annulé.")
+                                  contentResolver.openInputStream(u)?.use { input ->
+                                      while (true) {
+                                          if (cancelled) throw InterruptedException("Annulé.")
+                                          bytesRead = input.read(buf)
+                                          if (bytesRead <= 0) break
+                                          os.write(buf, 0, bytesRead)
+                                          sha256.update(buf, 0, bytesRead)
+                                          done += bytesRead
+                                          
+                                          val now = System.currentTimeMillis()
+                                          if (now - lastPush > 250) {
+                                              lastPush = now
+                                              val elapsedSecs = (now - t0) / 1000.0
+                                              val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
+                                              val speedStr = fmt(speedBps.toLong()) + "/s"
+                                              val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0L
+                                              val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
+                                              
+                                              val pct = if (total > 0) (done * 100 / total).toInt() else 0
+                                              val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
+                                              
+                                              ui.post {
+                                                  bar.progress = pct * 10
+                                                  statusView.text = msg
+                                              }
+                                              if (now - lastNotifTime > 2000 || pct == 100) {
+                                                  lastNotifTime = now
+                                                  updateProgressNotif("Fusion : $pct%", pct)
+                                              }
+                                          }
+                                      }
+                                  }
+                              }
+                              os.flush()
+                          } finally {
+                              pfd.close()
+                          }
+
+                          if (verifyBox.isChecked && !cancelled) {
+                              ui.post { statusView.text = "Vérification intégrité…" }
+                              val verifyDigest = MessageDigest.getInstance("SHA-256")
+                              contentResolver.openInputStream(out)?.use { verifyInput ->
+                                  val verifyBuf = ByteArray(1 shl 20)
+                                  while (true) {
+                                      if (cancelled) throw InterruptedException("Annulé.")
+                                      val r = verifyInput.read(verifyBuf)
+                                      if (r <= 0) break
+                                      verifyDigest.update(verifyBuf, 0, r)
+                                  }
+                              }
+                          }
+                          success = true
+                      } catch (e: Throwable) {
+                          ui.post {
+                              statusView.text = "Erreur : ${e.message}"
+                              showResultNotif("PS PKG Manager", "Échec : ${e.message}")
+                              processing = false
+                              doneUi()
+                          }
+                          return@Thread
+                      }
+
+                      if (!success) {
+                          processing = false
+                          return@Thread
+                      }
+
+                      val h256 = hex(sha256.digest())
+                      val secs = (System.currentTimeMillis() - t0) / 1000
+
+                      ui.post {
+                          bar.progress = 1000
+                          lastHash = h256
+                          copyBtn.isEnabled = true
+                          hashView.text = "SHA-256 : $h256"
+                          statusView.text = "Terminé avec succès en ${secs}s"
+                          showResultNotif("PS PKG Manager", "Fusion réussie en ${secs}s !")
+                          processing = false
+                          doneUi()
+                      }
+                  }.start()
+              }
+
+              private fun doneUi() {
+                  if (::goBtn.isInitialized) {
+                      goBtn.isEnabled = true
+                      cancelBtn.isEnabled = false
+                  }
+              }
+
+              private fun copyHash() {
+                  val h = lastHash ?: return
+                  getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("sha256", h))
+                  toast("SHA-256 copié")
+              }
+
+              private fun size(u: Uri): Long {
+                  return try {
+                      contentResolver.query(u, null, null, null, null)?.use { c ->
+                          val i = c.getColumnIndex(OpenableColumns.SIZE)
+                          if (c.moveToFirst() && i >= 0 && !c.isNull(i)) c.getLong(i) else 0L
+                      } ?: 0L
+                  } catch (_: Exception) { 0L }
+              }
+
+              private fun hex(b: ByteArray): String = b.joinToString("") { "%02x".format(it) }
+
+              private fun fmt(b: Long): String {
+                  if (b <= 0) return "0 o"
+                  val u = arrayOf("o", "Ko", "Mo", "Go", "To")
+                  var v = b.toDouble()
+                  var i = 0
+                  while (v >= 1024 && i < u.size - 1) { v /= 1024; i++ }
+                  return if (i == 0) "$b o" else String.format(Locale.US, "%.2f %s", v, u[i])
+              }
+
+              private val chunk = Regex("(\\d+|\\D+)")
+              private fun naturalCompare(a: String, b: String): Int {
+                  val ca = chunk.findAll(a).map { it.value }.toList()
+                  val cb = chunk.findAll(b).map { it.value }.toList()
+                  for (i in 0 until minOf(ca.size, cb.size)) {
+                      val x = ca[i]
+                      val y = cb[i]
+                      val dx = x[0].isDigit()
+                      val dy = y[0].isDigit()
+                      val c = when {
+                          dx && dy -> {
+                              val xs = x.trimStart('0').ifEmpty { "0" }
+                              val ys = y.trimStart('0').ifEmpty { "0" }
+                              if (xs.length != ys.length) xs.length - ys.length else xs.compareTo(ys)
+                          }
+                          dx != dy -> if (dx) 1 else -1
+                          else -> x.compareTo(y, ignoreCase = true)
+                      }
+                      if (c != 0) return c
+                  }
+                  return ca.size - cb.size
+              }
+
+              private fun suggestName(): String {
+                  if (names.isEmpty()) return "merged.pkg"
+                  val first = names.minWithOrNull { a, b -> naturalCompare(a, b) } ?: return "merged.pkg"
+                  val m = Regex("^(.*?)[._\\- ]?(?:part)?[._\\- ]?(\\d+)$", RegexOption.IGNORE_CASE).find(first)
+                  var base = m?.groupValues?.get(1)?.trimEnd('.', '_', '-', ' ') ?: first
+                  if (base.lowercase().endsWith(".pkg")) return base
+                  return "$base.pkg"
+              }
+          }
+          EOF
+
+      - name: Build APK
+        run: gradle clean assembleDebug --no-daemon --stacktrace
+
+      - name: Renommer l'APK v2.1.7
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.1.7.apk
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ps3-kernel-reader
+          name: pkg-merger-v2.1.7-apk
+          path: PkgMerger-v2.1.7.apk
           if-no-files-found: error
-          retention-days: 30
-          path: |
-            ps3_kernel_reader.pkg
-            ps3_kernel_reader.self
-            ps3_kernel_reader.elf
-
-      - name: Ecrire les sources dans le depot
-        if: ${{ github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.commit_sources) }}
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A .
-          if git diff --cached --quiet; then
-            echo "Rien a committer."
-          else
-            git commit -m "chore: generation automatique du vrai pkg [skip ci]"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
-          fi
