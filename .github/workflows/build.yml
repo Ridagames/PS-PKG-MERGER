@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.8.1 Fix & Smooth UI
+      - name: Générer le projet Android v2.9.0 Ultimate Immersive Experience
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 281
-                  versionName = "2.8.1"
+                  versionCode = 290
+                  versionName = "2.9.0"
               }
 
               compileOptions {
@@ -141,7 +141,7 @@ jobs:
               <uses-permission android:name="android.permission.VIBRATE" />
 
               <application
-                  android:label="PS PKG Smooth Hub"
+                  android:label="PS PKG Ultimate Hub"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -150,7 +150,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Smooth Hub">
+                      android:label="PS PKG Ultimate Hub">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -216,16 +216,30 @@ jobs:
           import java.util.Locale
           import kotlin.math.cos
           import kotlin.math.sin
+          import kotlin.random.Random
 
-          class GameAnimationView(context: Context) : View(context) {
+          class FreeRoamingAnimationView(context: Context) : View(context) {
               private var animProgress = 0f
               private val paint = Paint().apply { isAntiAlias = true }
               var currentTheme = "FORTNITE"
+              
+              // Trajectoire aléatoire libre sur tout l'écran
+              private var busX = 0f
+              private var busY = 100f
+              private var targetY = 200f
+
               private val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-                  duration = 5000
+                  duration = 6000
                   repeatCount = ValueAnimator.INFINITE
                   addUpdateListener {
                       animProgress = it.animatedValue as Float
+                      if (width > 0) {
+                          busX = animProgress * (width + 300f) - 150f
+                          if (animProgress < 0.05f) {
+                              targetY = Random.nextFloat() * (height - 100f).coerceAtLeast(50f)
+                          }
+                          busY += (targetY - busY) * 0.05f
+                      }
                       invalidate()
                   }
               }
@@ -242,64 +256,43 @@ jobs:
 
                   when (currentTheme) {
                       "FORTNITE" -> {
-                          // Bus de combat discret et fluide en mouvement
-                          val busX = -150f + (w + 300f) * animProgress
-                          val busY = h / 2f
-
+                          // Le vrai Bus de Combat libre sur tout l'écran
                           paint.color = Color.parseColor("#0099FF")
-                          canvas.drawRect(busX, busY - 12f, busX + 80f, busY + 12f, paint)
+                          canvas.drawRect(busX, busY - 14f, busX + 90f, busY + 14f, paint)
                           paint.color = Color.parseColor("#FFE600")
-                          canvas.drawRect(busX + 12f, busY - 8f, busX + 30f, busY, paint)
-                          canvas.drawRect(busX + 40f, busY - 8f, busX + 68f, busY, paint)
+                          canvas.drawRect(busX + 15f, busY - 10f, busX + 35f, busY - 2f, paint)
+                          canvas.drawRect(busX + 45f, busY - 10f, busX + 75f, busY - 2f, paint)
                           paint.color = Color.parseColor("#B800FF")
-                          canvas.drawCircle(busX + 40f, busY - 30f, 14f, paint)
-
-                          paint.color = Color.parseColor("#00D9FF")
-                          paint.textSize = 16f
-                          canvas.drawText("🚌 BATTLE BUS", 15f, h / 2f + 6f, paint)
+                          canvas.drawCircle(busX + 45f, busY - 35f, 18f, paint)
                       }
                       "GOW" -> {
-                          for (i in 0..4) {
-                              val angle = animProgress * 6.28f + i
-                              val cx = w / 3f + i * 50f + sin(angle) * 15f
-                              val cy = h / 2f + cos(angle) * 8f
+                          // Orbes rouges errants God of War
+                          for (i in 0..5) {
+                              val cx = (w / 6f) * (i + 1) + sin(animProgress * 6.28f + i) * 30f
+                              val cy = busY + ((i % 2) * 40f - 20f)
                               paint.color = Color.parseColor("#FF0000")
-                              canvas.drawCircle(cx, cy, 8f, paint)
+                              canvas.drawCircle(cx, cy, 10f, paint)
                               paint.color = Color.parseColor("#FFD700")
-                              canvas.drawCircle(cx, cy, 3f, paint)
+                              canvas.drawCircle(cx, cy, 4f, paint)
                           }
-                          paint.color = Color.parseColor("#FF4500")
-                          paint.textSize = 16f
-                          canvas.drawText("🪓 SPARTAN RAGE", 15f, h / 2f + 6f, paint)
                       }
                       "TLOU" -> {
                           paint.color = Color.parseColor("#7FA98B")
                           for (i in 0..5) {
-                              val sx = (w / 6f) * (i + 1) + sin(animProgress * 6.28f + i) * 10f
-                              canvas.drawCircle(sx, h / 2f, 5f, paint)
+                              canvas.drawCircle((w / 6f) * (i + 1), busY + sin(animProgress * 6.28f + i) * 20f, 6f, paint)
                           }
-                          paint.color = Color.parseColor("#D4A359")
-                          paint.textSize = 16f
-                          canvas.drawText("🌿 SPORES", 15f, h / 2f + 6f, paint)
                       }
                       "GENSHIN" -> {
                           paint.color = Color.parseColor("#4CC9F0")
-                          canvas.drawCircle(w * animProgress, h / 2f, 8f, paint)
-                          paint.color = Color.parseColor("#F72585")
-                          paint.textSize = 16f
-                          canvas.drawText("✨ TEYVAT", 15f, h / 2f + 6f, paint)
+                          canvas.drawCircle(w * animProgress, busY, 10f, paint)
                       }
                       "GTA" -> {
                           paint.color = Color.parseColor("#00FF66")
-                          canvas.drawRect(w * animProgress - 40f, h / 2f - 4f, w * animProgress + 40f, h / 2f + 4f, paint)
-                          paint.color = Color.parseColor("#FF007F")
-                          paint.textSize = 16f
-                          canvas.drawText("🚗 VINEWOOD", 15f, h / 2f + 6f, paint)
+                          canvas.drawRect(w * animProgress - 50f, busY - 4f, w * animProgress + 50f, busY + 4f, paint)
                       }
                       else -> {
                           paint.color = Color.parseColor("#38BDF8")
-                          paint.textSize = 16f
-                          canvas.drawText("⚡ SYSTEM READY", 15f, h / 2f + 6f, paint)
+                          canvas.drawCircle(w * animProgress, busY, 8f, paint)
                       }
                   }
               }
@@ -344,7 +337,7 @@ jobs:
               private lateinit var menuBtn: Button
               private lateinit var titleView: TextView
               private lateinit var subtitleView: TextView
-              private lateinit var animationBarView: GameAnimationView
+              private lateinit var roamingView: FreeRoamingAnimationView
               private lateinit var section1Title: TextView
               private lateinit var section2Title: TextView
               private lateinit var section3Title: TextView
@@ -504,7 +497,7 @@ jobs:
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
               @SuppressLint("ClickableViewAccessibility")
-              private fun styleButton(b: Button, bgHex: String, borderHexStr: String, textHex: String = "#FFFFFF", onClickAction: () -> Unit) {
+              private fun styleGameButton(b: Button, bgHex: String, borderHexStr: String, originalText: String, action: () -> Unit) {
                   val cfg = getThemeConfig(currentTheme)
                   
                   val normalBg = GradientDrawable().apply {
@@ -520,31 +513,76 @@ jobs:
                   }
 
                   b.background = normalBg
-                  b.setTextColor(Color.parseColor(textHex))
+                  b.setTextColor(Color.WHITE)
                   b.setTypeface(null, Typeface.BOLD)
                   b.textSize = 13f
                   b.setPadding(dp(14), dp(12), dp(14), dp(12))
 
-                  b.setOnClickListener {
-                      val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                      vibrator?.vibrate(VibrationEffect.createOneShot(40, VibrationEffect.DEFAULT_AMPLITUDE))
-                      onClickAction()
+                  // Application du texte thématique (Coffre Fortnite sur les boutons)
+                  if (currentTheme == "FORTNITE") {
+                      b.text = "📦 [COFFRE] $originalText"
+                  } else if (currentTheme == "GOW") {
+                      b.text = "🪓 [SPARTAN] $originalText"
+                  } else {
+                      b.text = originalText
                   }
 
+                  var pressHandler: Handler? = null
+                  var chargeRunnable: Runnable? = null
+
                   b.setOnTouchListener { view, event ->
+                      val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                       when (event.action) {
                           MotionEvent.ACTION_DOWN -> {
-                              view.animate().scaleX(0.95f).scaleY(0.95f).setDuration(60).start()
+                              view.animate().scaleX(0.93f).scaleY(0.93f).setDuration(70).start()
                               view.background = pressedBg
-                              b.setTextColor(Color.BLACK)
+
+                              if (currentTheme == "FORTNITE") {
+                                  // Effet d'ouverture de coffre Fortnite au clic
+                                  b.text = "✨ [COFFRE OUVERT !] $originalText"
+                                  vibrator?.vibrate(VibrationEffect.createOneShot(60, VibrationEffect.DEFAULT_AMPLITUDE))
+                                  action()
+                              } else if (currentTheme == "GOW") {
+                                  // God of War : Maintien prolongé avec charge d'orbes et embrasement progressif
+                                  b.text = "🔥 [CHARGEMENT RAGE...] $originalText"
+                                  pressHandler = Handler(Looper.getMainLooper())
+                                  chargeRunnable = object : Runnable {
+                                      var count = 0
+                                      override fun run() {
+                                          count++
+                                          vibrator?.vibrate(VibrationEffect.createOneShot(50L * count, VibrationEffect.DEFAULT_AMPLITUDE))
+                                          if (count >= 5) {
+                                              b.text = "💥 [RAGE DÉCHAÎNÉE !] $originalText"
+                                              action()
+                                              pressHandler?.removeCallbacks(this)
+                                          } else {
+                                              b.text = "🔥 [EMBRASEMENT NIVEAU $count] $originalText"
+                                              pressHandler?.postDelayed(this, 1000)
+                                          }
+                                      }
+                                  }
+                                  pressHandler?.postDelayed(chargeRunnable!!, 1000)
+                              } else {
+                                  vibrator?.vibrate(VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE))
+                                  action()
+                              }
                           }
                           MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                              view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(80).start()
+                              view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(90).start()
                               view.background = normalBg
-                              b.setTextColor(Color.parseColor(textHex))
+                              if (currentTheme == "GOW" && pressHandler != null && chargeRunnable != null) {
+                                  pressHandler?.removeCallbacks(chargeRunnable!!)
+                              }
+                              if (currentTheme == "FORTNITE") {
+                                  b.text = "📦 [COFFRE] $originalText"
+                              } else if (currentTheme == "GOW") {
+                                  b.text = "🪓 [SPARTAN] $originalText"
+                              } else {
+                                  b.text = originalText
+                              }
                           }
                       }
-                      false
+                      true
                   }
               }
 
@@ -556,10 +594,10 @@ jobs:
 
                   titleView.setTextColor(cfg.primaryText)
                   subtitleView.setTextColor(cfg.secondaryText)
-                  subtitleView.text = "SMOOTH UNIVERSE : ${cfg.name.uppercase()}"
+                  subtitleView.text = "ULTIMATE UNIVERSE : ${cfg.name.uppercase()}"
 
-                  animationBarView.currentTheme = currentTheme
-                  animationBarView.invalidate()
+                  roamingView.currentTheme = currentTheme
+                  roamingView.invalidate()
 
                   section1Title.setTextColor(cfg.secondaryText)
                   section2Title.setTextColor(cfg.secondaryText)
@@ -581,21 +619,19 @@ jobs:
                       }
                   }
 
-                  styleButton(pickBtn, cfg.btnPick.first, cfg.btnPick.second) { pick() }
-                  styleButton(dirBtn, cfg.btnDir.first, cfg.btnDir.second) { pickFolder() }
-                  styleButton(revBtn, cfg.btnRev.first, cfg.btnRev.second) { reversed = !reversed; refresh() }
-                  styleButton(outBtn, cfg.btnOut.first, cfg.btnOut.second) { pickOutput() }
-                  styleButton(goBtn, cfg.btnGo.first, cfg.btnGo.second) { executeAction() }
-                  styleButton(cancelBtn, cfg.btnCancel.first, cfg.btnCancel.second) {
+                  styleGameButton(pickBtn, cfg.btnPick.first, cfg.btnPick.second, "📁 CHOISIR LES FICHIERS") { pick() }
+                  styleGameButton(dirBtn, cfg.btnDir.first, cfg.btnDir.second, "📂 CHOISIR UN DOSSIER COMPLET") { pickFolder() }
+                  styleGameButton(revBtn, cfg.btnRev.first, cfg.btnRev.second, "🔀 INVERSER L'ORDRE DES PARTIES") { reversed = !reversed; refresh() }
+                  styleGameButton(outBtn, cfg.btnOut.first, cfg.btnOut.second, "💾 DÉFINIR EMPLACEMENT DE SORTIE") { pickOutput() }
+                  styleGameButton(goBtn, cfg.btnGo.first, cfg.btnGo.second, if (appMode == "MERGE") "▶️ LANCER LA FUSION" else "▶️ DÉCOUPER") { executeAction() }
+                  styleGameButton(cancelBtn, cfg.btnCancel.first, cfg.btnCancel.second, "❌ ANNULER") {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
-                  styleButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
-                  styleButton(menuBtn, cfg.btnRev.first, cfg.btnRev.second, cfg.secondaryText.toHex()) { showMenu(menuBtn) }
+                  styleGameButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second, "📋 Copier le SHA-256") { copyHash() }
+                  styleGameButton(menuBtn, cfg.btnRev.first, cfg.btnRev.second, "⚙️ MODE") { showMenu(menuBtn) }
 
                   refresh()
               }
-
-              private fun Int.toHex(): String = String.format("#%06X", 0xFFFFFF and this)
 
               private fun createNotificationChannel() {
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -637,7 +673,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS PKG Smooth Hub")
+                          .setContentTitle("⚡ PS PKG Ultimate Hub")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -686,7 +722,7 @@ jobs:
                       orientation = LinearLayout.VERTICAL
                   }
                   titleView = TextView(this).apply {
-                      text = "⚡ PS PKG SMOOTH HUB"
+                      text = "⚡ PS PKG ULTIMATE HUB"
                       textSize = 20f
                       setTypeface(null, Typeface.BOLD)
                   }
@@ -701,32 +737,24 @@ jobs:
                   titlesLayout.addView(subtitleView)
                   headerLayout.addView(titlesLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
-                  menuBtn = Button(this).apply {
-                      text = "⚙️ MODE"
-                  }
+                  menuBtn = Button(this)
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
                   mainCol.addView(headerLayout)
 
-                  animationBarView = GameAnimationView(this)
-                  mainCol.addView(animationBarView, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)).apply { bottomMargin = dp(10) })
+                  roamingView = FreeRoamingAnimationView(this)
+                  mainCol.addView(roamingView, LinearLayout.LayoutParams(MATCH_PARENT, dp(45)).apply { bottomMargin = dp(10) })
 
                   val card1 = createCard()
                   section1Title = text("1. SOURCE FILES (PKG / PARTS)", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(section1Title)
                   
-                  pickBtn = Button(this).apply {
-                      text = "📁 CHOISIR LES FICHIERS"
-                  }
+                  pickBtn = Button(this)
                   card1.addView(pickBtn, lp())
 
-                  dirBtn = Button(this).apply {
-                      text = "📂 CHOISIR UN DOSSIER COMPLET"
-                  }
+                  dirBtn = Button(this)
                   card1.addView(dirBtn, lp())
 
-                  revBtn = Button(this).apply {
-                      text = "🔀 INVERSER L'ORDRE DES PARTIES"
-                  }
+                  revBtn = Button(this)
                   card1.addView(revBtn, lp())
 
                   listContainer = LinearLayout(this).apply {
@@ -758,9 +786,7 @@ jobs:
                   section2Title = text("2. OUTPUT & PROCESSING", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card2.addView(section2Title)
 
-                  outBtn = Button(this).apply {
-                      text = "💾 DÉFINIR EMPLACEMENT DE SORTIE"
-                  }
+                  outBtn = Button(this)
                   card2.addView(outBtn, lp())
 
                   outView = text("Sortie : —", 11f, Color.GRAY).apply { 
@@ -772,15 +798,10 @@ jobs:
                   val actionLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
                   }
-                  goBtn = Button(this).apply {
-                      text = "▶️ LANCER LA FUSION"
-                  }
+                  goBtn = Button(this)
                   actionLayout.addView(goBtn, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
-                  cancelBtn = Button(this).apply {
-                      text = "❌ ANNULER"
-                      isEnabled = false
-                  }
+                  cancelBtn = Button(this)
                   actionLayout.addView(cancelBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
                   card2.addView(actionLayout, lp())
 
@@ -825,10 +846,7 @@ jobs:
                   hashView = text("", 11f, Color.CYAN).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(hashView, lp())
 
-                  copyBtn = Button(this).apply {
-                      text = "📋 Copier le SHA-256"
-                      isEnabled = false
-                  }
+                  copyBtn = Button(this)
                   card3.addView(copyBtn, lp())
                   mainCol.addView(card3, lpCard())
 
@@ -854,16 +872,15 @@ jobs:
                               if (appMode == "SPLIT") {
                                   titleView.text = "⚡ PKG SPLITTER"
                                   section1Title.text = "1. FICHIER SOURCE UNIQUE (.PKG)"
-                                  goBtn.text = "▶️ DÉCOUPER"
                                   statusView.text = "Prêt à découper."
                               } else {
-                                  titleView.text = "⚡ PS PKG SMOOTH HUB"
+                                  titleView.text = "⚡ PS PKG ULTIMATE HUB"
                                   section1Title.text = "1. SOURCE FILES (PKG / PARTS)"
-                                  goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
                               }
                               output = null
                               outView.text = "Sortie : —"
+                              applyTheme()
                               true
                           }
                           2 -> {
@@ -871,7 +888,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Smooth Hub v2.8.1")
+                              toast("PS PKG Ultimate Hub v2.9.0")
                               true
                           }
                           else -> false
@@ -1566,12 +1583,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.8.1
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.8.1.apk
+      - name: Renommer l'APK v2.9.0
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.0.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.8.1-apk
-          path: PkgMerger-v2.8.1.apk
+          name: pkg-merger-v2.9.0-apk
+          path: PkgMerger-v2.9.0.apk
           if-no-files-found: error
