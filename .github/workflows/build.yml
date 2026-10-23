@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.9.6 Clean Foreground Freedom
+      - name: Générer le projet Android v2.9.7 Ultimate Fluid Freedom
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 296
-                  versionName = "2.9.6"
+                  versionCode = 297
+                  versionName = "2.9.7"
               }
 
               compileOptions {
@@ -142,7 +142,7 @@ jobs:
               <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
               <application
-                  android:label="PS PKG Clean Freedom"
+                  android:label="PS PKG Fluid Freedom"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -151,7 +151,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Clean Freedom">
+                      android:label="PS PKG Fluid Freedom">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -221,29 +221,22 @@ jobs:
           import java.util.Locale
           import kotlin.math.cos
           import kotlin.math.sin
-          import kotlin.random.Random
 
-          class ForegroundAnimationView(context: Context) : View(context) {
-              private var animProgress = 0f
+          class Particle(var x: Float, var y: Float, val speedX: Float, val speedY: Float, val radius: Float, val color: Int)
+
+          class FluidForegroundAnimationView(context: Context) : View(context) {
+              private var animTime = 0f
               private val paint = Paint().apply { isAntiAlias = true }
               var currentTheme = "FORTNITE"
               
-              private var busX = -300f
-              private var busY = 150f
-              private var targetY = 300f
+              private val particles = ArrayList<Particle>()
+              private var initializedParticles = false
 
-              private val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-                  duration = 7000
+              private val animator = ValueAnimator.ofFloat(0f, 1000f).apply {
+                  duration = 20000
                   repeatCount = ValueAnimator.INFINITE
                   addUpdateListener {
-                      animProgress = it.animatedValue as Float
-                      if (width > 0 && height > 0) {
-                          busX = animProgress * (width + 500f) - 250f
-                          if (animProgress < 0.05f) {
-                              targetY = Random.nextFloat() * (height - 200f).coerceAtLeast(80f)
-                          }
-                          busY += (targetY - busY) * 0.05f
-                      }
+                      animTime = it.animatedValue as Float
                       invalidate()
                   }
               }
@@ -252,78 +245,97 @@ jobs:
                   animator.start()
               }
 
+              private fun initParticles(w: Float, h: Float) {
+                  if (initializedParticles) return
+                  particles.clear()
+                  // Éparpiller de façon aléatoire / structurée un peu partout sur l'écran
+                  for (i in 0..24) {
+                      val px = (i * 73f) % w
+                      val py = (i * 137f) % h
+                      val vx = ((i % 3) - 1) * 0.4f
+                      val vy = ((i % 5) - 2) * 0.4f
+                      val r = 6f + (i % 8).toFloat()
+                      val col = when (i % 4) {
+                          0 -> Color.parseColor("#FFD700")
+                          1 -> Color.parseColor("#00FFFF")
+                          2 -> Color.parseColor("#FF007F")
+                          else -> Color.parseColor("#00FF66")
+                      }
+                      particles.add(Particle(px, py, vx, vy, r, col))
+                  }
+                  initializedParticles = true
+              }
+
               override fun onDraw(canvas: Canvas) {
                   super.onDraw(canvas)
                   val w = width.toFloat()
                   val h = height.toFloat()
                   if (w <= 0 || h <= 0) return
 
-                  when (currentTheme) {
-                      "FORTNITE" -> {
-                          paint.color = Color.parseColor("#0099FF")
-                          canvas.drawRect(busX, busY - 20f, busX + 120f, busY + 20f, paint)
-                          paint.color = Color.parseColor("#FFE600")
-                          canvas.drawRect(busX + 25f, busY - 14f, busX + 50f, busY - 3f, paint)
-                          canvas.drawRect(busX + 70f, busY - 14f, busX + 105f, busY - 3f, paint)
-                          paint.color = Color.parseColor("#B800FF")
-                          canvas.drawCircle(busX + 70f, busY - 50f, 24f, paint)
+                  initParticles(w, h)
 
-                          paint.color = Color.parseColor("#00FFFF")
-                          paint.textSize = 18f
-                          canvas.drawText("🚌 BATTLE BUS", busX, busY - 60f, paint)
-                      }
-                      "GOW" -> {
-                          for (i in 0..10) {
-                              val angle = animProgress * 6.28f + i
-                              val cx = (w / 11f) * (i + 1) + sin(angle * 1.5f) * 80f
-                              val cy = (h * 0.1f) + ((i * 95f) % (h * 0.85f)) + cos(angle) * 50f
-                              paint.color = Color.parseColor("#FF0000")
-                              canvas.drawCircle(cx, cy, 16f, paint)
-                              paint.color = Color.parseColor("#FFD700")
-                              canvas.drawCircle(cx, cy, 7f, paint)
-                          }
-                      }
-                      "TLOU" -> {
-                          paint.color = Color.parseColor("#7FA98B")
-                          for (i in 0..8) {
-                              val sx = (w / 9f) * (i + 1) + sin(animProgress * 6.28f + i) * 40f
-                              val sy = (h * 0.1f) + (i * 90f) + cos(animProgress * 4f + i) * 50f
-                              canvas.drawCircle(sx, sy, 9f, paint)
-                          }
-                      }
-                      "GENSHIN" -> {
-                          paint.color = Color.parseColor("#4CC9F0")
-                          val starX = w * animProgress
-                          val starY = h * 0.15f + (animProgress * 700f) % (h * 0.8f)
-                          canvas.drawCircle(starX, starY, 14f, paint)
-                      }
-                      "GTA" -> {
-                          paint.color = Color.parseColor("#00FF66")
-                          val carX = w * animProgress
-                          val carY = h * 0.2f + (animProgress * 600f) % (h * 0.75f)
-                          canvas.drawRect(carX - 45f, carY - 14f, carX + 45f, carY + 14f, paint)
-                      }
-                      else -> {
-                          paint.color = Color.parseColor("#38BDF8")
-                          canvas.drawCircle(w * animProgress, h * 0.5f, 14f, paint)
-                      }
+                  // Dessiner et faire flotter les orbes éparpillés partout sans aucune coupure (boucle fluide)
+                  particles.forEachIndexed { idx, p ->
+                      val curX = (p.x + animTime * p.speedX * 3f + w) % w
+                      val curY = (p.y + animTime * p.speedY * 3f + h) % h
+                      
+                      // Effet de pulsation douce
+                      val pulse = p.radius + sin((animTime * 0.05f) + idx) * 2f
+
+                      paint.color = p.color
+                      canvas.drawCircle(curX, curY, pulse.coerceAtLeast(4f), paint)
+
+                      // Petit reflet lumineux sur l'orbe
+                      paint.color = Color.WHITE
+                      canvas.drawCircle(curX - pulse * 0.3f, curY - pulse * 0.3f, pulse * 0.3f, paint)
+                  }
+
+                  // Animation spécifique au thème au premier plan (ex: Bus de combat fluide de part en part)
+                  if (currentTheme == "FORTNITE") {
+                      val busProgress = (animTime * 0.15f) % (w + 400f) - 200f
+                      val busY = h * 0.18f + sin(animTime * 0.02f) * 40f
+
+                      // Traînée du bus
+                      paint.color = Color.parseColor("#5500D9FF")
+                      canvas.drawRect(busProgress - 80f, busY - 6f, busProgress, busY + 6f, paint)
+
+                      // Corps du bus
+                      paint.color = Color.parseColor("#0099FF")
+                      canvas.drawRect(busProgress, busY - 22f, busProgress + 130f, busY + 22f, paint)
+                      // Vitres
+                      paint.color = Color.parseColor("#FFE600")
+                      canvas.drawRect(busProgress + 25f, busY - 15f, busProgress + 55f, busY - 4f, paint)
+                      canvas.drawRect(busProgress + 75f, busY - 15f, busProgress + 115f, busY - 4f, paint)
+                      // Ballon montgolfière du bus sur le toit
+                      paint.color = Color.parseColor("#B800FF")
+                      canvas.drawCircle(busProgress + 75f, busY - 55f, 26f, paint)
+                      paint.color = Color.parseColor("#FF0055")
+                      canvas.drawCircle(busProgress + 75f, busY - 55f, 12f, paint)
+
+                      paint.color = Color.parseColor("#00FFFF")
+                      paint.textSize = 16f
+                      canvas.drawText("🚌 BATTLE BUS", busProgress, busY - 68f, paint)
                   }
               }
           }
 
           class SoundFX {
               companion object {
-                  fun playSound(theme: String) {
+                  @SuppressLint("MissingPermission")
+                  fun playSound(context: Context, theme: String) {
                       Thread {
                           try {
-                              val sampleRate = 22050
-                              val numSamples = if (theme == "GOW") sampleRate * 4 / 10 else sampleRate * 2 / 10
+                              val sampleRate = 44100
+                              val durationSec = if (theme == "GOW") 0.35 else 0.18
+                              val numSamples = (sampleRate * durationSec).toInt()
                               val generatedSnd = ByteArray(numSamples * 2)
-                              val freq = if (theme == "GOW") 95.0 else 523.25
+                              val freq = if (theme == "GOW") 85.0 else 587.33 // D5 / Grave percutant
 
                               for (i in 0 until numSamples) {
                                   val angle = i / (sampleRate / freq) * 2.0 * Math.PI
-                                  val valSample = (sin(angle) * 32767.0).toInt().toShort()
+                                  // Enveloppe sonore pour éviter les clics (fade in / fade out)
+                                  val envelope = 1.0 - (i.toDouble() / numSamples.toDouble())
+                                  val valSample = (sin(angle) * 32767.0 * envelope).toInt().toShort()
                                   generatedSnd[2 * i] = (valSample.toInt() and 0x00ff).toByte()
                                   generatedSnd[2 * i + 1] = ((valSample.toInt() and 0xff00) ushr 8).toByte()
                               }
@@ -331,7 +343,7 @@ jobs:
                               val audioTrack = AudioTrack.Builder()
                                   .setAudioAttributes(
                                       AudioAttributes.Builder()
-                                          .setUsage(AudioAttributes.USAGE_GAME)
+                                          .setUsage(AudioAttributes.USAGE_MEDIA)
                                           .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                                           .build()
                                   )
@@ -348,7 +360,7 @@ jobs:
 
                               audioTrack.write(generatedSnd, 0, numSamples * 2)
                               audioTrack.play()
-                              Thread.sleep(350)
+                              Thread.sleep((durationSec * 1000).toLong() + 50)
                               audioTrack.release()
                           } catch (_: Exception) {}
                       }.start()
@@ -396,7 +408,7 @@ jobs:
               private lateinit var menuBtn: Button
               private lateinit var titleView: TextView
               private lateinit var subtitleView: TextView
-              private lateinit var foregroundAnimView: ForegroundAnimationView
+              private lateinit var fluidAnimView: FluidForegroundAnimationView
               private lateinit var section1Title: TextView
               private lateinit var section2Title: TextView
               private lateinit var section3Title: TextView
@@ -556,7 +568,7 @@ jobs:
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
               @SuppressLint("ClickableViewAccessibility")
-              private fun styleForegroundButton(b: Button, bgHex: String, borderHexStr: String, textHex: String = "#FFFFFF", onClickAction: () -> Unit) {
+              private fun styleFluidButton(b: Button, bgHex: String, borderHexStr: String, textHex: String = "#FFFFFF", onClickAction: () -> Unit) {
                   val cfg = getThemeConfig(currentTheme)
                   
                   val normalBg = GradientDrawable().apply {
@@ -581,12 +593,13 @@ jobs:
                       val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                       if (currentTheme == "GOW") {
                           vibrator?.vibrate(VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE))
-                          SoundFX.playSound("GOW")
+                          SoundFX.playSound(this, "GOW")
                       } else if (currentTheme == "FORTNITE") {
                           vibrator?.vibrate(VibrationEffect.createOneShot(35, VibrationEffect.DEFAULT_AMPLITUDE))
-                          SoundFX.playSound("FORTNITE")
+                          SoundFX.playSound(this, "FORTNITE")
                       } else {
                           vibrator?.vibrate(VibrationEffect.createOneShot(40, VibrationEffect.DEFAULT_AMPLITUDE))
+                          SoundFX.playSound(this, "CLASSIC")
                       }
                       onClickAction()
                   }
@@ -615,10 +628,10 @@ jobs:
 
                   titleView.setTextColor(cfg.primaryText)
                   subtitleView.setTextColor(cfg.secondaryText)
-                  subtitleView.text = "CLEAN FREEDOM : ${cfg.name.uppercase()}"
+                  subtitleView.text = "FLUID FREEDOM : ${cfg.name.uppercase()}"
 
-                  foregroundAnimView.currentTheme = currentTheme
-                  foregroundAnimView.invalidate()
+                  fluidAnimView.currentTheme = currentTheme
+                  fluidAnimView.invalidate()
 
                   section1Title.setTextColor(cfg.secondaryText)
                   section2Title.setTextColor(cfg.secondaryText)
@@ -640,16 +653,16 @@ jobs:
                       }
                   }
 
-                  styleForegroundButton(pickBtn, cfg.btnPick.first, cfg.btnPick.second) { pick() }
-                  styleForegroundButton(dirBtn, cfg.btnDir.first, cfg.btnDir.second) { pickFolder() }
-                  styleForegroundButton(revBtn, cfg.btnRev.first, cfg.btnRev.second) { reversed = !reversed; refresh() }
-                  styleForegroundButton(outBtn, cfg.btnOut.first, cfg.btnOut.second) { pickOutput() }
-                  styleForegroundButton(goBtn, cfg.btnGo.first, cfg.btnGo.second) { executeAction() }
-                  styleForegroundButton(cancelBtn, cfg.btnCancel.first, cfg.btnCancel.second) {
+                  styleFluidButton(pickBtn, cfg.btnPick.first, cfg.btnPick.second) { pick() }
+                  styleFluidButton(dirBtn, cfg.btnDir.first, cfg.btnDir.second) { pickFolder() }
+                  styleFluidButton(revBtn, cfg.btnRev.first, cfg.btnRev.second) { reversed = !reversed; refresh() }
+                  styleFluidButton(outBtn, cfg.btnOut.first, cfg.btnOut.second) { pickOutput() }
+                  styleFluidButton(goBtn, cfg.btnGo.first, cfg.btnGo.second) { executeAction() }
+                  styleFluidButton(cancelBtn, cfg.btnCancel.first, cfg.btnCancel.second) {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
-                  styleForegroundButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
-                  styleForegroundButton(menuBtn, cfg.btnRev.first, cfg.btnRev.second, cfg.secondaryText.toHex()) { showMenu(menuBtn) }
+                  styleFluidButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
+                  styleFluidButton(menuBtn, cfg.btnRev.first, cfg.btnRev.second, cfg.secondaryText.toHex()) { showMenu(menuBtn) }
 
                   refresh()
               }
@@ -696,7 +709,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS PKG Clean Freedom")
+                          .setContentTitle("⚡ PS PKG Fluid Freedom")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -886,11 +899,11 @@ jobs:
 
                   rootFrameLayout.addView(rootLayout, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
 
-                  foregroundAnimView = ForegroundAnimationView(this).apply {
+                  fluidAnimView = FluidForegroundAnimationView(this).apply {
                       isClickable = false
                       isFocusable = false
                   }
-                  rootFrameLayout.addView(foregroundAnimView, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+                  rootFrameLayout.addView(fluidAnimView, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
 
                   setContentView(rootFrameLayout)
               }
@@ -928,7 +941,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Clean Freedom v2.9.6")
+                              toast("PS PKG Fluid Freedom v2.9.7")
                               true
                           }
                           else -> false
@@ -1623,12 +1636,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.6
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.6.apk
+      - name: Renommer l'APK v2.9.7
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.7.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.6-apk
-          path: PkgMerger-v2.9.6.apk
+          name: pkg-merger-v2.9.7-apk
+          path: PkgMerger-v2.9.7.apk
           if-no-files-found: error
