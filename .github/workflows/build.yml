@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.31
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.32
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.31
+      - name: Générer le projet Android v2.9.32
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2931
-                  versionName = "2.9.31"
+                  versionCode = 2932
+                  versionName = "2.9.32"
               }
 
               compileOptions {
@@ -671,7 +671,7 @@ jobs:
               }
 
               private fun scheduleNextBusRun(initialDelay: Long = 0L) {
-                  val delay = if (initialDelay > 0) initialDelay else (3500L + random.nextInt(4000).toLong())
+                  val delay = if (initialDelay > 0) initialDelay else (3500 + random.nextInt(4000)).toLong()
                   busHandler.postDelayed({
                       runFortniteBus()
                   }, delay)
@@ -1114,7 +1114,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.31")
+                              toast("PS PKG Freedom Hub v2.9.32")
                               true
                           }
                           else -> false
@@ -1804,15 +1804,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.31
+      - name: Build APK v2.9.32
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.31
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.31.apk
+      - name: Renommer l'APK v2.9.32
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.32.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.31-apk
-          path: PkgMerger-v2.9.31.apk
+          name: pkg-merger-v2.9.32-apk
+          path: PkgMerger-v2.9.32.apk
           if-no-files-found: error
