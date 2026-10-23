@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.5.0 Gaming Micro-FX
+      - name: Générer le projet Android v2.6.0 Ultimate Gaming Hub
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 250
-                  versionName = "2.5.0"
+                  versionCode = 260
+                  versionName = "2.6.0"
               }
 
               compileOptions {
@@ -140,7 +140,7 @@ jobs:
               <uses-permission android:name="android.permission.WAKE_LOCK" />
 
               <application
-                  android:label="PS PKG Gaming Hub"
+                  android:label="PS PKG Ultimate Hub"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -149,7 +149,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Gaming Hub">
+                      android:label="PS PKG Ultimate Hub">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -219,7 +219,7 @@ jobs:
               private var reversed = false
               private var lastHash: String? = null
               private var appMode = "MERGE"
-              private var currentTheme = "GOW"
+              private var currentTheme = "FORTNITE"
               
               @Volatile private var processing = false
               @Volatile private var cancelled = false
@@ -248,6 +248,7 @@ jobs:
               private lateinit var menuBtn: Button
               private lateinit var titleView: TextView
               private lateinit var subtitleView: TextView
+              private lateinit var bannerView: TextView
               private lateinit var section1Title: TextView
               private lateinit var section2Title: TextView
               private lateinit var section3Title: TextView
@@ -256,128 +257,141 @@ jobs:
 
               private val cardViews = ArrayList<LinearLayout>()
 
-              private data class ThemePalette(
+              private data class ThemeConfig(
+                  val name: String,
                   val bg: Int,
                   val card: Int,
                   val border: String,
                   val primaryText: Int,
                   val secondaryText: Int,
                   val dim: Int,
+                  val bannerText: String,
+                  val bannerBg: Int,
+                  val bannerBorder: String,
+                  val pressColor: String,
                   val btnPick: Pair<String, String>,
                   val btnDir: Pair<String, String>,
                   val btnRev: Pair<String, String>,
                   val btnOut: Pair<String, String>,
                   val btnGo: Pair<String, String>,
-                  val btnCancel: Pair<String, String>,
-                  val pressColor: String
+                  val btnCancel: Pair<String, String>
               )
 
-              private fun getPalette(themeKey: String): ThemePalette {
-                  return when (themeKey) {
-                      "GOW" -> ThemePalette( // God of War : Braise & Orbes Rouges
+              private fun getThemeConfig(key: String): ThemeConfig {
+                  return when (key) {
+                      "FORTNITE" -> ThemeConfig(
+                          name = "Fortnite Battle Royale",
+                          bg = Color.parseColor("#090C1F"),
+                          card = Color.parseColor("#131B3E"),
+                          border = "#00D9FF",
+                          primaryText = Color.parseColor("#FFE600"),
+                          secondaryText = Color.parseColor("#00D9FF"),
+                          dim = Color.parseColor("#8A99D1"),
+                          bannerText = "🚌 [BATTLE BUS] Destination : Tilted Towers — V-Bucks Ready 💎",
+                          bannerBg = Color.parseColor("#1A2559"),
+                          bannerBorder = "#FFE600",
+                          pressColor = "#FFE600",
+                          btnPick = Pair("#1E2D6E", "#00D9FF"),
+                          btnDir = Pair("#1E2D6E", "#00D9FF"),
+                          btnRev = Pair("#3A1E6E", "#B800FF"),
+                          btnOut = Pair("#0F5E6B", "#00FFF0"),
+                          btnGo = Pair("#198038", "#00FF66"),
+                          btnCancel = Pair("#801935", "#FF0055")
+                      )
+                      "GOW" -> ThemeConfig(
+                          name = "God of War Ragnarök",
                           bg = Color.parseColor("#120A0A"),
                           card = Color.parseColor("#241212"),
                           border = "#FF4500",
                           primaryText = Color.parseColor("#FFD700"),
                           secondaryText = Color.parseColor("#FF4500"),
                           dim = Color.parseColor("#B8860B"),
+                          bannerText = "🪓 [SPARTAN RAGE] Les Orbes Rouges alimentent la Forge de Kratos 🔥",
+                          bannerBg = Color.parseColor("#3D1414"),
+                          bannerBorder = "#FF4500",
+                          pressColor = "#FF0000",
                           btnPick = Pair("#3D1414", "#FF4500"),
                           btnDir = Pair("#3D1414", "#FF4500"),
                           btnRev = Pair("#4A3B12", "#FFD700"),
                           btnOut = Pair("#291321", "#FF1493"),
                           btnGo = Pair("#1C3D14", "#32CD32"),
-                          btnCancel = Pair("#5E0F0F", "#FF0000"),
-                          pressColor = "#FF0000" // Effet Orbe Rouge / Embrasement
+                          btnCancel = Pair("#5E0F0F", "#FF0000")
                       )
-                      "FORTNITE" -> ThemePalette( // Fortnite : V-Bucks & Bus Bleu
-                          bg = Color.parseColor("#0B0E28"),
-                          card = Color.parseColor("#171D4A"),
-                          border = "#00D2FF",
-                          primaryText = Color.parseColor("#FFE600"),
-                          secondaryText = Color.parseColor("#00D2FF"),
-                          dim = Color.parseColor("#8E99CC"),
-                          btnPick = Pair("#1E2978", "#00D2FF"),
-                          btnDir = Pair("#1E2978", "#00D2FF"),
-                          btnRev = Pair("#2D1D6B", "#B800FF"),
-                          btnOut = Pair("#0F5E6B", "#00FFF0"),
-                          btnGo = Pair("#198038", "#00FF66"),
-                          btnCancel = Pair("#801935", "#FF0055"),
-                          pressColor = "#FFE600"
-                      )
-                      "TLOU" -> ThemePalette( // The Last of Us : Survie & Vert Spore
+                      "TLOU" -> ThemeConfig(
+                          name = "The Last of Us Part II",
                           bg = Color.parseColor("#0A0F0D"),
                           card = Color.parseColor("#14211A"),
                           border = "#4A6B53",
                           primaryText = Color.parseColor("#D4A359"),
                           secondaryText = Color.parseColor("#7FA98B"),
                           dim = Color.parseColor("#8C9E91"),
+                          bannerText = "🌿 [ZONE DE QUARANTAINE] Attention aux Spores — Restez silencieux...",
+                          bannerBg = Color.parseColor("#1C3325"),
+                          bannerBorder = "#7FA98B",
+                          pressColor = "#D4A359",
                           btnPick = Pair("#1C3325", "#7FA98B"),
                           btnDir = Pair("#1C3325", "#7FA98B"),
                           btnRev = Pair("#3A3020", "#D4A359"),
                           btnOut = Pair("#243D31", "#7FA98B"),
                           btnGo = Pair("#2B4D21", "#52A336"),
-                          btnCancel = Pair("#4D2121", "#A33636"),
-                          pressColor = "#D4A359"
+                          btnCancel = Pair("#4D2121", "#A33636")
                       )
-                      "GENSHIN" -> ThemePalette( // Genshin : Céleste & Or
+                      "GENSHIN" -> ThemeConfig(
+                          name = "Genshin Impact Teyvat",
                           bg = Color.parseColor("#0B132B"),
                           card = Color.parseColor("#1C2541"),
                           border = "#5BC0BE",
                           primaryText = Color.parseColor("#F72585"),
                           secondaryText = Color.parseColor("#4CC9F0"),
                           dim = Color.parseColor("#8093F1"),
+                          bannerText = "✨ [TEYVAT HUB] Énergie Stellaire active — Connexion aux Sept Archontes 🌟",
+                          bannerBg = Color.parseColor("#22223B"),
+                          bannerBorder = "#4CC9F0",
+                          pressColor = "#F72585",
                           btnPick = Pair("#22223B", "#4CC9F0"),
                           btnDir = Pair("#22223B", "#4CC9F0"),
                           btnRev = Pair("#4A4E69", "#F72585"),
                           btnOut = Pair("#1C2541", "#5BC0BE"),
                           btnGo = Pair("#1A4314", "#38B000"),
-                          btnCancel = Pair("#5A189A", "#E0115F"),
-                          pressColor = "#F72585"
+                          btnCancel = Pair("#5A189A", "#E0115F")
                       )
-                      "GTA" -> ThemePalette( // GTA V : Los Santos Cash
+                      "GTA" -> ThemeConfig(
+                          name = "GTA V Los Santos",
                           bg = Color.parseColor("#050B05"),
                           card = Color.parseColor("#0D1A0E"),
                           border = "#00FF66",
                           primaryText = Color.parseColor("#FF007F"),
                           secondaryText = Color.parseColor("#00FF66"),
                           dim = Color.parseColor("#7FA98B"),
+                          bannerText = "🚗 [LOS SANTOS CASH] Livraison en cours à Vinewood Hills 💵",
+                          bannerBg = Color.parseColor("#123015"),
+                          bannerBorder = "#00FF66",
+                          pressColor = "#00FF66",
                           btnPick = Pair("#123015", "#00FF66"),
                           btnDir = Pair("#123015", "#00FF66"),
                           btnRev = Pair("#3B0D29", "#FF007F"),
                           btnOut = Pair("#0D2E2B", "#00FFFF"),
                           btnGo = Pair("#16521A", "#00FF00"),
-                          btnCancel = Pair("#521616", "#FF0033"),
-                          pressColor = "#00FF66"
+                          btnCancel = Pair("#521616", "#FF0033")
                       )
-                      "CLASSIC" -> ThemePalette(
-                          bg = Color.parseColor("#0F172A"),
-                          card = Color.parseColor("#1E293B"),
-                          border = "#334155",
-                          primaryText = Color.WHITE,
-                          secondaryText = Color.parseColor("#38BDF8"),
-                          dim = Color.parseColor("#94A3B8"),
-                          btnPick = Pair("#0284C7", "#38BDF8"),
-                          btnDir = Pair("#0369A1", "#38BDF8"),
-                          btnRev = Pair("#334155", "#64748B"),
-                          btnOut = Pair("#0D9488", "#14B8A6"),
-                          btnGo = Pair("#16A34A", "#22C55E"),
-                          btnCancel = Pair("#DC2626", "#EF4444"),
-                          pressColor = "#FFFFFF"
-                      )
-                      else -> ThemePalette( // CYBERPUNK
+                      else -> ThemeConfig(
+                          name = "Cyberpunk Neo Hub",
                           bg = Color.parseColor("#0D0814"),
                           card = Color.parseColor("#170F26"),
                           border = "#FF007F",
                           primaryText = Color.parseColor("#FF007F"),
                           secondaryText = Color.parseColor("#00F0FF"),
                           dim = Color.parseColor("#A899C2"),
+                          bannerText = "⚡ [CYBERNETIC CORE] Système Neural Opérationnel 🌐",
+                          bannerBg = Color.parseColor("#2A1845"),
+                          bannerBorder = "#FF007F",
+                          pressColor = "#00F0FF",
                           btnPick = Pair("#182045", "#00F0FF"),
                           btnDir = Pair("#182045", "#00F0FF"),
                           btnRev = Pair("#2A1845", "#FF007F"),
                           btnOut = Pair("#0D3838", "#00F0FF"),
                           btnGo = Pair("#0F4D2A", "#00FF66"),
-                          btnCancel = Pair("#4D0F1A", "#FF0055"),
-                          pressColor = "#FFFFFF"
+                          btnCancel = Pair("#4D0F1A", "#FF0055")
                       )
                   }
               }
@@ -388,7 +402,7 @@ jobs:
               override fun onCreate(state: Bundle?) {
                   super.onCreate(state)
                   prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
-                  currentTheme = prefs.getString("theme", "GOW") ?: "GOW"
+                  currentTheme = prefs.getString("theme", "FORTNITE") ?: "FORTNITE"
                   
                   createNotificationChannel()
                   checkPermissions()
@@ -400,7 +414,7 @@ jobs:
 
               @SuppressLint("ClickableViewAccessibility")
               private fun styleButton(b: Button, bgHex: String, borderHexStr: String, textHex: String = "#FFFFFF") {
-                  val p = getPalette(currentTheme)
+                  val cfg = getThemeConfig(currentTheme)
                   
                   val normalBg = GradientDrawable().apply {
                       setColor(Color.parseColor(bgHex))
@@ -408,9 +422,8 @@ jobs:
                       setStroke(dp(2), Color.parseColor(borderHexStr))
                   }
                   
-                  // Animation d'embrasement / d'effet spécial au clic
                   val pressedBg = GradientDrawable().apply {
-                      setColor(Color.parseColor(p.pressColor))
+                      setColor(Color.parseColor(cfg.pressColor))
                       cornerRadius = dp(6).toFloat()
                       setStroke(dp(3), Color.WHITE)
                   }
@@ -439,42 +452,51 @@ jobs:
               }
 
               private fun applyTheme() {
-                  val p = getPalette(currentTheme)
+                  val cfg = getThemeConfig(currentTheme)
 
-                  rootLayout.setBackgroundColor(p.bg)
-                  mainCol.setBackgroundColor(p.bg)
+                  rootLayout.setBackgroundColor(cfg.bg)
+                  mainCol.setBackgroundColor(cfg.bg)
 
-                  titleView.setTextColor(p.primaryText)
-                  subtitleView.setTextColor(p.secondaryText)
+                  titleView.setTextColor(cfg.primaryText)
+                  subtitleView.setTextColor(cfg.secondaryText)
+                  subtitleView.text = "UNIVERSE : ${cfg.name.uppercase()}"
 
-                  section1Title.setTextColor(p.secondaryText)
-                  section2Title.setTextColor(p.secondaryText)
-                  section3Title.setTextColor(p.secondaryText)
+                  bannerView.text = cfg.bannerText
+                  bannerView.setTextColor(cfg.primaryText)
+                  bannerView.background = GradientDrawable().apply {
+                      setColor(cfg.bannerBg)
+                      cornerRadius = dp(6).toFloat()
+                      setStroke(dp(2), Color.parseColor(cfg.bannerBorder))
+                  }
 
-                  checkView.setTextColor(p.secondaryText)
-                  statusView.setTextColor(p.primaryText)
-                  hashView.setTextColor(p.secondaryText)
+                  section1Title.setTextColor(cfg.secondaryText)
+                  section2Title.setTextColor(cfg.secondaryText)
+                  section3Title.setTextColor(cfg.secondaryText)
 
-                  verifyBox.setTextColor(p.dim)
-                  deleteBox.setTextColor(p.dim)
-                  outView.setTextColor(p.dim)
+                  checkView.setTextColor(cfg.secondaryText)
+                  statusView.setTextColor(cfg.primaryText)
+                  hashView.setTextColor(cfg.secondaryText)
+
+                  verifyBox.setTextColor(cfg.dim)
+                  deleteBox.setTextColor(cfg.dim)
+                  outView.setTextColor(cfg.dim)
 
                   cardViews.forEach { card ->
                       card.background = GradientDrawable().apply {
-                          setColor(p.card)
+                          setColor(cfg.card)
                           cornerRadius = dp(8).toFloat()
-                          setStroke(dp(2), Color.parseColor(p.border))
+                          setStroke(dp(2), Color.parseColor(cfg.border))
                       }
                   }
 
-                  styleButton(pickBtn, p.btnPick.first, p.btnPick.second)
-                  styleButton(dirBtn, p.btnDir.first, p.btnDir.second)
-                  styleButton(revBtn, p.btnRev.first, p.btnRev.second)
-                  styleButton(outBtn, p.btnOut.first, p.btnOut.second)
-                  styleButton(goBtn, p.btnGo.first, p.btnGo.second)
-                  styleButton(cancelBtn, p.btnCancel.first, p.btnCancel.second)
-                  styleButton(copyBtn, p.btnRev.first, p.btnRev.second)
-                  styleButton(menuBtn, p.btnRev.first, p.btnRev.second, p.secondaryText.toHex())
+                  styleButton(pickBtn, cfg.btnPick.first, cfg.btnPick.second)
+                  styleButton(dirBtn, cfg.btnDir.first, cfg.btnDir.second)
+                  styleButton(revBtn, cfg.btnRev.first, cfg.btnRev.second)
+                  styleButton(outBtn, cfg.btnOut.first, cfg.btnOut.second)
+                  styleButton(goBtn, cfg.btnGo.first, cfg.btnGo.second)
+                  styleButton(cancelBtn, cfg.btnCancel.first, cfg.btnCancel.second)
+                  styleButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second)
+                  styleButton(menuBtn, cfg.btnRev.first, cfg.btnRev.second, cfg.secondaryText.toHex())
 
                   refresh()
               }
@@ -521,7 +543,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS PKG Gaming Hub")
+                          .setContentTitle("⚡ PS PKG Ultimate Hub")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -563,21 +585,21 @@ jobs:
 
                   val headerLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
-                      setPadding(0, dp(4), 0, dp(14))
+                      setPadding(0, dp(4), 0, dp(10))
                   }
                   
                   val titlesLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
                   }
                   titleView = TextView(this).apply {
-                      text = "⚡ PS PKG GAMING HUB"
-                      textSize = 22f
+                      text = "⚡ PS PKG ULTIMATE HUB"
+                      textSize = 20f
                       setTypeface(null, Typeface.BOLD)
                   }
                   titlesLayout.addView(titleView)
                   
                   subtitleView = TextView(this).apply {
-                      text = "ENGINE v2.5.0 • FX MICRO-ANIMATIONS"
+                      text = "UNIVERSE"
                       textSize = 10f
                       typeface = Typeface.MONOSPACE
                       setPadding(0, dp(2), 0, 0)
@@ -591,6 +613,15 @@ jobs:
                   }
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
                   mainCol.addView(headerLayout)
+
+                  // Bannière Animée / Dynamique du Thème
+                  bannerView = TextView(this).apply {
+                      textSize = 11f
+                      setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
+                      setPadding(dp(10), dp(8), dp(10), dp(8))
+                      gravity = Gravity.CENTER
+                  }
+                  mainCol.addView(bannerView, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = dp(12) })
 
                   val card1 = createCard()
                   section1Title = text("1. SOURCE FILES (PKG / PARTS)", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
@@ -752,7 +783,7 @@ jobs:
                   }
                   val popup = PopupMenu(this, v)
                   popup.menu.add(0, 1, 0, if (appMode == "MERGE") "📂 Mode Splitter" else "🔗 Mode Fusion")
-                  popup.menu.add(0, 2, 1, "🎨 Changer de Thème")
+                  popup.menu.add(0, 2, 1, "🎨 Changer d'Univers")
                   popup.menu.add(0, 3, 2, "ℹ️ À propos")
                   popup.setOnMenuItemClickListener { item ->
                       when (item.itemId) {
@@ -760,13 +791,11 @@ jobs:
                               appMode = if (appMode == "MERGE") "SPLIT" else "MERGE"
                               if (appMode == "SPLIT") {
                                   titleView.text = "⚡ PKG SPLITTER"
-                                  subtitleView.text = "DECOUPAGE DES FICHIERS PKG EN BLOCS"
                                   section1Title.text = "1. FICHIER SOURCE UNIQUE (.PKG)"
                                   goBtn.text = "▶️ DÉCOUPER"
                                   statusView.text = "Prêt à découper."
                               } else {
-                                  titleView.text = "⚡ PS PKG GAMING HUB"
-                                  subtitleView.text = "ENGINE v2.5.0 • FX MICRO-ANIMATIONS"
+                                  titleView.text = "⚡ PS PKG ULTIMATE HUB"
                                   section1Title.text = "1. SOURCE FILES (PKG / PARTS)"
                                   goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
@@ -780,7 +809,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Gaming Hub v2.5.0")
+                              toast("PS PKG Ultimate Hub v2.6.0")
                               true
                           }
                           else -> false
@@ -791,19 +820,18 @@ jobs:
 
               private fun showThemeDialog() {
                   val themes = arrayOf(
-                      "🪓 God of War (Braise & Orbes)", 
-                      "⚡ Fortnite (V-Bucks & Bus)", 
-                      "🌿 The Last of Us (Survie)", 
-                      "🌌 Genshin Impact", 
-                      "🚗 GTA Los Santos",
-                      "🟣 Cyberpunk Néon", 
-                      "🔵 Sombre Classique"
+                      "⚡ Fortnite Battle Royale", 
+                      "🪓 God of War Ragnarök", 
+                      "🌿 The Last of Us Part II", 
+                      "🌌 Genshin Impact Teyvat", 
+                      "🚗 GTA V Los Santos",
+                      "🌐 Cyberpunk Neo Hub"
                   )
-                  val keys = arrayOf("GOW", "FORTNITE", "TLOU", "GENSHIN", "GTA", "CYBERPUNK", "CLASSIC")
+                  val keys = arrayOf("FORTNITE", "GOW", "TLOU", "GENSHIN", "GTA", "CYBERPUNK")
                   val checkedItem = keys.indexOf(currentTheme).coerceAtLeast(0)
 
                   AlertDialog.Builder(this)
-                      .setTitle("🎨 Sélectionne ton Univers")
+                      .setTitle("🌟 Choisis ton Univers Gaming")
                       .setSingleChoiceItems(themes, checkedItem) { dialog, which ->
                           currentTheme = keys[which]
                           prefs.edit().putString("theme", currentTheme).apply()
@@ -1061,10 +1089,10 @@ jobs:
                   if (!::listContainer.isInitialized) return
                   listContainer.removeAllViews()
 
-                  val p = getPalette(currentTheme)
+                  val cfg = getThemeConfig(currentTheme)
 
                   if (uris.isEmpty()) {
-                      listContainer.addView(text("AUCUN FICHIER SÉLECTIONNÉ", 11f, p.dim).apply { typeface = Typeface.MONOSPACE })
+                      listContainer.addView(text("AUCUN FICHIER SÉLECTIONNÉ", 11f, cfg.dim).apply { typeface = Typeface.MONOSPACE })
                       checkView.text = ""
                       pkgIconView.visibility = View.GONE
                       return
@@ -1074,7 +1102,7 @@ jobs:
                   val total = order.sumOf { sizes[it] }
                   val info = analyzePkg(uris[order[0]])
 
-                  val summaryView = text("${order.size} partie(s) • ${fmt(total)} • Ordre ${if (reversed) "inversé" else "croissant"}", 12f, p.primaryText, true).apply { typeface = Typeface.MONOSPACE }
+                  val summaryView = text("${order.size} partie(s) • ${fmt(total)} • Ordre ${if (reversed) "inversé" else "croissant"}", 12f, cfg.primaryText, true).apply { typeface = Typeface.MONOSPACE }
                   listContainer.addView(summaryView)
 
                   order.forEachIndexed { i, idx ->
@@ -1083,9 +1111,9 @@ jobs:
                           setPadding(dp(12), dp(8), dp(12), dp(8))
                           gravity = Gravity.CENTER_VERTICAL
                           background = GradientDrawable().apply {
-                              setColor(p.bg)
+                              setColor(cfg.bg)
                               cornerRadius = dp(6).toFloat()
-                              setStroke(dp(1), Color.parseColor(p.border))
+                              setStroke(dp(1), Color.parseColor(cfg.border))
                           }
                       }
 
@@ -1475,12 +1503,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.5.0
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.5.0.apk
+      - name: Renommer l'APK v2.6.0
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.6.0.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.5.0-apk
-          path: PkgMerger-v2.5.0.apk
+          name: pkg-merger-v2.6.0-apk
+          path: PkgMerger-v2.6.0.apk
           if-no-files-found: error
