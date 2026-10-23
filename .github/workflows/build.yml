@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.4.0 Game Themes
+      - name: Générer le projet Android v2.5.0 Gaming Micro-FX
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 240
-                  versionName = "2.4.0"
+                  versionCode = 250
+                  versionName = "2.5.0"
               }
 
               compileOptions {
@@ -120,14 +120,14 @@ jobs:
               android:viewportWidth="108"
               android:viewportHeight="108">
             <path
-                android:fillColor="#0D0814"
+                android:fillColor="#120A0A"
                 android:pathData="M16,0h76c8.8,0 16,7.2 16,16v76c0,8.8 -7.2,16 -16,16H16c-8.8,0 -16,-7.2 -16,-16V16C0,7.2 7.2,0 16,0z"/>
             <path
-                android:fillColor="#FF007F"
+                android:fillColor="#FF4500"
                 android:pathData="M54,18c19.9,0 36,16.1 36,36s-16.1,36 -36,36s-36,-16.1 -36,-36S34.1,18 54,18z"
-                android:fillAlpha="0.25"/>
+                android:fillAlpha="0.3"/>
             <path
-                android:fillColor="#00F0FF"
+                android:fillColor="#FFD700"
                 android:pathData="M58,32L38,58h14l-4,18l24-30H40L58,32z"/>
           </vector>
           EOF
@@ -140,7 +140,7 @@ jobs:
               <uses-permission android:name="android.permission.WAKE_LOCK" />
 
               <application
-                  android:label="PS PKG Cyber Manager"
+                  android:label="PS PKG Gaming Hub"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -149,7 +149,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Cyber Manager">
+                      android:label="PS PKG Gaming Hub">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -219,7 +219,7 @@ jobs:
               private var reversed = false
               private var lastHash: String? = null
               private var appMode = "MERGE"
-              private var currentTheme = "CYBERPUNK"
+              private var currentTheme = "GOW"
               
               @Volatile private var processing = false
               @Volatile private var cancelled = false
@@ -256,7 +256,6 @@ jobs:
 
               private val cardViews = ArrayList<LinearLayout>()
 
-              // Définition des palettes de thèmes
               private data class ThemePalette(
                   val bg: Int,
                   val card: Int,
@@ -269,12 +268,28 @@ jobs:
                   val btnRev: Pair<String, String>,
                   val btnOut: Pair<String, String>,
                   val btnGo: Pair<String, String>,
-                  val btnCancel: Pair<String, String>
+                  val btnCancel: Pair<String, String>,
+                  val pressColor: String
               )
 
               private fun getPalette(themeKey: String): ThemePalette {
                   return when (themeKey) {
-                      "FORTNITE" -> ThemePalette(
+                      "GOW" -> ThemePalette( // God of War : Braise & Orbes Rouges
+                          bg = Color.parseColor("#120A0A"),
+                          card = Color.parseColor("#241212"),
+                          border = "#FF4500",
+                          primaryText = Color.parseColor("#FFD700"),
+                          secondaryText = Color.parseColor("#FF4500"),
+                          dim = Color.parseColor("#B8860B"),
+                          btnPick = Pair("#3D1414", "#FF4500"),
+                          btnDir = Pair("#3D1414", "#FF4500"),
+                          btnRev = Pair("#4A3B12", "#FFD700"),
+                          btnOut = Pair("#291321", "#FF1493"),
+                          btnGo = Pair("#1C3D14", "#32CD32"),
+                          btnCancel = Pair("#5E0F0F", "#FF0000"),
+                          pressColor = "#FF0000" // Effet Orbe Rouge / Embrasement
+                      )
+                      "FORTNITE" -> ThemePalette( // Fortnite : V-Bucks & Bus Bleu
                           bg = Color.parseColor("#0B0E28"),
                           card = Color.parseColor("#171D4A"),
                           border = "#00D2FF",
@@ -286,9 +301,10 @@ jobs:
                           btnRev = Pair("#2D1D6B", "#B800FF"),
                           btnOut = Pair("#0F5E6B", "#00FFF0"),
                           btnGo = Pair("#198038", "#00FF66"),
-                          btnCancel = Pair("#801935", "#FF0055")
+                          btnCancel = Pair("#801935", "#FF0055"),
+                          pressColor = "#FFE600"
                       )
-                      "TLOU" -> ThemePalette(
+                      "TLOU" -> ThemePalette( // The Last of Us : Survie & Vert Spore
                           bg = Color.parseColor("#0A0F0D"),
                           card = Color.parseColor("#14211A"),
                           border = "#4A6B53",
@@ -300,23 +316,10 @@ jobs:
                           btnRev = Pair("#3A3020", "#D4A359"),
                           btnOut = Pair("#243D31", "#7FA98B"),
                           btnGo = Pair("#2B4D21", "#52A336"),
-                          btnCancel = Pair("#4D2121", "#A33636")
+                          btnCancel = Pair("#4D2121", "#A33636"),
+                          pressColor = "#D4A359"
                       )
-                      "GOW" -> ThemePalette(
-                          bg = Color.parseColor("#120A0A"),
-                          card = Color.parseColor("#241212"),
-                          border = "#8B0000",
-                          primaryText = Color.parseColor("#FFD700"),
-                          secondaryText = Color.parseColor("#FF4500"),
-                          dim = Color.parseColor("#B8860B"),
-                          btnPick = Pair("#3D1414", "#FF4500"),
-                          btnDir = Pair("#3D1414", "#FF4500"),
-                          btnRev = Pair("#4A3B12", "#FFD700"),
-                          btnOut = Pair("#291321", "#FF1493"),
-                          btnGo = Pair("#1C3D14", "#32CD32"),
-                          btnCancel = Pair("#5E0F0F", "#FF0000")
-                      )
-                      "GENSHIN" -> ThemePalette(
+                      "GENSHIN" -> ThemePalette( // Genshin : Céleste & Or
                           bg = Color.parseColor("#0B132B"),
                           card = Color.parseColor("#1C2541"),
                           border = "#5BC0BE",
@@ -328,9 +331,10 @@ jobs:
                           btnRev = Pair("#4A4E69", "#F72585"),
                           btnOut = Pair("#1C2541", "#5BC0BE"),
                           btnGo = Pair("#1A4314", "#38B000"),
-                          btnCancel = Pair("#5A189A", "#E0115F")
+                          btnCancel = Pair("#5A189A", "#E0115F"),
+                          pressColor = "#F72585"
                       )
-                      "GTA" -> ThemePalette(
+                      "GTA" -> ThemePalette( // GTA V : Los Santos Cash
                           bg = Color.parseColor("#050B05"),
                           card = Color.parseColor("#0D1A0E"),
                           border = "#00FF66",
@@ -342,7 +346,8 @@ jobs:
                           btnRev = Pair("#3B0D29", "#FF007F"),
                           btnOut = Pair("#0D2E2B", "#00FFFF"),
                           btnGo = Pair("#16521A", "#00FF00"),
-                          btnCancel = Pair("#521616", "#FF0033")
+                          btnCancel = Pair("#521616", "#FF0033"),
+                          pressColor = "#00FF66"
                       )
                       "CLASSIC" -> ThemePalette(
                           bg = Color.parseColor("#0F172A"),
@@ -356,7 +361,8 @@ jobs:
                           btnRev = Pair("#334155", "#64748B"),
                           btnOut = Pair("#0D9488", "#14B8A6"),
                           btnGo = Pair("#16A34A", "#22C55E"),
-                          btnCancel = Pair("#DC2626", "#EF4444")
+                          btnCancel = Pair("#DC2626", "#EF4444"),
+                          pressColor = "#FFFFFF"
                       )
                       else -> ThemePalette( // CYBERPUNK
                           bg = Color.parseColor("#0D0814"),
@@ -370,7 +376,8 @@ jobs:
                           btnRev = Pair("#2A1845", "#FF007F"),
                           btnOut = Pair("#0D3838", "#00F0FF"),
                           btnGo = Pair("#0F4D2A", "#00FF66"),
-                          btnCancel = Pair("#4D0F1A", "#FF0055")
+                          btnCancel = Pair("#4D0F1A", "#FF0055"),
+                          pressColor = "#FFFFFF"
                       )
                   }
               }
@@ -381,7 +388,7 @@ jobs:
               override fun onCreate(state: Bundle?) {
                   super.onCreate(state)
                   prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
-                  currentTheme = prefs.getString("theme", "CYBERPUNK") ?: "CYBERPUNK"
+                  currentTheme = prefs.getString("theme", "GOW") ?: "GOW"
                   
                   createNotificationChannel()
                   checkPermissions()
@@ -393,16 +400,19 @@ jobs:
 
               @SuppressLint("ClickableViewAccessibility")
               private fun styleButton(b: Button, bgHex: String, borderHexStr: String, textHex: String = "#FFFFFF") {
+                  val p = getPalette(currentTheme)
+                  
                   val normalBg = GradientDrawable().apply {
                       setColor(Color.parseColor(bgHex))
                       cornerRadius = dp(6).toFloat()
                       setStroke(dp(2), Color.parseColor(borderHexStr))
                   }
                   
+                  // Animation d'embrasement / d'effet spécial au clic
                   val pressedBg = GradientDrawable().apply {
-                      setColor(Color.parseColor(borderHexStr))
+                      setColor(Color.parseColor(p.pressColor))
                       cornerRadius = dp(6).toFloat()
-                      setStroke(dp(2), Color.WHITE)
+                      setStroke(dp(3), Color.WHITE)
                   }
 
                   b.background = normalBg
@@ -414,12 +424,12 @@ jobs:
                   b.setOnTouchListener { view, event ->
                       when (event.action) {
                           MotionEvent.ACTION_DOWN -> {
-                              view.animate().scaleX(0.95f).scaleY(0.95f).setDuration(80).start()
+                              view.animate().scaleX(0.93f).scaleY(0.93f).setDuration(70).start()
                               view.background = pressedBg
                               b.setTextColor(Color.BLACK)
                           }
                           MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                              view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
+                              view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start()
                               view.background = normalBg
                               b.setTextColor(Color.parseColor(textHex))
                           }
@@ -511,7 +521,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS PKG Manager")
+                          .setContentTitle("⚡ PS PKG Gaming Hub")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -560,14 +570,14 @@ jobs:
                       orientation = LinearLayout.VERTICAL
                   }
                   titleView = TextView(this).apply {
-                      text = "⚡ PS PKG MANAGER"
+                      text = "⚡ PS PKG GAMING HUB"
                       textSize = 22f
                       setTypeface(null, Typeface.BOLD)
                   }
                   titlesLayout.addView(titleView)
                   
                   subtitleView = TextView(this).apply {
-                      text = "ENGINE v2.4.0 • GAMING MULTI-THEME"
+                      text = "ENGINE v2.5.0 • FX MICRO-ANIMATIONS"
                       textSize = 10f
                       typeface = Typeface.MONOSPACE
                       setPadding(0, dp(2), 0, 0)
@@ -755,8 +765,8 @@ jobs:
                                   goBtn.text = "▶️ DÉCOUPER"
                                   statusView.text = "Prêt à découper."
                               } else {
-                                  titleView.text = "⚡ PS PKG MANAGER"
-                                  subtitleView.text = "ENGINE v2.4.0 • GAMING MULTI-THEME"
+                                  titleView.text = "⚡ PS PKG GAMING HUB"
+                                  subtitleView.text = "ENGINE v2.5.0 • FX MICRO-ANIMATIONS"
                                   section1Title.text = "1. SOURCE FILES (PKG / PARTS)"
                                   goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
@@ -770,7 +780,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Cyber Manager v2.4.0")
+                              toast("PS PKG Gaming Hub v2.5.0")
                               true
                           }
                           else -> false
@@ -781,19 +791,19 @@ jobs:
 
               private fun showThemeDialog() {
                   val themes = arrayOf(
+                      "🪓 God of War (Braise & Orbes)", 
+                      "⚡ Fortnite (V-Bucks & Bus)", 
+                      "🌿 The Last of Us (Survie)", 
+                      "🌌 Genshin Impact", 
+                      "🚗 GTA Los Santos",
                       "🟣 Cyberpunk Néon", 
-                      "🔵 Sombre Classique", 
-                      "⚡ Fortnite Edition", 
-                      "🌿 The Last of Us", 
-                      "🪓 God of War", 
-                      "🌌 Genshin Anime", 
-                      "🚗 GTA Los Santos"
+                      "🔵 Sombre Classique"
                   )
-                  val keys = arrayOf("CYBERPUNK", "CLASSIC", "FORTNITE", "TLOU", "GOW", "GENSHIN", "GTA")
+                  val keys = arrayOf("GOW", "FORTNITE", "TLOU", "GENSHIN", "GTA", "CYBERPUNK", "CLASSIC")
                   val checkedItem = keys.indexOf(currentTheme).coerceAtLeast(0)
 
                   AlertDialog.Builder(this)
-                      .setTitle("🎨 Sélectionne ton Thème")
+                      .setTitle("🎨 Sélectionne ton Univers")
                       .setSingleChoiceItems(themes, checkedItem) { dialog, which ->
                           currentTheme = keys[which]
                           prefs.edit().putString("theme", currentTheme).apply()
@@ -1465,12 +1475,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.4.0
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.4.0.apk
+      - name: Renommer l'APK v2.5.0
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.5.0.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.4.0-apk
-          path: PkgMerger-v2.4.0.apk
+          name: pkg-merger-v2.5.0-apk
+          path: PkgMerger-v2.5.0.apk
           if-no-files-found: error
