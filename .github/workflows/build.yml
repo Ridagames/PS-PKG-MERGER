@@ -119,6 +119,9 @@ jobs:
           LDFLAGS		:= -lio -lsysutil -llv2 -lm
 
           include $(PSL1GHT)/ppu_rules
+
+          clean:
+          	rm -f $(OBJS) $(TARGET).elf $(TARGET).self $(TARGET).pkg
           EOF
 
       - name: Compiler et generer le .pkg via Python
@@ -126,7 +129,9 @@ jobs:
           export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
           set -eo pipefail
 
-          make clean || true
+          # Nettoyage direct et securise
+          rm -f source/main.o ps3_kernel_reader.elf ps3_kernel_reader.self ps3_kernel_reader.pkg
+
           make
           make_self_npdrm ps3_kernel_reader.elf ps3_kernel_reader.self UP0001-KRNLRDR01_00-0000000000000000
 
