@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.33
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.34
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.33
+      - name: Générer le projet Android v2.9.34
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2933
-                  versionName = "2.9.33"
+                  versionCode = 2934
+                  versionName = "2.9.34"
               }
 
               compileOptions {
@@ -294,7 +294,7 @@ jobs:
               @Volatile private var processing = false
               @Volatile private var cancelled = false
               private val ui = Handler(Looper.getMainLooper())
-              private var lastNotifTime = 0L
+              private var lastNotifTime = 0.toLong()
 
               private lateinit var prefs: SharedPreferences
               private lateinit var rootFrameLayout: FrameLayout
@@ -1114,7 +1114,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.33")
+                              toast("PS PKG Freedom Hub v2.9.34")
                               true
                           }
                           else -> false
@@ -1288,7 +1288,7 @@ jobs:
                               val mime = c.getString(3)
                               if (id != null && name != null && mime != DocumentsContract.Document.MIME_TYPE_DIR) {
                                   if (isPkgFile(name)) {
-                                      val size = if (c.isNull(2)) 0L else c.getLong(2)
+                                      val size = if (c.isNull(2)) 0.toLong() else c.getLong(2)
                                       uris.add(DocumentsContract.buildDocumentUriUsingTree(tree, id))
                                       names.add(name)
                                       sizes.add(size)
@@ -1512,14 +1512,14 @@ jobs:
 
                   Thread {
                       val total = size(sourceUri)
-                      var done = 0L
-                      var lastPush = 0L
+                      var done = 0.toLong()
+                      var lastPush = 0.toLong()
                       var success = false
                       val t0 = System.currentTimeMillis()
                       val sha256 = if (verifyBox.isChecked) MessageDigest.getInstance("SHA-256") else null
 
                       try {
-                          val maxPartSize = 4L * 1024L * 1024L * 1024L
+                          val maxPartSize = 4.toLong() * 1024.toLong() * 1024.toLong() * 1024.toLong()
                           var partIndex = 0
                           val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
                           val baseDirUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocId)
@@ -1540,7 +1540,7 @@ jobs:
                           openNextPart()
 
                           val buf = ByteArray(1 shl 20)
-                          var currentPartBytes = 0L
+                          var currentPartBytes = 0.toLong()
                           contentResolver.openInputStream(sourceUri)?.use { input ->
                               while (true) {
                                   if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
@@ -1552,14 +1552,14 @@ jobs:
                                       if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
                                       if (currentPartBytes >= maxPartSize) {
                                           openNextPart()
-                                          currentPartBytes = 0L
+                                          currentPartBytes = 0.toLong()
                                       }
                                       val chunkToWrite = minOf(bytesRead - offset, (maxPartSize - currentPartBytes).toInt())
                                       currentOutputStream!!.write(buf, offset, chunkToWrite)
                                       sha256?.update(buf, offset, chunkToWrite)
                                       offset += chunkToWrite
-                                      currentPartBytes += chunkToWrite
-                                      done += chunkToWrite
+                                      currentPartBytes += chunkToWrite.toLong()
+                                      done += chunkToWrite.toLong()
 
                                       val now = System.currentTimeMillis()
                                       if (now - lastPush > 250) {
@@ -1567,10 +1567,10 @@ jobs:
                                           val elapsedSecs = (now - t0) / 1000.0
                                           val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
                                           val speedStr = fmt(speedBps.toLong()) + "/s"
-                                          val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0L
+                                          val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0.toLong()
                                           val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
                                           
-                                          val pct = if (total > 0) (done * 100 / total).toInt() else 0
+                                          val pct = if (total > 0.toLong()) (done * 100 / total).toInt() else 0
                                           val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
                                           
                                           ui.post {
@@ -1642,8 +1642,8 @@ jobs:
                   Thread {
                       val total = list.sumOf { size(it) }
                       val sha256 = MessageDigest.getInstance("SHA-256")
-                      var done = 0L
-                      var lastPush = 0L
+                      var done = 0.toLong()
+                      var lastPush = 0.toLong()
                       var success = false
                       val t0 = System.currentTimeMillis()
 
@@ -1663,7 +1663,7 @@ jobs:
                                           if (bytesRead <= 0) break
                                           os.write(buf, 0, bytesRead)
                                           sha256.update(buf, 0, bytesRead)
-                                          done += bytesRead
+                                          done += bytesRead.toLong()
                                           
                                           val now = System.currentTimeMillis()
                                           if (now - lastPush > 250) {
@@ -1671,10 +1671,10 @@ jobs:
                                               val elapsedSecs = (now - t0) / 1000.0
                                               val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
                                               val speedStr = fmt(speedBps.toLong()) + "/s"
-                                              val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0L
+                                              val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0.toLong()
                                               val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
                                               
-                                              val pct = if (total > 0) (done * 100 / total).toInt() else 0
+                                              val pct = if (total > 0.toLong()) (done * 100 / total).toInt() else 0
                                               val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
                                               
                                               ui.post {
@@ -1754,15 +1754,15 @@ jobs:
                   return try {
                       contentResolver.query(u, null, null, null, null)?.use { c ->
                           val i = c.getColumnIndex(OpenableColumns.SIZE)
-                          if (c.moveToFirst() && i >= 0 && !c.isNull(i)) c.getLong(i) else 0L
-                      } ?: 0L
-                  } catch (_: Exception) { 0L }
+                          if (c.moveToFirst() && i >= 0 && !c.isNull(i)) c.getLong(i) else 0.toLong()
+                      } ?: 0.toLong()
+                  } catch (_: Exception) { 0.toLong() }
               }
 
               private fun hex(b: ByteArray): String = b.joinToString("") { "%02x".format(it) }
 
               private fun fmt(b: Long): String {
-                  if (b <= 0) return "0 o"
+                  if (b <= 0.toLong()) return "0 o"
                   val u = arrayOf("o", "Ko", "Mo", "Go", "To")
                   var v = b.toDouble()
                   var i = 0
@@ -1804,15 +1804,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.33
+      - name: Build APK v2.9.34
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.33
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.33.apk
+      - name: Renommer l'APK v2.9.34
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.34.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.33-apk
-          path: PkgMerger-v2.9.33.apk
+          name: pkg-merger-v2.9.34-apk
+          path: PkgMerger-v2.9.34.apk
           if-no-files-found: error
