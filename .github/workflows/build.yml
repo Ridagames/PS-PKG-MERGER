@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.54
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.55
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.54
+      - name: Générer le projet Android v2.9.55
         env:
           FORCE: '1'
         run: |
@@ -120,7 +120,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2954
+                  versionCode = 2955
                   versionName = "2.1.0"
               }
 
@@ -527,7 +527,12 @@ jobs:
                       "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates", "es" to "🔄 Buscar actualizaciones", "it" to "🔄 Controlla aggiornamenti", "pt" to "🔄 Verificar atualizações", "de" to "🔄 Nach Updates suchen"),
                       "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.0)", "en" to "ℹ️ About (v2.1.0)", "es" to "ℹ️ Acerca de (v2.1.0)", "it" to "ℹ️ Informazioni (v2.1.0)", "pt" to "ℹ️ Sobre (v2.1.0)", "de" to "ℹ️ Über (v2.1.0)"),
                       "dialog_universe_title" to mapOf("fr" to "🌟 CHOISIS TON UNIVERS GAMING", "en" to "🌟 CHOOSE YOUR GAMING UNIVERSE", "es" to "🌟 ELIGE TU UNIVERSO DE JUEGO", "it" to "🌟 SCEGLI IL TUO UNIVERSO DI GIOCO", "pt" to "🌟 ESCOLHA SEU UNIVERSO DE JOGOS", "de" to "🌟 WÄHLE DEIN GAMING-UNIVERSUM"),
-                      "dialog_lang_title" to mapOf("fr" to "🌐 CHOISIR LA LANGUE / LANGUAGE", "en" to "🌐 CHOOSE LANGUAGE", "es" to "🌐 ELEGIR IDIOMA", "it" to "🌐 SCEGLI LINGUA", "pt" to "🌐 ESCOLHER IDIOMA", "de" to "🌐 SPRACHE WÄHLEN")
+                      "dialog_lang_title" to mapOf("fr" to "🌐 CHOISIR LA LANGUE / LANGUAGE", "en" to "🌐 CHOOSE LANGUAGE", "es" to "🌐 ELEGIR IDIOMA", "it" to "🌐 SCEGLI LINGUA", "pt" to "🌐 ESCOLHER IDIOMA", "de" to "🌐 SPRACHE WÄHLEN"),
+                      "toast_checking_updates" to mapOf("fr" to "🔍 Recherche de mises à jour...", "en" to "🔍 Checking for updates...", "es" to "🔍 Buscando actualizaciones...", "it" to "🔍 Controllo aggiornamenti...", "pt" to "🔍 Verificando atualizações...", "de" to "🔍 Nach Updates suchen..."),
+                      "toast_already_up_to_date" to mapOf("fr" to "✅ Ton application est déjà à jour (v2.1.0) !", "en" to "✅ Your application is already up to date (v2.1.0) !", "es" to "✅ ¡Tu aplicación ya está actualizada (v2.1.0)!", "it" to "✅ La tua applicazione è già aggiornata (v2.1.0) !", "pt" to "✅ Seu aplicativo já está atualizado (v2.1.0) !", "de" to "✅ Deine App ist bereits auf dem neuesten Stand (v2.1.0) !"),
+                      "toast_no_apk_found" to mapOf("fr" to "⚠️ Aucun fichier APK trouvé dans la dernière release.", "en" to "⚠️ No APK file found in the latest release.", "es" to "⚠️ No se encontró ningún archivo APK en la última versión.", "it" to "⚠️ Nessun file APK trovato nell'ultima release.", "pt" to "⚠️ Nenhum arquivo APK encontrado na última versão.", "de" to "⚠️ Keine APK-Datei im neuesten Release gefunden."),
+                      "toast_server_error" to mapOf("fr" to "❌ Erreur serveur GitHub", "en" to "❌ GitHub server error", "es" to "❌ Error del servidor GitHub", "it" to "❌ Errore del server GitHub", "pt" to "❌ Erro no servidor GitHub", "de" to "❌ GitHub-Serverfehler"),
+                      "toast_check_failed" to mapOf("fr" to "❌ Échec de la vérification", "en" to "❌ Check failed", "es" to "❌ Error en la verificación", "it" to "❌ Verifica fallita", "pt" to "❌ Falha na verificação", "de" to "❌ Überprüfung fehlgeschlagen")
                   )
                   return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
               }
@@ -1302,7 +1307,7 @@ jobs:
               }
 
               private fun checkForUpdates() {
-                  toast("🔍 Recherche de mises à jour...")
+                  toast(tr("toast_checking_updates"))
                   Thread {
                       try {
                           val repoUrl = "https://api.github.com/repos/Ridagames/Pkg-merge/releases/latest"
@@ -1326,17 +1331,17 @@ jobs:
                                       if (isVersionNewer(latestTag, currentVersion)) {
                                           showUpdateDialog(latestTag, apkUrl)
                                       } else {
-                                          toast("✅ Ton application est déjà à jour (v$currentVersion) !")
+                                          toast(tr("toast_already_up_to_date"))
                                       }
                                   }
                               } else {
-                                  ui.post { toast("⚠️ Aucun fichier APK trouvé dans la dernière release.") }
+                                  ui.post { toast(tr("toast_no_apk_found")) }
                               }
                           } else {
-                              ui.post { toast("❌ Erreur serveur GitHub (${conn.responseCode}).") }
+                              ui.post { toast("${tr("toast_server_error")} (${conn.responseCode}).") }
                           }
                       } catch (e: Exception) {
-                          ui.post { toast("❌ Échec de la vérification : ${e.message}") }
+                          ui.post { toast("${tr("toast_check_failed")} : ${e.message}") }
                       }
                   }.start()
               }
@@ -2363,15 +2368,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.54
+      - name: Build APK v2.9.55
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.54
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.54.apk
+      - name: Renommer l'APK v2.9.55
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.55.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.54-apk
-          path: PkgMerger-v2.9.54.apk
+          name: pkg-merger-v2.9.55-apk
+          path: PkgMerger-v2.9.55.apk
           if-no-files-found: error
