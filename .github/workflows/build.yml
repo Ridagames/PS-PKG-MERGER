@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.9.9 Ultimate Media Integration
+      - name: Générer le projet Android v2.9.10 Ragnarök Fixed
         env:
           FORCE: '1'
         run: |
@@ -97,8 +97,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 299
-                  versionName = "2.9.9"
+                  versionCode = 2910
+                  versionName = "2.9.10"
               }
 
               compileOptions {
@@ -231,6 +231,9 @@ jobs:
               private var bgVideoView: VideoView? = null
               private var musicPlayer: MediaPlayer? = null
               private var clickPlayer: MediaPlayer? = null
+
+              private val NOTIF_ID_PROGRESS = 101
+              private val NOTIF_ID_RESULT = 102
 
               @Volatile private var processing = false
               @Volatile private var cancelled = false
@@ -729,7 +732,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Ragnarök Edition v2.9.9")
+                              toast("PS PKG Ragnarök Edition v2.9.10")
                               true
                           }
                           else -> false
@@ -1399,12 +1402,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.9
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.9.apk
+      - name: Renommer l'APK v2.9.10
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.10.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.9-apk
-          path: PkgMerger-v2.9.9.apk
+          name: pkg-merger-v2.9.10-apk
+          path: PkgMerger-v2.9.10.apk
           if-no-files-found: error
