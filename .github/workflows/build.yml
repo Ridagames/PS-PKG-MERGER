@@ -124,10 +124,11 @@ jobs:
           cp ICON0.PNG pkg_build/
           cp PIC1.PNG pkg_build/
 
-          echo "5. Generation du PARAM.SFO en Python..."
+          echo "5. Generation du PARAM.SFO, telechargement et assemblage en Python..."
           python3 -c '
-          import struct
+          import struct, urllib.request, os
 
+          # 1. Generation du PARAM.SFO
           def create_sfo(output_path, title, app_ver, version, title_id):
               entries = [
                   ("TITLE", title.encode("utf-8") + b"\x00", 0x0204, len(title) + 1, 0x80),
@@ -164,18 +165,21 @@ jobs:
                   f.write(val_table)
 
           create_sfo("pkg_build/PARAM.SFO", "PS3 Kernel Reader", "01.00", "01.00", "KRNLRDR01")
+
+          # 2. Telechargement direct du script de packaging via urllib (evite tout conflit de PATH)
+          print("Telechargement du builder de PKG...")
+          url = "https://raw.githubusercontent.com/infinitykkj/PS3-PKG-Module/main/pkg_builder.py"
+          urllib.request.urlretrieve(url, "pkg_builder.py")
           '
 
-          echo "6. Telechargement du builder de PKG officiel..."
-          curl -sSL https://raw.githubusercontent.com/infinitykkj/PS3-PKG-Module/main/pkg_builder.py -o pkg_builder.py
           pip install --quiet pycryptodome || true
 
-          echo "7. Assemblage du vrai fichier .pkg..."
+          echo "6. Assemblage final du vrai fichier .pkg..."
           python3 pkg_builder.py pkg_build --retail -c "UP0001-KRNLRDR01_00-0000000000000000" -o ps3_kernel_reader.pkg
 
           # Verification
           if [ -f "ps3_kernel_reader.pkg" ]; then
-              echo "Succes : Le vrai .pkg est pret !"
+              echo "Succes : Le vrai .pkg a ete genere avec succes !"
           else
               echo "Erreur : Echec de la creation du .pkg"
               exit 1
