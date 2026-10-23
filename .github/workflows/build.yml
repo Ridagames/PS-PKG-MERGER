@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.51
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.52
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.51
+      - name: Générer le projet Android v2.9.52
         env:
           FORCE: '1'
         run: |
@@ -120,7 +120,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2951
+                  versionCode = 2952
                   versionName = "2.1.0"
               }
 
@@ -561,7 +561,6 @@ jobs:
                       setPadding(0, dp(4), 0, dp(4))
                   }
 
-                  // Arbres agrandis (54dp x 78dp)
                   if (currentTheme == "FORTNITE" && (treeSide == 1 || treeSide == 3)) {
                       val treeRes = getResId("fn_tree1")
                       if (treeRes != 0) {
@@ -737,7 +736,6 @@ jobs:
                   bus.visibility = View.VISIBLE
                   bus.bringToFront()
 
-                  // Son du bus décalé de 300ms pour correspondre parfaitement à l'arrivée visuelle
                   busHandler.postDelayed({
                       try {
                           var busSoundRes = resources.getIdentifier("fn_bus", "raw", packageName)
@@ -1191,6 +1189,12 @@ jobs:
                   }
                   dialogView.addView(titleMenu)
 
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .create()
+
+                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
                   fun addMenuOption(text: String, action: () -> Unit) {
                       val btn = Button(this).apply {
                           this.text = text
@@ -1202,12 +1206,6 @@ jobs:
                       }
                       dialogView.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)))
                   }
-
-                  val dialog = AlertDialog.Builder(this)
-                      .setView(dialogView)
-                      .create()
-
-                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
                   addMenuOption(if (appMode == "MERGE") "📂 Basculer en Mode Splitter" else "🔗 Basculer en Mode Fusion") {
                       dialog.dismiss()
@@ -1253,7 +1251,6 @@ jobs:
                   toast("🔍 Recherche de mises à jour...")
                   Thread {
                       try {
-                          // Lien vers ton dépôt GitHub réel "Ridagames/Pkg-merge"
                           val repoUrl = "https://api.github.com/repos/Ridagames/Pkg-merge/releases/latest"
                           val url = URL(repoUrl)
                           val conn = url.openConnection() as HttpURLConnection
@@ -1393,11 +1390,15 @@ jobs:
                   }
                   dialogView.addView(titleViewDialog)
 
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .create()
+                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
                   val listLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
                   }
 
-                  var selectedIndex = checkedItem
                   themes.forEachIndexed { index, themeName ->
                       val btn = Button(this).apply {
                           text = if (index == checkedItem) "▶ $themeName" else "   $themeName"
@@ -1406,21 +1407,17 @@ jobs:
                           gravity = Gravity.START or Gravity.CENTER_VERTICAL
                           setBackgroundColor(Color.TRANSPARENT)
                           setOnClickListener {
+                              dialog.dismiss()
                               currentTheme = keys[index]
                               prefs.edit().putString("theme", currentTheme).apply()
                               rewardChestView?.visibility = View.GONE
                               applyTheme()
-                              (parent as? View)?.let { } // close dialog parent
                           }
                       }
                       listLayout.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(38)))
                   }
                   dialogView.addView(listLayout)
 
-                  val dialog = AlertDialog.Builder(this)
-                      .setView(dialogView)
-                      .create()
-                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
                   dialog.show()
               }
 
@@ -1449,6 +1446,11 @@ jobs:
                   }
                   dialogView.addView(titleViewDialog)
 
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .create()
+                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
                   val listLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
                   }
@@ -1461,10 +1463,10 @@ jobs:
                           gravity = Gravity.START or Gravity.CENTER_VERTICAL
                           setBackgroundColor(Color.TRANSPARENT)
                           setOnClickListener {
+                              dialog.dismiss()
                               val selectedLang = codes[index]
                               prefs.edit().putString("lang", selectedLang).apply()
                               currentLang = selectedLang
-                              dialog.dismiss()
                               showRestartPrompt()
                           }
                       }
@@ -1472,10 +1474,6 @@ jobs:
                   }
                   dialogView.addView(listLayout)
 
-                  val dialog = AlertDialog.Builder(this)
-                      .setView(dialogView)
-                      .create()
-                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
                   dialog.show()
               }
 
@@ -2185,15 +2183,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.51
+      - name: Build APK v2.9.52
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.51
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.51.apk
+      - name: Renommer l'APK v2.9.52
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.52.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.51-apk
-          path: PkgMerger-v2.9.51.apk
+          name: pkg-merger-v2.9.52-apk
+          path: PkgMerger-v2.9.52.apk
           if-no-files-found: error
