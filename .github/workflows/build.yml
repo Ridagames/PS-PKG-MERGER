@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.39
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.40
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.39
+      - name: Générer le projet Android v2.9.40
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2939
-                  versionName = "2.9.39"
+                  versionCode = 2940
+                  versionName = "2.9.40"
               }
 
               compileOptions {
@@ -503,8 +503,8 @@ jobs:
                               setImageResource(treeRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val treeLp = FrameLayout.LayoutParams(dp(75), dp(100), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
-                              if (treeSide == 1) leftMargin = -dp(12) else rightMargin = -dp(12)
+                          val treeLp = FrameLayout.LayoutParams(dp(50), dp(75), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
+                              if (treeSide == 1) leftMargin = dp(4) else rightMargin = dp(4)
                           }
                           outerFrame.addView(treeIv, treeLp)
                       }
@@ -539,9 +539,9 @@ jobs:
                   buttonContent.addView(tv, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
 
                   val contentLp = FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                      topMargin = dp(18)
-                      leftMargin = dp(8)
-                      rightMargin = dp(8)
+                      topMargin = dp(16)
+                      leftMargin = dp(24)
+                      rightMargin = dp(24)
                   }
                   outerFrame.addView(buttonContent, contentLp)
 
@@ -555,7 +555,7 @@ jobs:
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
                           val chestLp = FrameLayout.LayoutParams(dp(36), dp(36), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
-                              topMargin = dp(0)
+                              topMargin = -dp(20)
                           }
                           outerFrame.addView(chestIv, chestLp)
 
@@ -1073,7 +1073,10 @@ jobs:
                           setImageResource(busRes)
                           visibility = View.GONE
                       }
-                      rootFrameLayout.addView(busImageView, FrameLayout.LayoutParams(dp(140), dp(90)))
+                      val busLp = FrameLayout.LayoutParams(dp(140), dp(90)).apply {
+                          gravity = Gravity.TOP or Gravity.START
+                      }
+                      rootFrameLayout.addView(busImageView, busLp)
                   }
 
                   setContentView(rootFrameLayout)
@@ -1111,7 +1114,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.39")
+                              toast("PS PKG Freedom Hub v2.9.40")
                               true
                           }
                           else -> false
@@ -1801,15 +1804,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.39
+      - name: Build APK v2.9.40
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.39
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.39.apk
+      - name: Renommer l'APK v2.9.40
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.40.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.39-apk
-          path: PkgMerger-v2.9.39.apk
+          name: pkg-merger-v2.9.40-apk
+          path: PkgMerger-v2.9.40.apk
           if-no-files-found: error
