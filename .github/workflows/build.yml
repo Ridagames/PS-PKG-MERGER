@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.46
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.47
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.46
+      - name: Générer le projet Android v2.9.47
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2946
-                  versionName = "2.9.46"
+                  versionCode = 2947
+                  versionName = "2.9.47"
               }
 
               compileOptions {
@@ -219,6 +219,7 @@ jobs:
           import android.view.Gravity
           import android.view.MotionEvent
           import android.view.View
+          import android.view.ViewGroup
           import android.view.ViewGroup.LayoutParams.MATCH_PARENT
           import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
           import android.widget.Button
@@ -475,7 +476,7 @@ jobs:
                       "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER", "es" to "ELEGIR CARPETA", "it" to "SCEGLI CARTELLA", "pt" to "ESCOLHER PASTA", "de" to "ORDNER WÄHLEN"),
                       "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER", "es" to "INVERTIR ORDEN DE PARTES", "it" to "INVERTI ORDINE PARTI", "pt" to "INVERTER ORDEM DAS PARTES", "de" to "TEILEREIHENFOLGE UMKEHREN"),
                       "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING", "es" to "2. SALIDA Y PROCESAMIENTO", "it" to "2. USCITA & ELABORAZIONE", "pt" to "2. SAÍDA & PROCESSAMENTO", "de" to "2. AUSGABE & VERARBEITUNG"),
-                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION", "es" to "DEFINIR UBICACIÓN DE SALIDA", "it" to "IMPOSTA DESTINAZIONE", "pt" to "DEFINIR LOCAL DE SAÍDA", "de" to "AUSGABEZIEL FESTLEGEN"),
+                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION", "es" to "DEFINIR UBICACIÓN DE SALIDA", "it" to "IMPOSTA DESTINAZIONE", "pt" to "IMPOSTA DESTINAZIONE", "de" to "AUSGABEZIEL FESTLEGEN"),
                       "out_lbl" to mapOf("fr" to "Sortie : —", "en" to "Output : —", "es" to "Salida : —", "it" to "Uscita : —", "pt" to "Saída : —", "de" to "Ausgabe : —"),
                       "btn_go" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE", "es" to "▶️ INICIAR FUSIÓN", "it" to "▶️ AVVIA UNIONE", "pt" to "▶️ INICIAR FUSÃO", "de" to "▶️ ZUSAMMENFÜHRUNG STARTEN"),
                       "btn_cancel" to mapOf("fr" to "❌ ANNULER", "en" to "❌ CANCEL", "es" to "❌ CANCELAR", "it" to "❌ ANNULLA", "pt" to "❌ CANCELAR", "de" to "❌ ABBRECHEN"),
@@ -521,18 +522,23 @@ jobs:
               @SuppressLint("ClickableViewAccessibility")
               private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, treeSide: Int, onClickAction: () -> Unit): View {
                   val cfg = getThemeConfig(currentTheme)
-                  val outerFrame = FrameLayout(this)
+                  val outerFrame = FrameLayout(this).apply {
+                      clipChildren = false
+                      clipToPadding = false
+                  }
 
-                  // Correction arbres : conteneur dédié à l'extérieur du bouton pour ne jamais couper le design
                   if (currentTheme == "FORTNITE" && treeSide != 0) {
-                      val treeRes = resources.getIdentifier(if (treeSide == 1) "fn_tree1" else "fn_tree2", "drawable", packageName)
+                      val treeResName = if (treeSide == 1) "fn_tree1" else "fn_tree2"
+                      var treeRes = resources.getIdentifier(treeResName, "drawable", packageName)
+                      if (treeRes == 0) treeRes = resources.getIdentifier("img_$treeResName", "drawable", packageName)
+
                       if (treeRes != 0) {
                           val treeIv = ImageView(this).apply {
                               setImageResource(treeRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val treeLp = FrameLayout.LayoutParams(dp(48), dp(72), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
-                              if (treeSide == 1) leftMargin = -dp(52) else rightMargin = -dp(52)
+                          val treeLp = FrameLayout.LayoutParams(dp(54), dp(80), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
+                              if (treeSide == 1) leftMargin = -dp(56) else rightMargin = -dp(56)
                           }
                           outerFrame.addView(treeIv, treeLp)
                       }
@@ -601,7 +607,8 @@ jobs:
 
               private fun playClickSound(soundName: String) {
                   try {
-                      val resId = resources.getIdentifier(soundName, "raw", packageName)
+                      var resId = resources.getIdentifier(soundName, "raw", packageName)
+                      if (resId == 0) resId = resources.getIdentifier("img_$soundName", "raw", packageName)
                       if (resId != 0) {
                           clickPlayer?.release()
                           clickPlayer = MediaPlayer.create(this, resId)
@@ -653,7 +660,9 @@ jobs:
 
               private fun startFortniteBusAnimation() {
                   stopFortniteBusAnimation()
-                  scheduleNextBusRun(300)
+                  busHandler.postDelayed({
+                      runFortniteBus()
+                  }, 400)
               }
 
               private fun stopFortniteBusAnimation() {
@@ -661,8 +670,8 @@ jobs:
                   busImageView?.visibility = View.GONE
               }
 
-              private fun scheduleNextBusRun(initialDelay: Long = 0) {
-                  val delay = if (initialDelay > 0) initialDelay else (1500 + random.nextInt(2000)).toLong()
+              private fun scheduleNextBusRun() {
+                  val delay = (1500 + random.nextInt(2000)).toLong()
                   busHandler.postDelayed({
                       runFortniteBus()
                   }, delay)
@@ -670,24 +679,25 @@ jobs:
 
               private fun runFortniteBus() {
                   val bus = busImageView ?: return
-                  val screenWidth = resources.displayMetrics.widthPixels.toFloat()
-                  val screenHeight = resources.displayMetrics.heightPixels.toFloat()
+                  val parentWidth = rootFrameLayout.width
+                  val screenWidth = if (parentWidth > 0) parentWidth.toFloat() else resources.displayMetrics.widthPixels.toFloat()
+                  val screenHeight = rootFrameLayout.height.toFloat().takeIf { it > 0f } ?: resources.displayMetrics.heightPixels.toFloat()
 
                   val goRight = random.nextBoolean()
-                  val startX = if (goRight) -dp(220).toFloat() else screenWidth + dp(220).toFloat()
-                  val endX = if (goRight) screenWidth + dp(220).toFloat() else -dp(220).toFloat()
-                  val randomY = dp(20) + random.nextFloat() * (screenHeight * 0.45f)
+                  val startX = if (goRight) -dp(240).toFloat() else screenWidth + dp(240).toFloat()
+                  val endX = if (goRight) screenWidth + dp(240).toFloat() else -dp(240).toFloat()
+                  val randomY = dp(40) + random.nextFloat() * (screenHeight * 0.4f)
 
                   bus.translationY = randomY
                   bus.translationX = startX
-                  bus.scaleX = if (goRight) 1.2f else -1.2f
-                  bus.scaleY = 1.2f
+                  bus.scaleX = if (goRight) 1.25f else -1.25f
+                  bus.scaleY = 1.25f
                   bus.visibility = View.VISIBLE
                   bus.bringToFront()
 
-                  // Sécurisation audio du bus pour éviter tout plantage
                   try {
-                      val busSoundRes = resources.getIdentifier("fn_bus", "raw", packageName)
+                      var busSoundRes = resources.getIdentifier("fn_bus", "raw", packageName)
+                      if (busSoundRes == 0) busSoundRes = resources.getIdentifier("img_fn_bus", "raw", packageName)
                       if (busSoundRes != 0) {
                           fnBusPlayer?.release()
                           fnBusPlayer = MediaPlayer.create(this, busSoundRes)
@@ -902,7 +912,8 @@ jobs:
               private fun triggerSuccessReward() {
                   if (currentTheme == "FORTNITE") {
                       playClickSound("fn_chest_open")
-                      val closedRes = resources.getIdentifier("fn_chest_closed", "drawable", packageName)
+                      var closedRes = resources.getIdentifier("fn_chest_closed", "drawable", packageName)
+                      if (closedRes == 0) closedRes = resources.getIdentifier("img_fn_chest_closed", "drawable", packageName)
                       if (closedRes != 0 && rewardChestView != null) {
                           rewardChestView?.setImageResource(closedRes)
                           rewardChestView?.visibility = View.VISIBLE
@@ -915,7 +926,10 @@ jobs:
               }
 
               private fun showMergerScreen() {
-                  rootFrameLayout = FrameLayout(this)
+                  rootFrameLayout = FrameLayout(this).apply {
+                      clipChildren = false
+                      clipToPadding = false
+                  }
 
                   bgVideoView = AspectRatioVideoView(this).apply {
                       layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT, Gravity.CENTER)
@@ -924,6 +938,8 @@ jobs:
 
                   rootLayout = ScrollView(this).apply {
                       setBackgroundColor(Color.TRANSPARENT)
+                      clipChildren = false
+                      clipToPadding = false
                   }
 
                   val pad = dp(16)
@@ -931,6 +947,8 @@ jobs:
                       orientation = LinearLayout.VERTICAL
                       setPadding(pad, pad, pad, pad)
                       setBackgroundColor(Color.TRANSPARENT)
+                      clipChildren = false
+                      clipToPadding = false
                   }
 
                   val headerLayout = LinearLayout(this).apply {
@@ -1090,7 +1108,10 @@ jobs:
                   rootLayout.addView(mainCol)
                   rootFrameLayout.addView(rootLayout, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
 
-                  val busRes = resources.getIdentifier("fn_bus", "drawable", packageName)
+                  var busRes = resources.getIdentifier("fn_bus", "drawable", packageName)
+                  if (busRes == 0) busRes = resources.getIdentifier("img_fn_bus", "drawable", packageName)
+                  if (busRes == 0) busRes = resources.getIdentifier("bus", "drawable", packageName)
+
                   if (busRes != 0) {
                       busImageView = ImageView(this).apply {
                           setImageResource(busRes)
@@ -1143,7 +1164,7 @@ jobs:
                               true
                           }
                           4 -> {
-                              toast("PS PKG Freedom Hub v2.9.46")
+                              toast("PS PKG Freedom Hub v2.9.47")
                               true
                           }
                           else -> false
@@ -1246,6 +1267,8 @@ jobs:
                   val card = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
                       setPadding(dp(16), dp(16), dp(16), dp(16))
+                      clipChildren = false
+                      clipToPadding = false
                   }
                   cardViews.add(card)
                   return card
@@ -1902,15 +1925,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.46
+      - name: Build APK v2.9.47
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.46
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.46.apk
+      - name: Renommer l'APK v2.9.47
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.47.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.46-apk
-          path: PkgMerger-v2.9.46.apk
+          name: pkg-merger-v2.9.47-apk
+          path: PkgMerger-v2.9.47.apk
           if-no-files-found: error
