@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.48
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.49
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.48
+      - name: Générer le projet Android v2.9.49
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2948
-                  versionName = "2.9.48"
+                  versionCode = 2949
+                  versionName = "2.9.49"
               }
 
               compileOptions {
@@ -163,12 +163,15 @@ jobs:
               <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
               <uses-permission android:name="android.permission.WAKE_LOCK" />
               <uses-permission android:name="android.permission.VIBRATE" />
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
               <application
                   android:label="PS PKG Freedom Hub"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
+                  android:usesCleartextTraffic="true"
                   android:theme="@android:style/Theme.Material.NoActionBar">
                   
                   <activity
@@ -227,15 +230,18 @@ jobs:
           import android.widget.FrameLayout
           import android.widget.ImageView
           import android.widget.LinearLayout
-          import android.widget.PopupMenu
           import android.widget.ProgressBar
           import android.widget.ScrollView
           import android.widget.TextView
           import android.widget.Toast
           import android.widget.VideoView
+          import androidx.core.content.FileProvider
           import java.io.BufferedOutputStream
+          import java.io.File
           import java.io.FileOutputStream
           import java.io.OutputStream
+          import java.net.HttpURLConnection
+          import java.net.URL
           import java.security.MessageDigest
           import java.util.Locale
           import java.util.Random
@@ -475,7 +481,7 @@ jobs:
                       "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER", "es" to "ELEGIR CARPETA", "it" to "SCEGLI CARTELLA", "pt" to "ESCOLHER PASTA", "de" to "ORDNER WÄHLEN"),
                       "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER", "es" to "INVERTIR ORDEN DE PARTES", "it" to "INVERTI ORDINE PARTI", "pt" to "INVERTER ORDEM DAS PARTES", "de" to "TEILEREIHENFOLGE UMKEHREN"),
                       "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING", "es" to "2. SALIDA Y PROCESAMIENTO", "it" to "2. USCITA & ELABORAZIONE", "pt" to "2. SAÍDA & PROCESSAMENTO", "de" to "2. AUSGABE & VERARBEITUNG"),
-                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION", "es" to "DEFINIR UBICACIÓN DE SALIDA", "it" to "IMPOSTA DESTINAZIONE", "pt" to "DEFINIR LOCAL DE SAÍDA", "de" to "AUSGABEZIEL FESTLEGEN"),
+                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION", "es" to "DEFINIR UBICACIÓN DE SALIDA", "it" to "IMPOSTA DESTINAZIONE", "pt" to "IMPOSTA DESTINAZIONE", "de" to "AUSGABEZIEL FESTLEGEN"),
                       "out_lbl" to mapOf("fr" to "Sortie : —", "en" to "Output : —", "es" to "Salida : —", "it" to "Uscita : —", "pt" to "Saída : —", "de" to "Ausgabe : —"),
                       "btn_go" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE", "es" to "▶️ INICIAR FUSIÓN", "it" to "▶️ AVVIA UNIONE", "pt" to "▶️ INICIAR FUSÃO", "de" to "▶️ ZUSAMMENFÜHRUNG STARTEN"),
                       "btn_cancel" to mapOf("fr" to "❌ ANNULER", "en" to "❌ CANCEL", "es" to "❌ CANCELAR", "it" to "❌ ANNULLA", "pt" to "❌ CANCELAR", "de" to "❌ ABBRECHEN"),
@@ -533,7 +539,6 @@ jobs:
                       setPadding(0, dp(4), 0, dp(4))
                   }
 
-                  // Arbre gauche (si Fortnite et treeSide 1 ou 3)
                   if (currentTheme == "FORTNITE" && (treeSide == 1 || treeSide == 3)) {
                       val treeRes = getResId("fn_tree1")
                       if (treeRes != 0) {
@@ -548,7 +553,6 @@ jobs:
                       }
                   }
 
-                  // Bouton principal
                   val buttonContent = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
                       gravity = Gravity.CENTER
@@ -580,7 +584,6 @@ jobs:
                   val buttonLp = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
                   container.addView(buttonContent, buttonLp)
 
-                  // Arbre droit (si Fortnite et treeSide 2 ou 3)
                   if (currentTheme == "FORTNITE" && (treeSide == 2 || treeSide == 3)) {
                       val treeRes = getResId("fn_tree2")
                       if (treeRes != 0) {
@@ -678,7 +681,7 @@ jobs:
                   stopFortniteBusAnimation()
                   busHandler.postDelayed({
                       runFortniteBus()
-                  }, 400)
+                  }, 800)
               }
 
               private fun stopFortniteBusAnimation() {
@@ -687,7 +690,8 @@ jobs:
               }
 
               private fun scheduleNextBusRun() {
-                  val delay = (1500 + random.nextInt(2000)).toLong()
+                  // Cadence réduite : entre 5 et 8 secondes d'attente
+                  val delay = (5000 + random.nextInt(3500)).toLong()
                   busHandler.postDelayed({
                       runFortniteBus()
                   }, delay)
@@ -702,7 +706,7 @@ jobs:
                   val goRight = random.nextBoolean()
                   val startX = if (goRight) -dp(240).toFloat() else screenWidth + dp(240).toFloat()
                   val endX = if (goRight) screenWidth + dp(240).toFloat() else -dp(240).toFloat()
-                  val randomY = dp(40) + random.nextFloat() * (screenHeight * 0.4f)
+                  val randomY = dp(30) + random.nextFloat() * (screenHeight * 0.45f)
 
                   bus.translationY = randomY
                   bus.translationX = startX
@@ -721,9 +725,10 @@ jobs:
                       }
                   } catch (_: Exception) {}
 
+                  // Vitesse réduite : 5500ms pour traverser l'écran tout doucement
                   bus.animate()
                       .translationX(endX)
-                      .setDuration(3500)
+                      .setDuration(5500)
                       .withEndAction {
                           bus.visibility = View.GONE
                           scheduleNextBusRun()
@@ -797,7 +802,7 @@ jobs:
                   menuBtn.background = modeBtnStyleBg
                   menuBtn.setTextColor(cfg.secondaryText)
                   menuBtn.text = tr("mode_btn")
-                  menuBtn.setOnClickListener { showMenu(menuBtn) }
+                  menuBtn.setOnClickListener { showCustomMenu(menuBtn) }
 
                   setupBackgroundMedia()
                   refresh()
@@ -1136,50 +1141,207 @@ jobs:
                   setContentView(rootFrameLayout)
               }
 
-              private fun showMenu(v: View) {
+              // Menu Stylisé au lieu du Popup par défaut
+              private fun showCustomMenu(anchor: View) {
                   if (processing) {
                       toast("⚠️ Traitement en cours !")
                       return
                   }
-                  val popup = PopupMenu(this, v)
-                  popup.menu.add(0, 1, 0, if (appMode == "MERGE") "📂 Mode Splitter" else "🔗 Mode Fusion")
-                  popup.menu.add(0, 2, 1, "🎨 Changer d'Univers")
-                  popup.menu.add(0, 3, 2, "🌐 Changer la Langue / Language")
-                  popup.menu.add(0, 4, 3, "ℹ️ À propos")
-                  popup.setOnMenuItemClickListener { item ->
-                      when (item.itemId) {
-                          1 -> {
-                              appMode = if (appMode == "MERGE") "SPLIT" else "MERGE"
-                              if (appMode == "SPLIT") {
-                                  titleView.text = "⚡ PKG SPLITTER"
-                                  section1Title.text = "1. FICHIER SOURCE UNIQUE (.PKG)"
-                                  statusView.text = "Prêt à découper."
-                              } else {
-                                  titleView.text = tr("app_title")
-                                  section1Title.text = tr("sec1")
-                                  statusView.text = tr("status_ready")
-                              }
-                              output = null
-                              outView.text = tr("out_lbl")
-                              rebuildButtons()
-                              true
-                          }
-                          2 -> {
-                              showThemeDialog()
-                              true
-                          }
-                          3 -> {
-                              showLanguageDialog()
-                              true
-                          }
-                          4 -> {
-                              toast("PS PKG Freedom Hub v2.9.48")
-                              true
-                          }
-                          else -> false
+                  val cfg = getThemeConfig(currentTheme)
+                  
+                  val dialogView = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply {
+                          setColor(cfg.card)
+                          cornerRadius = dp(10).toFloat()
+                          setStroke(dp(2), Color.parseColor(cfg.border))
                       }
                   }
-                  popup.show()
+
+                  val titleMenu = TextView(this).apply {
+                      text = "⚙️ OPTIONS & MENU"
+                      textSize = 14f
+                      setTextColor(cfg.primaryText)
+                      setTypeface(null, Typeface.BOLD)
+                      setPadding(0, 0, 0, dp(12))
+                  }
+                  dialogView.addView(titleMenu)
+
+                  fun addMenuOption(text: String, action: () -> Unit) {
+                      val btn = Button(this).apply {
+                          this.text = text
+                          setTextColor(Color.WHITE)
+                          textSize = 12f
+                          gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                          setBackgroundColor(Color.TRANSPARENT)
+                          setOnClickListener {
+                              action()
+                          }
+                      }
+                      dialogView.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)))
+                  }
+
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .create()
+
+                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+                  addMenuOption(if (appMode == "MERGE") "📂 Basculer en Mode Splitter" else "🔗 Basculer en Mode Fusion") {
+                      dialog.dismiss()
+                      appMode = if (appMode == "MERGE") "SPLIT" else "MERGE"
+                      if (appMode == "SPLIT") {
+                          titleView.text = "⚡ PKG SPLITTER"
+                          section1Title.text = "1. FICHIER SOURCE UNIQUE (.PKG)"
+                          statusView.text = "Prêt à découper."
+                      } else {
+                          titleView.text = tr("app_title")
+                          section1Title.text = tr("sec1")
+                          statusView.text = tr("status_ready")
+                      }
+                      output = null
+                      outView.text = tr("out_lbl")
+                      rebuildButtons()
+                  }
+
+                  addMenuOption("🎨 Changer d'Univers") {
+                      dialog.dismiss()
+                      showThemeDialog()
+                  }
+
+                  addMenuOption("🌐 Changer la Langue / Language") {
+                      dialog.dismiss()
+                      showLanguageDialog()
+                  }
+
+                  addMenuOption("🔄 Vérifier les mises à jour") {
+                      dialog.dismiss()
+                      checkForUpdates()
+                  }
+
+                  addMenuOption("ℹ️ À propos (v2.9.49)") {
+                      dialog.dismiss()
+                      toast("PS PKG Freedom Hub v2.9.49")
+                  }
+
+                  dialog.show()
+              }
+
+              // Vérification automatique des mises à jour sur GitHub (Releases)
+              private fun checkForUpdates() {
+                  toast("🔍 Recherche de mises à jour...")
+                  Thread {
+                      try {
+                          // Remplace "ton-pseudo" et "ton-repo" par ton nom d'utilisateur et ton dépôt GitHub réel
+                          val repoUrl = "https://api.github.com/repos/ton-pseudo/ton-repo/releases/latest"
+                          val url = URL(repoUrl)
+                          val conn = url.openConnection() as HttpURLConnection
+                          conn.requestMethod = "GET"
+                          conn.setRequestProperty("User-Agent", "PkgMerger-App")
+                          conn.connectTimeout = 5000
+
+                          if (conn.responseCode == 200) {
+                              val response = conn.inputStream.bufferedReader().use { it.readText() }
+                              
+                              // Analyse simple pour extraire le tag_name (ex: "v2.1.1" ou "2.2.0") et l'URL de l'APK
+                              val tagMatch = Regex("\"tag_name\"\\s*:\\s*\"([^\"]+)\"").find(response)
+                              val apkUrlMatch = Regex("\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.apk)\"").find(response)
+
+                              if (tagMatch != null && apkUrlMatch != null) {
+                                  val latestTag = tagMatch.groupValues[1].replace("v", "")
+                                  val apkUrl = apkUrlMatch.groupValues[1]
+
+                                  // Version actuelle de l'app (au-dessus de 2.1.0)
+                                  val currentVersion = "2.1.0"
+
+                                  ui.post {
+                                      if (isVersionNewer(latestTag, currentVersion)) {
+                                          showUpdateDialog(latestTag, apkUrl)
+                                      } else {
+                                          toast("✅ Ton application est déjà à jour (v$currentVersion) !")
+                                      }
+                                  }
+                              } else {
+                                  ui.post { toast("⚠️ Aucun fichier APK trouvé dans la dernière release.") }
+                              }
+                          } else {
+                              ui.post { toast("❌ Erreur de connexion au serveur GitHub.") }
+                          }
+                      } catch (e: Exception) {
+                          ui.post { toast("❌ Échec de la vérification : ${e.message}") }
+                      }
+                  }.start()
+              }
+
+              private fun isVersionNewer(remote: String, local: String): Boolean {
+                  try {
+                      val rParts = remote.split(".").map { it.toIntOrNull() ?: 0 }
+                      val lParts = local.split(".").map { it.toIntOrNull() ?: 0 }
+                      for (i in 0 until maxOf(rParts.size, lParts.size)) {
+                          val r = rParts.getOrNull(i) ?: 0
+                          val l = lParts.getOrNull(i) ?: 0
+                          if (r > l) return true
+                          if (r < l) return false
+                      }
+                  } catch (_: Exception) {}
+                  return false
+              }
+
+              private fun showUpdateDialog(newVersion: String, apkUrl: String) {
+                  AlertDialog.Builder(this)
+                      .setTitle("🎉 Nouvelle mise à jour dispo (v$newVersion) !")
+                      .setMessage("Une nouvelle version de PS PKG Freedom Hub est disponible sur ton dépôt GitHub.\n\nVeux-tu la télécharger et l'installer maintenant ?")
+                      .setPositiveButton("Mettre à jour") { _, _ ->
+                          downloadAndInstallApk(apkUrl)
+                      }
+                      .setNegativeButton("Plus tard", null)
+                      .show()
+              }
+
+              private fun downloadAndInstallApk(apkUrl: String) {
+                  toast("📥 Téléchargement de la mise à jour...")
+                  Thread {
+                      try {
+                          val url = URL(apkUrl)
+                          val conn = url.openConnection() as HttpURLConnection
+                          conn.connect()
+                          
+                          val apkFile = File(getExternalFilesDir(null), "update.apk")
+                          if (apkFile.exists()) apkFile.delete()
+
+                          conn.inputStream.use { input ->
+                              FileOutputStream(apkFile).use { output ->
+                                  input.copyTo(output)
+                              }
+                          }
+
+                          ui.post {
+                              toast("✅ Téléchargement terminé. Installation...")
+                              installApk(apkFile)
+                          }
+                      } catch (e: Exception) {
+                          ui.post { toast("❌ Erreur de téléchargement : ${e.message}") }
+                      }
+                  }.start()
+              }
+
+              private fun installApk(file: File) {
+                  try {
+                      val intent = Intent(Intent.ACTION_VIEW).apply {
+                          val uri: Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                              FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", file)
+                          } else {
+                              Uri.fromFile(file)
+                          }
+                          setDataAndType(uri, "application/vnd.android.package-archive")
+                          addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                      }
+                      startActivity(intent)
+                  } catch (e: Exception) {
+                      toast("Erreur d'installation : ${e.message}")
+                  }
               }
 
               private fun showThemeDialog() {
@@ -1932,15 +2094,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.48
+      - name: Build APK v2.9.49
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.48
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.48.apk
+      - name: Renommer l'APK v2.9.49
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.49.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.48-apk
-          path: PkgMerger-v2.9.48.apk
+          name: pkg-merger-v2.9.49-apk
+          path: PkgMerger-v2.9.49.apk
           if-no-files-found: error
