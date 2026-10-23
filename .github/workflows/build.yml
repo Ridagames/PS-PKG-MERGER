@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.53
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.54
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.53
+      - name: Générer le projet Android v2.9.54
         env:
           FORCE: '1'
         run: |
@@ -120,7 +120,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2953
+                  versionCode = 2954
                   versionName = "2.1.0"
               }
 
@@ -163,6 +163,7 @@ jobs:
           write app/src/main/AndroidManifest.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
               <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -196,8 +197,9 @@ jobs:
                       <meta-data
                           android:name="android.support.FILE_PROVIDER_PATHS"
                           android:resource="@xml/file_paths" />
-                  </meta-data>
+                  </provider>
               </application>
+
           </manifest>
           EOF
 
@@ -2361,15 +2363,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.53
+      - name: Build APK v2.9.54
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.53
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.53.apk
+      - name: Renommer l'APK v2.9.54
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.54.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.53-apk
-          path: PkgMerger-v2.9.53.apk
+          name: pkg-merger-v2.9.54-apk
+          path: PkgMerger-v2.9.54.apk
           if-no-files-found: error
