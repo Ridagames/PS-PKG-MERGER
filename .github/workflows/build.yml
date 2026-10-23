@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.9.11 All-Themes & Fullscreen
+      - name: Générer le projet Android v2.9.12 Vertical Aspect Ratio
         env:
           FORCE: '1'
         run: |
@@ -97,8 +97,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2911
-                  versionName = "2.9.11"
+                  versionCode = 2912
+                  versionName = "2.9.12"
               }
 
               compileOptions {
@@ -216,11 +216,29 @@ jobs:
           import java.security.MessageDigest
           import java.util.Locale
 
-          class FullscreenVideoView(context: Context) : VideoView(context) {
+          class AspectRatioVideoView(context: Context) : VideoView(context) {
+              private var videoWidth = 0
+              private var videoHeight = 0
+
+              fun setVideoSize(width: Int, height: Int) {
+                  videoWidth = width
+                  videoHeight = height
+                  requestLayout()
+              }
+
               override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-                  val width = getDefaultSize(0, widthMeasureSpec)
-                  val height = getDefaultSize(0, heightMeasureSpec)
-                  setMeasuredDimension(width, height)
+                  val width = getDefaultSize(videoWidth, widthMeasureSpec)
+                  val height = getDefaultSize(videoHeight, heightMeasureSpec)
+                  
+                  if (videoWidth > 0 && videoHeight > 0) {
+                      if (videoWidth * height > width * videoHeight) {
+                          setMeasuredDimension(width, width * videoHeight / videoWidth)
+                      } else {
+                          setMeasuredDimension(height * videoWidth / videoHeight, height)
+                      }
+                  } else {
+                      setMeasuredDimension(width, height)
+                  }
               }
           }
 
@@ -236,7 +254,7 @@ jobs:
               private var appMode = "MERGE"
               private var currentTheme = "FORTNITE"
 
-              private var bgVideoView: FullscreenVideoView? = null
+              private var bgVideoView: AspectRatioVideoView? = null
               private var musicPlayer: MediaPlayer? = null
               private var clickPlayer: MediaPlayer? = null
 
@@ -495,6 +513,7 @@ jobs:
                               bgVideoView?.setOnPreparedListener { mp ->
                                   mp.isLooping = true
                                   mp.setVolume(0f, 0f)
+                                  bgVideoView?.setVideoSize(mp.videoWidth, mp.videoHeight)
                                   bgVideoView?.start()
                               }
                           }
@@ -661,8 +680,8 @@ jobs:
               private fun showMergerScreen() {
                   rootFrameLayout = FrameLayout(this)
 
-                  bgVideoView = FullscreenVideoView(this).apply {
-                      layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT, Gravity.CENTER)
+                  bgVideoView = AspectRatioVideoView(this).apply {
+                      layoutParams = FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER)
                   }
                   rootFrameLayout.addView(bgVideoView)
 
@@ -856,7 +875,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.11")
+                              toast("PS PKG Freedom Hub v2.9.12")
                               true
                           }
                           else -> false
@@ -1551,12 +1570,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.11
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.11.apk
+      - name: Renommer l'APK v2.9.12
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.12.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.11-apk
-          path: PkgMerger-v2.9.11.apk
+          name: pkg-merger-v2.9.12-apk
+          path: PkgMerger-v2.9.12.apk
           if-no-files-found: error
