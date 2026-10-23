@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.1.8 UI Fix
+      - name: Générer le projet Android v2.2.0 Cyber FX
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 218
-                  versionName = "2.1.8"
+                  versionCode = 220
+                  versionName = "2.2.0"
               }
 
               compileOptions {
@@ -120,14 +120,14 @@ jobs:
               android:viewportWidth="108"
               android:viewportHeight="108">
             <path
-                android:fillColor="#0F172A"
+                android:fillColor="#0D0814"
                 android:pathData="M16,0h76c8.8,0 16,7.2 16,16v76c0,8.8 -7.2,16 -16,16H16c-8.8,0 -16,-7.2 -16,-16V16C0,7.2 7.2,0 16,0z"/>
             <path
-                android:fillColor="#38BDF8"
+                android:fillColor="#FF007F"
                 android:pathData="M54,18c19.9,0 36,16.1 36,36s-16.1,36 -36,36s-36,-16.1 -36,-36S34.1,18 54,18z"
-                android:fillAlpha="0.15"/>
+                android:fillAlpha="0.25"/>
             <path
-                android:fillColor="#38BDF8"
+                android:fillColor="#00F0FF"
                 android:pathData="M58,32L38,58h14l-4,18l24-30H40L58,32z"/>
           </vector>
           EOF
@@ -140,7 +140,7 @@ jobs:
               <uses-permission android:name="android.permission.WAKE_LOCK" />
 
               <application
-                  android:label="PS PKG Manager &amp; Analyzer"
+                  android:label="PS PKG Cyber Manager"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -149,7 +149,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Manager &amp; Analyzer">
+                      android:label="PS PKG Cyber Manager">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -163,6 +163,7 @@ jobs:
           package com.venice.pkgmerger
 
           import android.Manifest
+          import android.annotation.SuppressLint
           import android.app.Activity
           import android.app.NotificationChannel
           import android.app.NotificationManager
@@ -171,6 +172,8 @@ jobs:
           import android.content.Context
           import android.content.Intent
           import android.content.pm.PackageManager
+          import android.graphics.Bitmap
+          import android.graphics.BitmapFactory
           import android.graphics.Color
           import android.graphics.Typeface
           import android.graphics.drawable.GradientDrawable
@@ -184,11 +187,13 @@ jobs:
           import android.provider.OpenableColumns
           import android.provider.Settings
           import android.view.Gravity
+          import android.view.MotionEvent
           import android.view.ViewGroup.LayoutParams.MATCH_PARENT
           import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
           import android.widget.Button
           import android.widget.CheckBox
           import android.widget.EditText
+          import android.widget.ImageView
           import android.widget.LinearLayout
           import android.widget.PopupMenu
           import android.widget.ProgressBar
@@ -236,12 +241,15 @@ jobs:
               private lateinit var titleView: TextView
               private lateinit var subtitleView: TextView
               private lateinit var section1Title: TextView
+              private lateinit var pkgIconView: ImageView
+              private lateinit var infoLayout: LinearLayout
 
-              private val accent = Color.parseColor("#38BDF8")
-              private val dim = Color.parseColor("#94A3B8")
-              private val cardBg = Color.parseColor("#1E293B")
-              private val bgMain = Color.parseColor("#0F172A")
-              private val borderHex = "#334155"
+              private val cyanNeon = Color.parseColor("#00F0FF")
+              private val pinkNeon = Color.parseColor("#FF007F")
+              private val bgDark = Color.parseColor("#0D0814")
+              private val cardCyber = Color.parseColor("#170F26")
+              private val borderCyber = "#FF007F"
+              private val dimText = Color.parseColor("#A899C2")
 
               private val NOTIF_ID_PROGRESS = 101
               private val NOTIF_ID_RESULT = 102
@@ -255,15 +263,41 @@ jobs:
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
-              private fun styleButton(b: Button, bgHex: String, textHex: String = "#FFFFFF") {
-                  b.setBackgroundDrawable(GradientDrawable().apply {
+              @SuppressLint("ClickableViewAccessibility")
+              private fun styleCyberButton(b: Button, bgHex: String, borderHexStr: String = "#00F0FF", textHex: String = "#FFFFFF") {
+                  val normalBg = GradientDrawable().apply {
                       setColor(Color.parseColor(bgHex))
-                      cornerRadius = dp(12).toFloat()
-                  })
+                      cornerRadius = dp(6).toFloat()
+                      setStroke(dp(2), Color.parseColor(borderHexStr))
+                  }
+                  
+                  val pressedBg = GradientDrawable().apply {
+                      setColor(Color.parseColor(borderHexStr))
+                      cornerRadius = dp(6).toFloat()
+                      setStroke(dp(2), Color.WHITE)
+                  }
+
+                  b.background = normalBg
                   b.setTextColor(Color.parseColor(textHex))
                   b.setTypeface(null, Typeface.BOLD)
-                  b.textSize = 12f
-                  b.setPadding(dp(12), dp(10), dp(12), dp(10))
+                  b.textSize = 13f
+                  b.setPadding(dp(14), dp(12), dp(14), dp(12))
+
+                  b.setOnTouchListener { view, event ->
+                      when (event.action) {
+                          MotionEvent.ACTION_DOWN -> {
+                              view.animate().scaleX(0.95f).scaleY(0.95f).setDuration(80).start()
+                              view.background = pressedBg
+                              b.setTextColor(Color.BLACK)
+                          }
+                          MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                              view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
+                              view.background = normalBg
+                              b.setTextColor(Color.parseColor(textHex))
+                          }
+                      }
+                      false
+                  }
               }
 
               private fun createNotificationChannel() {
@@ -306,7 +340,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS PKG Manager")
+                          .setContentTitle("⚡ PS PKG Cyber Manager")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -344,7 +378,7 @@ jobs:
                   val col = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
                       setPadding(pad, pad, pad, pad)
-                      setBackgroundColor(bgMain)
+                      setBackgroundColor(bgDark)
                   }
 
                   val headerLayout = LinearLayout(this).apply {
@@ -356,37 +390,38 @@ jobs:
                       orientation = LinearLayout.VERTICAL
                   }
                   titleView = TextView(this).apply {
-                      text = "⚡ PS PKG MANAGER"
+                      text = "⚡ CYBER PKG MANAGER"
                       textSize = 22f
-                      setTextColor(Color.WHITE)
+                      setTextColor(pinkNeon)
                       setTypeface(null, Typeface.BOLD)
                   }
                   titlesLayout.addView(titleView)
                   
                   subtitleView = TextView(this).apply {
-                      text = "Fusion, découpage et analyse détaillée de PKG (PS3, PS4, PS5)."
-                      textSize = 11f
-                      setTextColor(dim)
+                      text = "ENGINE v2.2.0 • PS3/PS4/PS5 FX TOOLKIT"
+                      textSize = 10f
+                      setTextColor(cyanNeon)
+                      typeface = Typeface.MONOSPACE
                       setPadding(0, dp(2), 0, 0)
                   }
                   titlesLayout.addView(subtitleView)
                   headerLayout.addView(titlesLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
                   menuBtn = Button(this).apply {
-                      text = "⚙️ Mode"
-                      styleButton(this, "#334155")
+                      text = "⚙️ MODE"
+                      styleCyberButton(this, "#2A1845", "#FF007F", "#00F0FF")
                       setOnClickListener { showMenu(it) }
                   }
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
                   col.addView(headerLayout)
 
                   val card1 = createCard()
-                  section1Title = text("1. Sélection des parties (.pkg / .pkg.0 ...)", 14f, accent, true)
+                  section1Title = text("1. SOURCE FILES (PKG / PARTS)", 13f, cyanNeon, true).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(section1Title)
                   
                   pickBtn = Button(this).apply {
                       text = "📁 CHOISIR LES FICHIERS"
-                      styleButton(this, "#0284C7")
+                      styleCyberButton(this, "#182045", "#00F0FF")
                       setOnClickListener {
                           if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           pick()
@@ -396,7 +431,7 @@ jobs:
 
                   dirBtn = Button(this).apply {
                       text = "📂 CHOISIR UN DOSSIER COMPLET"
-                      styleButton(this, "#0369A1")
+                      styleCyberButton(this, "#182045", "#00F0FF")
                       setOnClickListener {
                           if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           pickFolder()
@@ -406,7 +441,7 @@ jobs:
 
                   revBtn = Button(this).apply {
                       text = "🔀 INVERSER L'ORDRE DES PARTIES"
-                      styleButton(this, "#475569")
+                      styleCyberButton(this, "#2A1845", "#FF007F")
                       setOnClickListener {
                           if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           reversed = !reversed; refresh()
@@ -420,16 +455,35 @@ jobs:
                   }
                   card1.addView(listContainer, lp())
 
-                  checkView = text("", 12f, accent).apply { typeface = Typeface.MONOSPACE }
-                  card1.addView(checkView, lp())
+                  infoLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.CENTER_VERTICAL
+                      setPadding(0, dp(8), 0, dp(4))
+                  }
+
+                  pkgIconView = ImageView(this).apply {
+                      visibility = GONE
+                      adjustViewBounds = true
+                      background = GradientDrawable().apply {
+                          setColor(Color.parseColor("#0D0814"))
+                          cornerRadius = dp(8).toFloat()
+                          setStroke(dp(1), Color.parseColor("#00F0FF"))
+                      }
+                  }
+                  infoLayout.addView(pkgIconView, LinearLayout.LayoutParams(dp(64), dp(64)).apply { rightMargin = dp(12) })
+
+                  checkView = text("", 11f, cyanNeon).apply { typeface = Typeface.MONOSPACE }
+                  infoLayout.addView(checkView, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+                  
+                  card1.addView(infoLayout, lp())
                   col.addView(card1, lpCard())
 
                   val card2 = createCard()
-                  card2.addView(text("2. Fichier de sortie & Traitement", 14f, accent, true))
+                  card2.addView(text("2. OUTPUT & PROCESSING", 13f, cyanNeon, true).apply { typeface = Typeface.MONOSPACE })
 
                   outBtn = Button(this).apply {
-                      text = "💾 DÉFINIR L'EMPLACEMENT DE SORTIE"
-                      styleButton(this, "#0D9488")
+                      text = "💾 DÉFINIR EMPLACEMENT DE SORTIE"
+                      styleCyberButton(this, "#0D3838", "#00F0FF")
                       setOnClickListener {
                           if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
                           pickOutput()
@@ -437,7 +491,7 @@ jobs:
                   }
                   card2.addView(outBtn, lp())
 
-                  outView = text("Sortie : —", 12f, dim).apply { 
+                  outView = text("Sortie : —", 11f, dimText).apply { 
                       typeface = Typeface.MONOSPACE
                       setPadding(0, dp(6), 0, dp(8))
                   }
@@ -448,14 +502,14 @@ jobs:
                   }
                   goBtn = Button(this).apply {
                       text = "▶️ LANCER LA FUSION"
-                      styleButton(this, "#16A34A")
+                      styleCyberButton(this, "#0F4D2A", "#00FF66")
                       setOnClickListener { executeAction() }
                   }
                   actionLayout.addView(goBtn, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
                   cancelBtn = Button(this).apply {
                       text = "❌ ANNULER"
-                      styleButton(this, "#DC2626")
+                      styleCyberButton(this, "#4D0F1A", "#FF0055")
                       isEnabled = false
                       setOnClickListener {
                           if (processing) {
@@ -475,17 +529,17 @@ jobs:
                   }
                   card2.addView(bar, lp())
 
-                  statusView = text("Prêt à fusionner.", 13f, accent).apply { setTypeface(null, Typeface.BOLD) }
+                  statusView = text("Prêt.", 13f, pinkNeon).apply { setTypeface(Typeface.MONOSPACE, Typeface.BOLD) }
                   card2.addView(statusView, lp())
                   col.addView(card2, lpCard())
 
                   val card3 = createCard()
-                  card3.addView(text("3. Options de sécurité & Hash", 14f, accent, true))
+                  card3.addView(text("3. SECURITY & CHECKSUM", 13f, cyanNeon, true).apply { typeface = Typeface.MONOSPACE })
 
                   verifyBox = CheckBox(this).apply {
-                      text = "Relire le fichier après écriture (contrôle intégrité)"
+                      text = "Contrôle d'intégrité après écriture"
                       isChecked = true
-                      setTextColor(dim)
+                      setTextColor(dimText)
                       textSize = 12f
                   }
                   card3.addView(verifyBox, lp())
@@ -493,26 +547,26 @@ jobs:
                   deleteBox = CheckBox(this).apply {
                       text = "Supprimer les sources après succès"
                       isChecked = false
-                      setTextColor(dim)
+                      setTextColor(dimText)
                       textSize = 12f
                   }
                   card3.addView(deleteBox, lp())
 
                   hashField = EditText(this).apply {
-                      hint = "Coller un hash pour comparer"
+                      hint = "Coller un hash SHA-256 de contrôle"
                       setTextColor(Color.WHITE)
-                      setHintTextColor(dim)
+                      setHintTextColor(dimText)
                       textSize = 11f
                       typeface = Typeface.MONOSPACE
                   }
                   card3.addView(hashField, lp())
 
-                  hashView = text("", 11f, accent).apply { typeface = Typeface.MONOSPACE }
+                  hashView = text("", 11f, cyanNeon).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(hashView, lp())
 
                   copyBtn = Button(this).apply {
-                      text = "📋 Copier le SHA-256 produit"
-                      styleButton(this, "#334155")
+                      text = "📋 Copier le SHA-256"
+                      styleCyberButton(this, "#2A1845", "#FF007F")
                       isEnabled = false
                       setOnClickListener { copyHash() }
                   }
@@ -522,7 +576,7 @@ jobs:
                   refresh()
 
                   setContentView(ScrollView(this).apply { 
-                      setBackgroundColor(bgMain)
+                      setBackgroundColor(bgDark)
                       addView(col) 
                   })
               }
@@ -533,22 +587,22 @@ jobs:
                       return
                   }
                   val popup = PopupMenu(this, v)
-                  popup.menu.add(0, 1, 0, if (appMode == "MERGE") "📂 Basculer vers : Mode Splitter" else "🔗 Basculer vers : Mode Fusion")
+                  popup.menu.add(0, 1, 0, if (appMode == "MERGE") "📂 Mode Splitter" else "🔗 Mode Fusion")
                   popup.menu.add(0, 2, 1, "ℹ️ À propos")
                   popup.setOnMenuItemClickListener { item ->
                       when (item.itemId) {
                           1 -> {
                               appMode = if (appMode == "MERGE") "SPLIT" else "MERGE"
                               if (appMode == "SPLIT") {
-                                  titleView.text = "⚡ PKG SPLITTER"
-                                  subtitleView.text = "Découpe ton gros fichier .pkg en morceaux de 4 Go."
-                                  section1Title.text = "1. Sélection du fichier .pkg unique à découper"
-                                  goBtn.text = "▶️ LANCER DÉCOUPAGE"
+                                  titleView.text = "⚡ CYBER SPLITTER"
+                                  subtitleView.text = "DECOUPAGE DES FICHIERS PKG EN BLOCS"
+                                  section1Title.text = "1. FICHIER SOURCE UNIQUE (.PKG)"
+                                  goBtn.text = "▶️ DÉCOUPER"
                                   statusView.text = "Prêt à découper."
                               } else {
-                                  titleView.text = "⚡ PS PKG MANAGER"
-                                  subtitleView.text = "Fusion, découpage et analyse détaillée de PKG (PS3, PS4, PS5)."
-                                  section1Title.text = "1. Sélection des parties (.pkg / .pkg.0 ...)"
+                                  titleView.text = "⚡ CYBER PKG MANAGER"
+                                  subtitleView.text = "ENGINE v2.2.0 • PS3/PS4/PS5 FX TOOLKIT"
+                                  section1Title.text = "1. SOURCE FILES (PKG / PARTS)"
                                   goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
                               }
@@ -557,7 +611,7 @@ jobs:
                               true
                           }
                           2 -> {
-                              toast("PS PKG Manager v2.1.8")
+                              toast("PS PKG Cyber Manager v2.2.0")
                               true
                           }
                           else -> false
@@ -574,9 +628,9 @@ jobs:
                       orientation = LinearLayout.VERTICAL
                       setPadding(dp(16), dp(16), dp(16), dp(16))
                       background = GradientDrawable().apply {
-                          setColor(cardBg)
-                          cornerRadius = dp(16).toFloat()
-                          setStroke(dp(1), Color.parseColor(borderHex))
+                          setColor(cardCyber)
+                          cornerRadius = dp(8).toFloat()
+                          setStroke(dp(2), Color.parseColor(borderCyber))
                       }
                   }
               }
@@ -749,12 +803,12 @@ jobs:
                   }
               }
 
-              private data class PkgInfo(val console: String, val valid: Boolean, val contentId: String, val region: String)
+              private data class PkgInfo(val console: String, val valid: Boolean, val contentId: String, val region: String, val icon: Bitmap? = null)
 
               private fun analyzePkg(u: Uri): PkgInfo {
                   try {
                       contentResolver.openInputStream(u)?.use { input ->
-                          val header = ByteArray(256)
+                          val header = ByteArray(512)
                           val read = input.read(header)
                           if (read < 128) return PkgInfo("Inconnu", false, "", "Inconnue")
 
@@ -775,16 +829,6 @@ jobs:
                                   contentId = ""
                               }
                           }
-                          if (contentId.length < 15) {
-                              contentId = ""
-                              for (i in 0 until read - 20) {
-                                  val possibleId = String(header, i, 36)
-                                  if ((possibleId.startsWith("EP") || possibleId.startsWith("UP") || possibleId.startsWith("JP")) && possibleId.contains("-")) {
-                                      contentId = possibleId
-                                      break
-                                  }
-                              }
-                          }
 
                           val region = when {
                               contentId.startsWith("EP", true) || contentId.startsWith("BP", true) -> "🇪🇺 Europe (EP/BP)"
@@ -800,7 +844,23 @@ jobs:
                               name.contains("ps5") || name.contains("ppsa") || isFih -> "PS5"
                               else -> "PS5/PS4"
                           }
-                          return PkgInfo(console, true, contentId.trim(), region)
+
+                          var iconBitmap: Bitmap? = null
+                          try {
+                              val iconBuf = ByteArray(64 * 1024)
+                              val iconRead = input.read(iconBuf)
+                              if (iconRead > 0) {
+                                  for (i in 0 until iconRead - 8) {
+                                      if (iconBuf[i] == 0x89.toByte() && iconBuf[i+1] == 'P'.toByte() &&
+                                          iconBuf[i+2] == 'N'.toByte() && iconBuf[i+3] == 'G'.toByte()) {
+                                          iconBitmap = BitmapFactory.decodeByteArray(iconBuf, i, iconRead - i)
+                                          break
+                                      }
+                                  }
+                              }
+                          } catch (_: Exception) {}
+
+                          return PkgInfo(console, true, contentId.trim(), region, iconBitmap)
                       }
                   } catch (_: Exception) {}
                   return PkgInfo("Invalide", false, "", "Inconnue")
@@ -811,8 +871,9 @@ jobs:
                   listContainer.removeAllViews()
 
                   if (uris.isEmpty()) {
-                      listContainer.addView(text("Aucun fichier sélectionné.", 12f, dim))
+                      listContainer.addView(text("NO FILES SELECTED", 11f, dimText).apply { typeface = Typeface.MONOSPACE })
                       checkView.text = ""
+                      pkgIconView.visibility = GONE
                       return
                   }
 
@@ -820,24 +881,24 @@ jobs:
                   val total = order.sumOf { sizes[it] }
                   val info = analyzePkg(uris[order[0]])
 
-                  val summaryView = text("${order.size} partie(s) • ${fmt(total)} • Ordre ${if (reversed) "inversé" else "croissant"}", 12f, Color.WHITE, true)
+                  val summaryView = text("${order.size} parte(s) • ${fmt(total)} • Ordre ${if (reversed) "inversé" else "croissant"}", 12f, pinkNeon, true).apply { typeface = Typeface.MONOSPACE }
                   listContainer.addView(summaryView)
 
                   order.forEachIndexed { i, idx ->
                       val row = LinearLayout(this).apply {
                           orientation = LinearLayout.HORIZONTAL
-                          setPadding(dp(10), dp(6), dp(10), dp(6))
+                          setPadding(dp(12), dp(8), dp(12), dp(8))
                           gravity = Gravity.CENTER_VERTICAL
                           background = GradientDrawable().apply {
-                              setColor(Color.parseColor("#0F172A"))
-                              cornerRadius = dp(8).toFloat()
-                              setStroke(dp(1), Color.parseColor("#334155"))
+                              setColor(Color.parseColor("#0D0814"))
+                              cornerRadius = dp(4).toFloat()
+                              setStroke(dp(1), Color.parseColor("#00F0FF"))
                           }
                       }
 
                       val itemText = TextView(this).apply {
-                          text = "${i + 1}. ${names[idx]} (${fmt(sizes[idx])})"
-                          textSize = 12f
+                          text = "[${i + 1}] ${names[idx]}\n↳ ${fmt(sizes[idx])}"
+                          textSize = 11f
                           setTextColor(Color.WHITE)
                           typeface = Typeface.MONOSPACE
                       }
@@ -861,14 +922,21 @@ jobs:
                       listContainer.addView(row, marginLp)
                   }
 
+                  if (info.icon != null) {
+                      pkgIconView.setImageBitmap(info.icon)
+                      pkgIconView.visibility = VISIBLE
+                  } else {
+                      pkgIconView.visibility = GONE
+                  }
+
                   checkView.text = if (info.valid) {
                       buildString {
-                          append("✓ PKG ").append(info.console).append(" détecté\n")
-                          if (info.contentId.isNotEmpty()) append("• ID : ").append(info.contentId).append("\n")
-                          append("• Région : ").append(info.region)
+                          append("► PKG ").append(info.console).append(" DETECTED\n")
+                          if (info.contentId.isNotEmpty()) append("• CID: ").append(info.contentId).append("\n")
+                          append("• REGION: ").append(info.region)
                       }
                   } else {
-                      "⚠️ Fichier PKG invalide (En-tête incorrect)"
+                      "⚠️ INVALID PKG HEADER"
                   }
               }
 
@@ -1214,12 +1282,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.1.8
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.1.8.apk
+      - name: Renommer l'APK v2.2.0
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.2.0.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.1.8-apk
-          path: PkgMerger-v2.1.8.apk
+          name: pkg-merger-v2.2.0-apk
+          path: PkgMerger-v2.2.0.apk
           if-no-files-found: error
