@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.45
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.46
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.45
+      - name: Générer le projet Android v2.9.46
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2945
-                  versionName = "2.9.45"
+                  versionCode = 2946
+                  versionName = "2.9.46"
               }
 
               compileOptions {
@@ -523,6 +523,7 @@ jobs:
                   val cfg = getThemeConfig(currentTheme)
                   val outerFrame = FrameLayout(this)
 
+                  // Correction arbres : conteneur dédié à l'extérieur du bouton pour ne jamais couper le design
                   if (currentTheme == "FORTNITE" && treeSide != 0) {
                       val treeRes = resources.getIdentifier(if (treeSide == 1) "fn_tree1" else "fn_tree2", "drawable", packageName)
                       if (treeRes != 0) {
@@ -530,8 +531,8 @@ jobs:
                               setImageResource(treeRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val treeLp = FrameLayout.LayoutParams(dp(54), dp(80), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
-                              if (treeSide == 1) leftMargin = -dp(12) else rightMargin = -dp(12)
+                          val treeLp = FrameLayout.LayoutParams(dp(48), dp(72), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
+                              if (treeSide == 1) leftMargin = -dp(52) else rightMargin = -dp(52)
                           }
                           outerFrame.addView(treeIv, treeLp)
                       }
@@ -661,7 +662,7 @@ jobs:
               }
 
               private fun scheduleNextBusRun(initialDelay: Long = 0) {
-                  val delay = if (initialDelay > 0) initialDelay else (1200 + random.nextInt(1500)).toLong()
+                  val delay = if (initialDelay > 0) initialDelay else (1500 + random.nextInt(2000)).toLong()
                   busHandler.postDelayed({
                       runFortniteBus()
                   }, delay)
@@ -675,15 +676,16 @@ jobs:
                   val goRight = random.nextBoolean()
                   val startX = if (goRight) -dp(220).toFloat() else screenWidth + dp(220).toFloat()
                   val endX = if (goRight) screenWidth + dp(220).toFloat() else -dp(220).toFloat()
-                  val randomY = dp(30) + random.nextFloat() * (screenHeight * 0.4f)
+                  val randomY = dp(20) + random.nextFloat() * (screenHeight * 0.45f)
 
                   bus.translationY = randomY
                   bus.translationX = startX
-                  bus.scaleX = if (goRight) 1.15f else -1.15f
-                  bus.scaleY = 1.15f
+                  bus.scaleX = if (goRight) 1.2f else -1.2f
+                  bus.scaleY = 1.2f
                   bus.visibility = View.VISIBLE
                   bus.bringToFront()
 
+                  // Sécurisation audio du bus pour éviter tout plantage
                   try {
                       val busSoundRes = resources.getIdentifier("fn_bus", "raw", packageName)
                       if (busSoundRes != 0) {
@@ -695,7 +697,7 @@ jobs:
 
                   bus.animate()
                       .translationX(endX)
-                      .setDuration(3200)
+                      .setDuration(3500)
                       .withEndAction {
                           bus.visibility = View.GONE
                           scheduleNextBusRun()
@@ -1141,7 +1143,7 @@ jobs:
                               true
                           }
                           4 -> {
-                              toast("PS PKG Freedom Hub v2.9.45")
+                              toast("PS PKG Freedom Hub v2.9.46")
                               true
                           }
                           else -> false
@@ -1900,15 +1902,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.45
+      - name: Build APK v2.9.46
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.45
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.45.apk
+      - name: Renommer l'APK v2.9.46
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.46.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.45-apk
-          path: PkgMerger-v2.9.45.apk
+          name: pkg-merger-v2.9.46-apk
+          path: PkgMerger-v2.9.46.apk
           if-no-files-found: error
