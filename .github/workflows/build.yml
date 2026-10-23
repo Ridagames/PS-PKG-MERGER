@@ -49,12 +49,15 @@ jobs:
           command -v ppu-gcc >/dev/null || { echo "::error::ppu-gcc introuvable"; exit 1; }
           echo "Toolchain OK"
 
-      - name: Generer le code source
+      - name: Generer la structure du projet
         run: |
           set -eo pipefail
-          rm -rf source assets Makefile pkg_build
+          rm -rf source assets Makefile *.elf *.self *.pkg
 
-          cat << 'MAIN_C' > main.c
+          # Creation du dossier source requis par le SDK
+          mkdir -p source
+
+          cat << 'MAIN_C' > source/main.c
           #include <stdio.h>
           #include <string.h>
           #include <stdint.h>
@@ -99,38 +102,38 @@ jobs:
           printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > ICON0.PNG
           cp ICON0.PNG PIC1.PNG
 
-      - name: Compiler et empaqueter en .pkg
+          # Creation d un Makefile standard compatible PSL1GHT
+          cat << 'EOF' > Makefile
+          ifeq ($(strip $(PSL1GHT)),)
+          export PSL1GHT := /usr/local/ps3dev
+          endif
+
+          TARGET		:= ps3_kernel_reader
+          TITLE		:= PS3 Kernel Reader
+          APPID		:= KRNLRDR01
+          CONTENTID	:= UP0001-$(APPID)_00-0000000000000000
+          ICON0		:= ICON0.PNG
+          PIC1		:= PIC1.PNG
+
+          OBJS		:= source/main.o
+          CFLAGS		:= -O2 -Wall
+          CXXFLAGS	:= $(CFLAGS)
+          LDFLAGS		:= -lio -lsysutil -llv2 -lm
+
+          include $(PSL1GHT)/ppu_rules
+          include $(PSL1GHT)/ppu_pkg.rules
+          EOF
+
+      - name: Compiler et generer le .pkg
         run: |
           export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
           set -eo pipefail
 
-          echo "1. Compilation de main.c..."
-          ppu-gcc -O2 -Wall -I/usr/local/ps3dev/ppu/include -c main.c -o main.o
-
-          echo "2. Edition des liens..."
-          ppu-gcc -L/usr/local/ps3dev/ppu/lib main.o -lio -lsysutil -llv2 -lm -o ps3_kernel_reader.elf
-
-          echo "3. Generation du fichier SELF..."
-          make_self_npdrm ps3_kernel_reader.elf EBOOT.BIN UP0001-KRNLRDR01_00-0000000000000000
-
-          echo "4. Utilisation du Makefile natif de PSL1GHT pour un package correct..."
-          cat << 'EOF' > Makefile
-          TARGET    := ps3_kernel_reader
-          TITLE     := PS3 Kernel Reader
-          APPID     := KRNLRDR01
-          CONTENTID := UP0001-$(APPID)_00-0000000000000000
-          ICON0     := ICON0.PNG
-          PIC1      := PIC1.PNG
-          SOURCES   := .
-          BUILD     := .
-          PSL1GHT   ?= /usr/local/ps3dev
-          include $(PSL1GHT)/ppu_rules
-          EOF
-
-          # Nettoyage et compilation propre via les regles officielles du SDK
           make clean || true
           make
           make pkg
+
+          echo "Package .pkg genere avec succes !"
 
       - name: Publier les artefacts
         uses: actions/upload-artifact@v4
