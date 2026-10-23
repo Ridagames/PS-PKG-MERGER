@@ -101,52 +101,32 @@ jobs:
           printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > ICON0.PNG
           cp ICON0.PNG PIC1.PNG
 
-          cat << 'EOF' > Makefile
-          ifeq ($(strip $(PSL1GHT)),)
-          export PSL1GHT := /usr/local/ps3dev
-          endif
-
-          TARGET		:= ps3_kernel_reader
-          TITLE		:= PS3 Kernel Reader
-          APPID		:= KRNLRDR01
-          CONTENTID	:= UP0001-$(APPID)_00-0000000000000000
-          ICON0		:= ICON0.PNG
-          PIC1		:= PIC1.PNG
-
-          OBJS		:= source/main.o
-          CFLAGS		:= -O2 -Wall
-          CXXFLAGS	:= $(CFLAGS)
-          LDFLAGS		:= -lio -lsysutil -llv2 -lm
-
-          include $(PSL1GHT)/ppu_rules
-
-          clean:
-          	rm -f $(OBJS) $(TARGET).elf $(TARGET).self $(TARGET).pkg
-          EOF
-
-      - name: Compiler et generer le .pkg via Python
+      - name: Compiler et empaqueter en .pkg
         run: |
           export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
           set -eo pipefail
 
-          rm -f source/main.o ps3_kernel_reader.elf ps3_kernel_reader.self ps3_kernel_reader.pkg
+          rm -f main.o ps3_kernel_reader.elf ps3_kernel_reader.self ps3_kernel_reader.pkg
 
-          echo "1. Compilation..."
-          make
+          echo "1. Compilation de main.c..."
+          ppu-gcc -O2 -Wall -I/usr/local/ps3dev/ppu/include -c source/main.c -o main.o
 
-          echo "2. Nettoyage des symboles superflus (evite le segfault)..."
+          echo "2. Edition des liens..."
+          ppu-gcc -L/usr/local/ps3dev/ppu/lib main.o -lio -lsysutil -llv2 -lm -o ps3_kernel_reader.elf
+
+          echo "3. Nettoyage des symboles (evite le segfault)..."
           ppu-strip ps3_kernel_reader.elf
 
-          echo "3. Generation du fichier SELF..."
+          echo "4. Generation du fichier SELF..."
           make_self_npdrm ps3_kernel_reader.elf ps3_kernel_reader.self UP0001-KRNLRDR01_00-0000000000000000
 
-          echo "4. Preparation des fichiers du package..."
+          echo "5. Preparation des fichiers du package..."
           mkdir -p pkg_build/USRDIR
           cp ps3_kernel_reader.self pkg_build/USRDIR/EBOOT.BIN
           cp ICON0.PNG pkg_build/
           cp PIC1.PNG pkg_build/
 
-          echo "5. Generation du PARAM.SFO et empaquetage..."
+          echo "6. Generation du PARAM.SFO et empaquetage..."
           python3 -c '
           import struct, os, shutil
 
