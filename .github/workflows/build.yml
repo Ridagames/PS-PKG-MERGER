@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.22
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.23
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.22
+      - name: Générer le projet Android v2.9.23
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2922
-                  versionName = "2.9.22"
+                  versionCode = 2923
+                  versionName = "2.9.23"
               }
 
               compileOptions {
@@ -512,15 +512,8 @@ jobs:
                   b.textSize = 13f
                   b.setPadding(dp(14), dp(12), dp(14), dp(12))
 
-                  val closedChestRes = resources.getIdentifier("fn_chest_closed", "drawable", packageName)
-                  val openChestRes = resources.getIdentifier("fn_chest_open", "drawable", packageName)
-
-                  if (currentTheme == "FORTNITE" && closedChestRes != 0) {
-                      b.setCompoundDrawablesWithIntrinsicBounds(closedChestRes, 0, 0, 0)
-                      b.compoundDrawablePadding = dp(8)
-                  } else {
-                      b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
-                  }
+                  // Correction : Retrait des drawables natifs sur les boutons pour éviter l'étirement géant de l'image
+                  b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
 
                   b.setOnClickListener {
                       val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
@@ -529,13 +522,9 @@ jobs:
                       if (currentTheme == "GOW") {
                           playClickSound("gow_click")
                           onClickAction()
-                      } else if (currentTheme == "FORTNITE" && openChestRes != 0) {
-                          b.setCompoundDrawablesWithIntrinsicBounds(openChestRes, 0, 0, 0)
+                      } else if (currentTheme == "FORTNITE") {
                           playClickSound("fn_chest_open")
-                          Handler(Looper.getMainLooper()).postDelayed({
-                              b.setCompoundDrawablesWithIntrinsicBounds(closedChestRes, 0, 0, 0)
-                              onClickAction()
-                          }, 350)
+                          onClickAction()
                       } else {
                           onClickAction()
                       }
@@ -1048,7 +1037,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.22")
+                              toast("PS PKG Freedom Hub v2.9.23")
                               true
                           }
                           else -> false
@@ -1740,15 +1729,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.22
+      - name: Build APK v2.9.23
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.22
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.22.apk
+      - name: Renommer l'APK v2.9.23
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.23.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.22-apk
-          path: PkgMerger-v2.9.22.apk
+          name: pkg-merger-v2.9.23-apk
+          path: PkgMerger-v2.9.23.apk
           if-no-files-found: error
