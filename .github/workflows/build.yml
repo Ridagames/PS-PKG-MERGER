@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.9.13 Vertical Center Crop
+      - name: Générer le projet Android v2.9.14 Default Classic & Welcome Dialog
         env:
           FORCE: '1'
         run: |
@@ -97,8 +97,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2913
-                  versionName = "2.9.13"
+                  versionCode = 2914
+                  versionName = "2.9.14"
               }
 
               compileOptions {
@@ -215,6 +215,7 @@ jobs:
           import java.io.OutputStream
           import java.security.MessageDigest
           import java.util.Locale
+          import java.util.Random
 
           class AspectRatioVideoView(context: Context) : VideoView(context) {
               private var videoWidth = 0
@@ -252,11 +253,18 @@ jobs:
               private var reversed = false
               private var lastHash: String? = null
               private var appMode = "MERGE"
-              private var currentTheme = "GOW"
+              private var currentTheme = "CLASSIC"
 
               private var bgVideoView: AspectRatioVideoView? = null
               private var musicPlayer: MediaPlayer? = null
               private var clickPlayer: MediaPlayer? = null
+              private var fnBusPlayer: MediaPlayer? = null
+
+              private var busImageView: ImageView? = null
+              private var tree1ImageView: ImageView? = null
+              private var tree2ImageView: ImageView? = null
+              private val busHandler = Handler(Looper.getMainLooper())
+              private val random = Random()
 
               private val NOTIF_ID_PROGRESS = 101
               private val NOTIF_ID_RESULT = 102
@@ -319,7 +327,7 @@ jobs:
                       "FORTNITE" -> ThemeConfig(
                           name = "Fortnite Battle Royale",
                           bg = Color.parseColor("#090C1F"),
-                          card = Color.parseColor("#131B3E"),
+                          card = Color.parseColor("#80131B3E"),
                           border = "#00D9FF",
                           primaryText = Color.parseColor("#FFE600"),
                           secondaryText = Color.parseColor("#00D9FF"),
@@ -434,12 +442,27 @@ jobs:
               override fun onCreate(state: Bundle?) {
                   super.onCreate(state)
                   prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
-                  currentTheme = prefs.getString("theme", "GOW") ?: "GOW"
+                  currentTheme = prefs.getString("theme", "CLASSIC") ?: "CLASSIC"
                   
                   createNotificationChannel()
                   checkPermissions()
                   showMergerScreen()
                   applyTheme()
+
+                  checkFirstRunWelcome()
+              }
+
+              private fun checkFirstRunWelcome() {
+                  val isFirstRun = prefs.getBoolean("is_first_run", true)
+                  if (isFirstRun) {
+                      prefs.edit().putBoolean("is_first_run", false).apply()
+                      AlertDialog.Builder(this)
+                          .setTitle("🎉 NOUVEAUX UNIVERS DISPONIBLES !")
+                          .setMessage("Bienvenue dans PS PKG Freedom Hub !\n\nDes thèmes immersifs (God of War, Fortnite, Genshin, GTA V...) sont désormais disponibles !\n\nPour les essayer, clique sur ⚙️ MODE > 🎨 Changer d'Univers.")
+                          .setPositiveButton("COMPRIS !") { dialog, _ -> dialog.dismiss() }
+                          .setCancelable(false)
+                          .show()
+                  }
               }
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
@@ -466,14 +489,33 @@ jobs:
                   b.textSize = 13f
                   b.setPadding(dp(14), dp(12), dp(14), dp(12))
 
+                  val closedChestRes = resources.getIdentifier("fn_chest_closed", "drawable", packageName)
+                  val openChestRes = resources.getIdentifier("fn_chest_open", "drawable", packageName)
+
+                  if (currentTheme == "FORTNITE" && closedChestRes != 0) {
+                      b.setCompoundDrawablesWithIntrinsicBounds(closedChestRes, 0, 0, 0)
+                      b.compoundDrawablePadding = dp(8)
+                  } else {
+                      b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                  }
+
                   b.setOnClickListener {
                       val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                       vibrator?.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
                       
                       if (currentTheme == "GOW") {
-                          playClickSound()
+                          playClickSound("gow_click")
+                          onClickAction()
+                      } else if (currentTheme == "FORTNITE" && openChestRes != 0) {
+                          b.setCompoundDrawablesWithIntrinsicBounds(openChestRes, 0, 0, 0)
+                          playClickSound("fn_chest_open")
+                          Handler(Looper.getMainLooper()).postDelayed({
+                              b.setCompoundDrawablesWithIntrinsicBounds(closedChestRes, 0, 0, 0)
+                              onClickAction()
+                          }, 350)
+                      } else {
+                          onClickAction()
                       }
-                      onClickAction()
                   }
 
                   b.setOnTouchListener { view, event ->
@@ -491,9 +533,9 @@ jobs:
                   }
               }
 
-              private fun playClickSound() {
+              private fun playClickSound(soundName: String) {
                   try {
-                      val resId = resources.getIdentifier("gow_click", "raw", packageName)
+                      val resId = resources.getIdentifier(soundName, "raw", packageName)
                       if (resId != 0) {
                           clickPlayer?.release()
                           clickPlayer = MediaPlayer.create(this, resId)
@@ -528,12 +570,74 @@ jobs:
                                   musicPlayer?.start()
                               }
                           }
+                          stopFortniteBusAnimation()
+                      } else if (currentTheme == "FORTNITE") {
+                          bgVideoView?.stopPlayback()
+                          bgVideoView?.visibility = View.GONE
+                          musicPlayer?.pause()
+                          startFortniteBusAnimation()
                       } else {
                           bgVideoView?.stopPlayback()
                           bgVideoView?.visibility = View.GONE
                           musicPlayer?.pause()
+                          stopFortniteBusAnimation()
                       }
                   } catch (_: Exception) {}
+              }
+
+              private fun startFortniteBusAnimation() {
+                  stopFortniteBusAnimation()
+                  tree1ImageView?.visibility = View.VISIBLE
+                  tree2ImageView?.visibility = View.VISIBLE
+                  scheduleNextBusRun()
+              }
+
+              private fun stopFortniteBusAnimation() {
+                  busHandler.removeCallbacksAndMessages(null)
+                  busImageView?.visibility = View.GONE
+                  tree1ImageView?.visibility = View.GONE
+                  tree2ImageView?.visibility = View.GONE
+              }
+
+              private fun scheduleNextBusRun() {
+                  val delay = 8000L + random.nextInt(10000)
+                  busHandler.postDelayed({
+                      runFortniteBus()
+                  }, delay)
+              }
+
+              private fun runFortniteBus() {
+                  val bus = busImageView ?: return
+                  val screenWidth = resources.displayMetrics.widthPixels.toFloat()
+                  val screenHeight = resources.displayMetrics.heightPixels.toFloat()
+
+                  val goRight = random.nextBoolean()
+                  val startX = if (goRight) -dp(120).toFloat() else screenWidth + dp(120).toFloat()
+                  val endX = if (goRight) screenWidth + dp(120).toFloat() else -dp(120).toFloat()
+                  val randomY = dp(50) + random.nextFloat() * (screenHeight * 0.4f)
+
+                  bus.translationY = randomY
+                  bus.translationX = startX
+                  bus.scaleX = if (goRight) 1f else -1f
+                  bus.visibility = View.VISIBLE
+
+                  try {
+                      val busSoundRes = resources.getIdentifier("fn_bus", "raw", packageName)
+                      if (busSoundRes != 0) {
+                          fnBusPlayer?.release()
+                          fnBusPlayer = MediaPlayer.create(this, busSoundRes)
+                          fnBusPlayer?.start()
+                      }
+                  } catch (_: Exception) {}
+
+                  bus.animate()
+                      .translationX(endX)
+                      .setDuration(4500)
+                      .withEndAction {
+                          bus.visibility = View.GONE
+                          scheduleNextBusRun()
+                      }
+                      .start()
               }
 
               override fun onResume() {
@@ -541,6 +645,8 @@ jobs:
                   if (currentTheme == "GOW") {
                       bgVideoView?.start()
                       musicPlayer?.start()
+                  } else if (currentTheme == "FORTNITE") {
+                      startFortniteBusAnimation()
                   }
               }
 
@@ -548,12 +654,15 @@ jobs:
                   super.onPause()
                   bgVideoView?.pause()
                   musicPlayer?.pause()
+                  stopFortniteBusAnimation()
               }
 
               override fun onDestroy() {
                   super.onDestroy()
                   musicPlayer?.release()
                   clickPlayer?.release()
+                  fnBusPlayer?.release()
+                  stopFortniteBusAnimation()
               }
 
               private fun applyTheme() {
@@ -596,13 +705,19 @@ jobs:
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
                   styleButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
-                  styleButton(menuBtn, cfg.btnRev.first, cfg.btnRev.second, cfg.secondaryText.toHex()) { showMenu(menuBtn) }
+                  
+                  val modeBtnStyleBg = GradientDrawable().apply {
+                      setColor(Color.parseColor(cfg.btnRev.first))
+                      cornerRadius = dp(6).toFloat()
+                      setStroke(dp(2), Color.parseColor(cfg.btnRev.second))
+                  }
+                  menuBtn.background = modeBtnStyleBg
+                  menuBtn.setTextColor(cfg.secondaryText)
+                  menuBtn.setOnClickListener { showMenu(menuBtn) }
 
                   setupBackgroundMedia()
                   refresh()
               }
-
-              private fun Int.toHex(): String = String.format("#%06X", 0xFFFFFF and this)
 
               private fun createNotificationChannel() {
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -684,6 +799,41 @@ jobs:
                       layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT, Gravity.CENTER)
                   }
                   rootFrameLayout.addView(bgVideoView)
+
+                  val tree1Res = resources.getIdentifier("fn_tree1", "drawable", packageName)
+                  if (tree1Res != 0) {
+                      tree1ImageView = ImageView(this).apply {
+                          setImageResource(tree1Res)
+                          visibility = View.GONE
+                      }
+                      rootFrameLayout.addView(tree1ImageView, FrameLayout.LayoutParams(dp(120), dp(180)).apply {
+                          gravity = Gravity.BOTTOM or Gravity.LEFT
+                          leftMargin = dp(10)
+                          bottomMargin = dp(40)
+                      })
+                  }
+
+                  val tree2Res = resources.getIdentifier("fn_tree2", "drawable", packageName)
+                  if (tree2Res != 0) {
+                      tree2ImageView = ImageView(this).apply {
+                          setImageResource(tree2Res)
+                          visibility = View.GONE
+                      }
+                      rootFrameLayout.addView(tree2ImageView, FrameLayout.LayoutParams(dp(140), dp(200)).apply {
+                          gravity = Gravity.BOTTOM or Gravity.RIGHT
+                          rightMargin = dp(-20)
+                          bottomMargin = dp(100)
+                      })
+                  }
+
+                  val busRes = resources.getIdentifier("fn_bus", "drawable", packageName)
+                  if (busRes != 0) {
+                      busImageView = ImageView(this).apply {
+                          setImageResource(busRes)
+                          visibility = View.GONE
+                      }
+                      rootFrameLayout.addView(busImageView, FrameLayout.LayoutParams(dp(120), dp(80)))
+                  }
 
                   val pad = dp(16)
                   mainCol = LinearLayout(this).apply {
@@ -875,7 +1025,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.13")
+                              toast("PS PKG Freedom Hub v2.9.14")
                               true
                           }
                           else -> false
@@ -886,15 +1036,15 @@ jobs:
 
               private fun showThemeDialog() {
                   val themes = arrayOf(
+                      "🔵 Sombre Classique",
                       "⚡ Fortnite Battle Royale", 
                       "🪓 God of War Ragnarök", 
                       "🌿 The Last of Us Part II", 
                       "🌌 Genshin Impact Teyvat", 
                       "🚗 GTA V Los Santos",
-                      "🔵 Sombre Classique",
                       "🌐 Cyberpunk Neo Hub"
                   )
-                  val keys = arrayOf("FORTNITE", "GOW", "TLOU", "GENSHIN", "GTA", "CLASSIC", "CYBERPUNK")
+                  val keys = arrayOf("CLASSIC", "FORTNITE", "GOW", "TLOU", "GENSHIN", "GTA", "CYBERPUNK")
                   val checkedItem = keys.indexOf(currentTheme).coerceAtLeast(0)
 
                   AlertDialog.Builder(this)
@@ -1570,12 +1720,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.13
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.13.apk
+      - name: Renommer l'APK v2.9.14
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.14.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.13-apk
-          path: PkgMerger-v2.9.13.apk
+          name: pkg-merger-v2.9.14-apk
+          path: PkgMerger-v2.9.14.apk
           if-no-files-found: error
