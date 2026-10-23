@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.55
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.56
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.55
+      - name: Générer le projet Android v2.9.56
         env:
           FORCE: '1'
         run: |
@@ -120,7 +120,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2955
+                  versionCode = 2956
                   versionName = "2.1.0"
               }
 
@@ -382,16 +382,16 @@ jobs:
                   return when (key) {
                       "FORTNITE" -> ThemeConfig(
                           name = "Fortnite Battle Royale",
-                          bg = Color.parseColor("#090C1F"),
-                          card = Color.parseColor("#80131B3E"),
+                          bg = Color.parseColor("#0C0826"),
+                          card = Color.parseColor("#85162447"),
                           border = "#00D9FF",
                           primaryText = Color.parseColor("#FFE600"),
                           secondaryText = Color.parseColor("#00D9FF"),
-                          dim = Color.parseColor("#8A99D1"),
+                          dim = Color.parseColor("#9DB2F5"),
                           pressColor = "#FFE600",
                           btnPick = Pair("#1E2D6E", "#00D9FF"),
                           btnDir = Pair("#1E2D6E", "#00D9FF"),
-                          btnRev = Pair("#3A1E6E", "#B800FF"),
+                          btnRev = Pair("#4B1E6E", "#B800FF"),
                           btnOut = Pair("#0F5E6B", "#00FFF0"),
                           btnGo = Pair("#198038", "#00FF66"),
                           btnCancel = Pair("#801935", "#FF0055")
@@ -499,7 +499,7 @@ jobs:
                   val map = mapOf(
                       "app_title" to mapOf("fr" to "⚡ PS PKG FREEDOM HUB", "en" to "⚡ PS PKG FREEDOM HUB", "es" to "⚡ PS PKG FREEDOM HUB", "it" to "⚡ PS PKG FREEDOM HUB", "pt" to "⚡ PS PKG FREEDOM HUB", "de" to "⚡ PS PKG FREEDOM HUB"),
                       "universe" to mapOf("fr" to "UNIVERS", "en" to "UNIVERSE", "es" to "UNIVERSO", "it" to "UNIVERSO", "pt" to "UNIVERSO", "de" to "UNIVERSUM"),
-                      "mode_btn" to mapOf("fr" to "⚙️ MODE", "en" to "⚙️ MODE", "es" to "⚙️ MODO", "it" to "⚙️ MODO", "pt" to "⚙️ MODO", "de" to "⚙️ MODUS"),
+                      "menu_btn" to mapOf("fr" to "⚙️ MENU", "en" to "⚙️ MENU", "es" to "⚙️ MENÚ", "it" to "⚙️ MENU", "pt" to "⚙️ MENU", "de" to "⚙️ MENÜ"),
                       "sec1" to mapOf("fr" to "1. FICHIERS SOURCE (PKG / PARTIES)", "en" to "1. SOURCE FILES (PKG / PARTS)", "es" to "1. ARCHIVOS DE ORIGEN (PKG / PARTES)", "it" to "1. FILE SORGENTE (PKG / PARTI)", "pt" to "1. ARQUIVOS DE ORIGEM (PKG / PARTES)", "de" to "1. QUELLDATEIEN (PKG / TEILE)"),
                       "sec1_split" to mapOf("fr" to "1. FICHIER SOURCE UNIQUE (.PKG)", "en" to "1. SINGLE SOURCE FILE (.PKG)", "es" to "1. ARCHIVO DE ORIGEN ÚNICO (.PKG)", "it" to "1. FILE SORGENTE SINGOLO (.PKG)", "pt" to "1. ARQUIVO DE ORIGEM ÚNICO (.PKG)", "de" to "1. EINZELNE QUELLDATEI (.PKG)"),
                       "btn_pick" to mapOf("fr" to "CHOISIR LES FICHIERS", "en" to "CHOOSE FILES", "es" to "ELEGIR ARCHIVOS", "it" to "SCEGLI FILE", "pt" to "ESCOLHER ARQUIVOS", "de" to "DATEIEN WÄHLEN"),
@@ -575,7 +575,7 @@ jobs:
                       dialogView.addView(tvTitle)
 
                       val tvMsg = TextView(this).apply {
-                          text = "Bienvenue dans PS PKG Freedom Hub !\n\nDes thèmes immersifs (God of War, Fortnite, Genshin, GTA V...) sont désormais disponibles !\n\nPour les essayer, clique sur ⚙️ MODE > 🎨 Changer d'Univers."
+                          text = "Bienvenue dans PS PKG Freedom Hub !\n\nDes thèmes immersifs (God of War, Fortnite, Genshin, GTA V...) sont désormais disponibles !\n\nPour les essayer, clique sur ⚙️ MENU > 🎨 Changer d'Univers."
                           textSize = 12f
                           setTextColor(Color.WHITE)
                           setPadding(0, 0, 0, dp(12))
@@ -681,6 +681,8 @@ jobs:
                       vibrator?.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
                       if (currentTheme == "GOW") {
                           playClickSound("gow_click")
+                      } else if (currentTheme == "FORTNITE") {
+                          playClickSound("fn_click")
                       }
                       onClickAction()
                   }
@@ -744,7 +746,17 @@ jobs:
                       } else if (currentTheme == "FORTNITE") {
                           bgVideoView?.stopPlayback()
                           bgVideoView?.visibility = View.GONE
-                          musicPlayer?.pause()
+                          
+                          val fnMusicRes = resources.getIdentifier("fn_music", "raw", packageName)
+                          if (fnMusicRes != 0) {
+                              if (musicPlayer == null) {
+                                  musicPlayer = MediaPlayer.create(this, fnMusicRes)
+                                  musicPlayer?.isLooping = true
+                              }
+                              if (musicPlayer?.isPlaying == false) {
+                                  musicPlayer?.start()
+                              }
+                          }
                           startFortniteBusAnimation()
                       } else {
                           bgVideoView?.stopPlayback()
@@ -816,10 +828,11 @@ jobs:
 
               override fun onResume() {
                   super.onResume()
-                  if (currentTheme == "GOW") {
+                  if (currentTheme == "GOW" || currentTheme == "FORTNITE") {
                       bgVideoView?.start()
                       musicPlayer?.start()
-                  } else if (currentTheme == "FORTNITE") {
+                  }
+                  if (currentTheme == "FORTNITE") {
                       startFortniteBusAnimation()
                   }
               }
@@ -879,7 +892,7 @@ jobs:
                   }
                   menuBtn.background = modeBtnStyleBg
                   menuBtn.setTextColor(cfg.secondaryText)
-                  menuBtn.text = tr("mode_btn")
+                  menuBtn.text = tr("menu_btn")
                   menuBtn.setOnClickListener { showCustomMenu(menuBtn) }
 
                   setupBackgroundMedia()
@@ -1018,8 +1031,8 @@ jobs:
                           rewardChestView?.setImageResource(closedRes)
                           rewardChestView?.visibility = View.VISIBLE
                           rewardChestView?.bringToFront()
-                          rewardChestView?.animate()?.scaleX(1.2f)?.scaleY(1.2f)?.setDuration(200)?.withEndAction {
-                              rewardChestView?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(200)?.start()
+                          rewardChestView?.animate()?.scaleX(1.3f)?.scaleY(1.3f)?.setDuration(220)?.withEndAction {
+                              rewardChestView?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(220)?.start()
                           }?.start()
                       }
                   }
@@ -1069,7 +1082,7 @@ jobs:
                   headerLayout.addView(titlesLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
                   menuBtn = Button(this).apply {
-                      text = tr("mode_btn")
+                      text = tr("menu_btn")
                   }
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
                   mainCol.addView(headerLayout)
@@ -1624,7 +1637,7 @@ jobs:
                   }
 
                   val titleTv = TextView(this).apply {
-                      text = "🌐 ${tr("mode_btn")}"
+                      text = "🌐 ${tr("menu_btn")}"
                       textSize = 14f
                       setTextColor(cfg.primaryText)
                       setTypeface(null, Typeface.BOLD)
@@ -2368,15 +2381,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.55
+      - name: Build APK v2.9.56
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.55
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.55.apk
+      - name: Renommer l'APK v2.9.56
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.56.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.55-apk
-          path: PkgMerger-v2.9.55.apk
+          name: pkg-merger-v2.9.56-apk
+          path: PkgMerger-v2.9.56.apk
           if-no-files-found: error
