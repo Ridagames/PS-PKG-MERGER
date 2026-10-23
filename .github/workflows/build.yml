@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.25
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.27
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.25
+      - name: Générer le projet Android v2.9.27
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2925
-                  versionName = "2.9.25"
+                  versionCode = 2927
+                  versionName = "2.9.27"
               }
 
               compileOptions {
@@ -203,6 +203,7 @@ jobs:
           import android.graphics.BitmapFactory
           import android.graphics.Color
           import android.graphics.Typeface
+          import android.graphics.drawable.BitmapDrawable
           import android.graphics.drawable.GradientDrawable
           import android.media.MediaPlayer
           import android.net.Uri
@@ -219,6 +220,7 @@ jobs:
           import android.view.Gravity
           import android.view.MotionEvent
           import android.view.View
+          import android.view.ViewGroup
           import android.view.ViewGroup.LayoutParams.MATCH_PARENT
           import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
           import android.widget.Button
@@ -284,8 +286,6 @@ jobs:
               private var fnBusPlayer: MediaPlayer? = null
 
               private var busImageView: ImageView? = null
-              private var tree1ImageView: ImageView? = null
-              private var tree2ImageView: ImageView? = null
               private val busHandler = Handler(Looper.getMainLooper())
               private val random = Random()
 
@@ -511,7 +511,29 @@ jobs:
                   b.setTypeface(null, Typeface.BOLD)
                   b.textSize = 13f
                   b.setPadding(dp(14), dp(12), dp(14), dp(12))
-                  b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+
+                  if (currentTheme == "FORTNITE") {
+                      val chestRes = resources.getIdentifier("fn_chest_closed", "drawable", packageName)
+                      if (chestRes != 0) {
+                          try {
+                              val bmp = BitmapFactory.decodeResource(resources, chestRes)
+                              if (bmp != null) {
+                                  val scaled = Bitmap.createScaledBitmap(bmp, dp(24), dp(24), true)
+                                  val drawable = BitmapDrawable(resources, scaled)
+                                  b.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
+                                  b.compoundDrawablePadding = dp(10)
+                              } else {
+                                  b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                              }
+                          } catch (_: Exception) {
+                              b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                          }
+                      } else {
+                          b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                      }
+                  } else {
+                      b.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                  }
 
                   b.setOnClickListener {
                       val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
@@ -597,20 +619,16 @@ jobs:
 
               private fun startFortniteBusAnimation() {
                   stopFortniteBusAnimation()
-                  tree1ImageView?.visibility = View.VISIBLE
-                  tree2ImageView?.visibility = View.VISIBLE
-                  scheduleNextBusRun()
+                  scheduleNextBusRun(1000L)
               }
 
               private fun stopFortniteBusAnimation() {
                   busHandler.removeCallbacksAndMessages(null)
                   busImageView?.visibility = View.GONE
-                  tree1ImageView?.visibility = View.GONE
-                  tree2ImageView?.visibility = View.GONE
               }
 
-              private fun scheduleNextBusRun() {
-                  val delay = 8000L + random.nextInt(10000)
+              private fun scheduleNextBusRun(initialDelay: Long = 0L) {
+                  val delay = if (initialDelay > 0) initialDelay else (6000L + random.nextInt(8000).toLong())
                   busHandler.postDelayed({
                       runFortniteBus()
                   }, delay)
@@ -624,7 +642,7 @@ jobs:
                   val goRight = random.nextBoolean()
                   val startX = if (goRight) -dp(120).toFloat() else screenWidth + dp(120).toFloat()
                   val endX = if (goRight) screenWidth + dp(120).toFloat() else -dp(120).toFloat()
-                  val randomY = dp(50) + random.nextFloat() * (screenHeight * 0.3f)
+                  val randomY = dp(40) + random.nextFloat() * (screenHeight * 0.25f)
 
                   bus.translationY = randomY
                   bus.translationX = startX
@@ -642,7 +660,7 @@ jobs:
 
                   bus.animate()
                       .translationX(endX)
-                      .setDuration(4500)
+                      .setDuration(4000)
                       .withEndAction {
                           bus.visibility = View.GONE
                           scheduleNextBusRun()
@@ -716,9 +734,6 @@ jobs:
                   }
                   styleButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
                   
-                  // Mise à jour des icônes/petits coffres posés sur les boutons en mode Fortnite
-                  updateButtonChestIcons()
-
                   val modeBtnStyleBg = GradientDrawable().apply {
                       setColor(Color.parseColor(cfg.btnRev.first))
                       cornerRadius = dp(6).toFloat()
@@ -730,14 +745,6 @@ jobs:
 
                   setupBackgroundMedia()
                   refresh()
-              }
-
-              private fun updateButtonChestIcons() {
-                  // Cette fonction permet de poser de jolis petits coffres sur les boutons si on est dans l'univers Fortnite
-                  val isFn = (currentTheme == "FORTNITE")
-                  val chestRes = resources.getIdentifier("fn_chest_closed", "drawable", packageName)
-                  
-                  // On peut ajouter une petite vue ou s'assurer que le style est parfait
               }
 
               private fun createNotificationChannel() {
@@ -813,6 +820,28 @@ jobs:
                   } catch (_: Exception) {}
               }
 
+              private fun addButtonWithTree(card: LinearLayout, btn: Button, lp: LinearLayout.LayoutParams, isLeftTree: Boolean) {
+                  if (currentTheme == "FORTNITE") {
+                      val container = FrameLayout(this)
+                      val treeRes = resources.getIdentifier(if (isLeftTree) "fn_tree1" else "fn_tree2", "drawable", packageName)
+                      if (treeRes != 0) {
+                          val treeIv = ImageView(this).apply {
+                              setImageResource(treeRes)
+                              scaleType = ImageView.ScaleType.FIT_CENTER
+                          }
+                          // Le pied de l'arbre positionné juste derrière/sous le bouton et qui suit le mouvement
+                          val treeLp = FrameLayout.LayoutParams(dp(32), dp(44), Gravity.CENTER_VERTICAL or if (isLeftTree) Gravity.START else Gravity.END).apply {
+                              if (isLeftTree) leftMargin = dp(6) else rightMargin = dp(6)
+                          }
+                          container.addView(treeIv, treeLp)
+                      }
+                      container.addView(btn, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+                      card.addView(container, lp)
+                  } else {
+                      card.addView(btn, lp)
+                  }
+              }
+
               private fun showMergerScreen() {
                   rootFrameLayout = FrameLayout(this)
 
@@ -821,44 +850,17 @@ jobs:
                   }
                   rootFrameLayout.addView(bgVideoView)
 
-                  // 1. Pieds des arbres en arrière-plan en bas
-                  val tree1Res = resources.getIdentifier("fn_tree1", "drawable", packageName)
-                  if (tree1Res != 0) {
-                      tree1ImageView = ImageView(this).apply {
-                          setImageResource(tree1Res)
-                          visibility = View.GONE
-                      }
-                      rootFrameLayout.addView(tree1ImageView, FrameLayout.LayoutParams(dp(70), dp(90)).apply {
-                          gravity = Gravity.BOTTOM or Gravity.LEFT
-                          leftMargin = dp(4)
-                          bottomMargin = dp(10)
-                      })
-                  }
-
-                  val tree2Res = resources.getIdentifier("fn_tree2", "drawable", packageName)
-                  if (tree2Res != 0) {
-                      tree2ImageView = ImageView(this).apply {
-                          setImageResource(tree2Res)
-                          visibility = View.GONE
-                      }
-                      rootFrameLayout.addView(tree2ImageView, FrameLayout.LayoutParams(dp(80), dp(100)).apply {
-                          gravity = Gravity.BOTTOM or Gravity.RIGHT
-                          rightMargin = dp(4)
-                          bottomMargin = dp(10)
-                      })
-                  }
-
-                  // 2. Bus de combat en arrière-plan haut
+                  // Bus de combat en haut en arrière-plan
                   val busRes = resources.getIdentifier("fn_bus", "drawable", packageName)
                   if (busRes != 0) {
                       busImageView = ImageView(this).apply {
                           setImageResource(busRes)
                           visibility = View.GONE
                       }
-                      rootFrameLayout.addView(busImageView, FrameLayout.LayoutParams(dp(100), dp(70)))
+                      rootFrameLayout.addView(busImageView, FrameLayout.LayoutParams(dp(90), dp(60)))
                   }
 
-                  // 3. Contenu principal par-dessus
+                  // Contenu principal (ScrollView)
                   rootLayout = ScrollView(this).apply {
                       setBackgroundColor(Color.TRANSPARENT)
                   }
@@ -905,13 +907,13 @@ jobs:
                   card1.addView(section1Title)
                   
                   pickBtn = Button(this).apply { text = "📁 CHOISIR LES FICHIERS" }
-                  card1.addView(pickBtn, lp())
+                  addButtonWithTree(card1, pickBtn, lp(), true)
 
                   dirBtn = Button(this).apply { text = "📂 CHOISIR UN DOSSIER COMPLET" }
-                  card1.addView(dirBtn, lp())
+                  addButtonWithTree(card1, dirBtn, lp(), false)
 
                   revBtn = Button(this).apply { text = "🔀 INVERSER L'ORDRE DES PARTIES" }
-                  card1.addView(revBtn, lp())
+                  addButtonWithTree(card1, revBtn, lp(), true)
 
                   listContainer = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
@@ -943,7 +945,7 @@ jobs:
                   card2.addView(section2Title)
 
                   outBtn = Button(this).apply { text = "💾 DÉFINIR EMPLACEMENT DE SORTIE" }
-                  card2.addView(outBtn, lp())
+                  addButtonWithTree(card2, outBtn, lp(), false)
 
                   outView = text("Sortie : —", 11f, Color.GRAY).apply { 
                       typeface = Typeface.MONOSPACE
@@ -1009,7 +1011,7 @@ jobs:
                       text = "📋 Copier le SHA-256"
                       isEnabled = false
                   }
-                  card3.addView(copyBtn, lp())
+                  addButtonWithTree(card3, copyBtn, lp(), true)
                   mainCol.addView(card3, lpCard())
 
                   rootLayout.addView(mainCol)
@@ -1051,7 +1053,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.25")
+                              toast("PS PKG Freedom Hub v2.9.27")
                               true
                           }
                           else -> false
@@ -1743,15 +1745,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.25
+      - name: Build APK v2.9.27
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.25
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.25.apk
+      - name: Renommer l'APK v2.9.27
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.27.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.25-apk
-          path: PkgMerger-v2.9.25.apk
+          name: pkg-merger-v2.9.27-apk
+          path: PkgMerger-v2.9.27.apk
           if-no-files-found: error
