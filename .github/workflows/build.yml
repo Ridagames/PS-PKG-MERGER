@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.43
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.44
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.43
+      - name: Générer le projet Android v2.9.44
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2943
-                  versionName = "2.9.43"
+                  versionCode = 2944
+                  versionName = "2.9.44"
               }
 
               compileOptions {
@@ -520,9 +520,23 @@ jobs:
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
               @SuppressLint("ClickableViewAccessibility")
-              private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, onClickAction: () -> Unit): View {
+              private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, treeSide: Int, onClickAction: () -> Unit): View {
                   val cfg = getThemeConfig(currentTheme)
                   val outerFrame = FrameLayout(this)
+
+                  if (currentTheme == "FORTNITE" && treeSide != 0) {
+                      val treeRes = resources.getIdentifier(if (treeSide == 1) "fn_tree1" else "fn_tree2", "drawable", packageName)
+                      if (treeRes != 0) {
+                          val treeIv = ImageView(this).apply {
+                              setImageResource(treeRes)
+                              scaleType = ImageView.ScaleType.FIT_CENTER
+                          }
+                          val treeLp = FrameLayout.LayoutParams(dp(70), dp(100), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
+                              if (treeSide == 1) leftMargin = -dp(20) else rightMargin = -dp(20)
+                          }
+                          outerFrame.addView(treeIv, treeLp)
+                      }
+                  }
 
                   val buttonContent = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
@@ -639,7 +653,7 @@ jobs:
 
               private fun startFortniteBusAnimation() {
                   stopFortniteBusAnimation()
-                  scheduleNextBusRun(300)
+                  scheduleNextBusRun(200)
               }
 
               private fun stopFortniteBusAnimation() {
@@ -648,7 +662,7 @@ jobs:
               }
 
               private fun scheduleNextBusRun(initialDelay: Long = 0) {
-                  val delay = if (initialDelay > 0) initialDelay else (1500 + random.nextInt(2000)).toLong()
+                  val delay = if (initialDelay > 0) initialDelay else (1000 + random.nextInt(1500)).toLong()
                   busHandler.postDelayed({
                       runFortniteBus()
                   }, delay)
@@ -660,13 +674,14 @@ jobs:
                   val screenHeight = resources.displayMetrics.heightPixels.toFloat()
 
                   val goRight = random.nextBoolean()
-                  val startX = if (goRight) -dp(180).toFloat() else screenWidth + dp(180).toFloat()
-                  val endX = if (goRight) screenWidth + dp(180).toFloat() else -dp(180).toFloat()
-                  val randomY = dp(20) + random.nextFloat() * (screenHeight * 0.4f)
+                  val startX = if (goRight) -dp(200).toFloat() else screenWidth + dp(200).toFloat()
+                  val endX = if (goRight) screenWidth + dp(200).toFloat() else -dp(200).toFloat()
+                  val randomY = dp(10) + random.nextFloat() * (screenHeight * 0.45f)
 
                   bus.translationY = randomY
                   bus.translationX = startX
-                  bus.scaleX = if (goRight) 1.1f else -1.1f
+                  bus.scaleX = if (goRight) 1.2f else -1.2f
+                  bus.scaleY = 1.2f
                   bus.visibility = View.VISIBLE
                   bus.bringToFront()
 
@@ -681,7 +696,7 @@ jobs:
 
                   bus.animate()
                       .translationX(endX)
-                      .setDuration(3500)
+                      .setDuration(3000)
                       .withEndAction {
                           bus.visibility = View.GONE
                           scheduleNextBusRun()
@@ -778,15 +793,15 @@ jobs:
 
                   val actionContainer = goBtnLayout.parent as? LinearLayout
 
-                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second) { pick() }
-                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second) { pickFolder() }
-                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second) { reversed = !reversed; refresh() }
-                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second) { pickOutput() }
-                  goBtnLayout = createCustomButton(tr("btn_go"), cfg.btnGo.first, cfg.btnGo.second) { executeAction() }
-                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second) {
+                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1) { pick() }
+                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2) { pickFolder() }
+                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1) { reversed = !reversed; refresh() }
+                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2) { pickOutput() }
+                  goBtnLayout = createCustomButton(tr("btn_go"), cfg.btnGo.first, cfg.btnGo.second, 0) { executeAction() }
+                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0) {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
-                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
+                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 0) { copyHash() }
 
                   if (parentCard1 != null && idxPick != -1) {
                       parentCard1.removeViewAt(idxPick); parentCard1.addView(pickBtnLayout, idxPick, lp())
@@ -852,7 +867,7 @@ jobs:
                       val notification = builder
                           .setContentTitle("⚡ PS PKG Hub")
                           .setContentText(msg)
-                          .setSmallIcon(android.R.drawable.ic_menu_save)
+                          .setSmallIcon(R.drawable.ic_app_logo)
                           .setProgress(100, pct, false)
                           .setOngoing(true)
                           .build()
@@ -875,7 +890,7 @@ jobs:
                       val notification = builder
                           .setContentTitle(title)
                           .setContentText(message)
-                          .setSmallIcon(android.R.drawable.ic_menu_save)
+                          .setSmallIcon(R.drawable.ic_app_logo)
                           .setAutoCancel(true)
                           .build()
 
@@ -953,13 +968,13 @@ jobs:
                   section1Title = text(tr("sec1"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(section1Title)
                   
-                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second) { pick() }
+                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1) { pick() }
                   card1.addView(pickBtnLayout, lp())
 
-                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second) { pickFolder() }
+                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2) { pickFolder() }
                   card1.addView(dirBtnLayout, lp())
 
-                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second) { reversed = !reversed; refresh() }
+                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1) { reversed = !reversed; refresh() }
                   card1.addView(revBtnLayout, lp())
 
                   listContainer = LinearLayout(this).apply {
@@ -991,7 +1006,7 @@ jobs:
                   section2Title = text(tr("sec2"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card2.addView(section2Title)
 
-                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second) { pickOutput() }
+                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2) { pickOutput() }
                   card2.addView(outBtnLayout, lp())
 
                   outView = text(tr("out_lbl"), 11f, Color.GRAY).apply { 
@@ -1004,10 +1019,10 @@ jobs:
                       orientation = LinearLayout.HORIZONTAL
                       gravity = Gravity.CENTER_VERTICAL
                   }
-                  goBtnLayout = createCustomButton(tr("btn_go"), cfg.btnGo.first, cfg.btnGo.second) { executeAction() }
+                  goBtnLayout = createCustomButton(tr("btn_go"), cfg.btnGo.first, cfg.btnGo.second, 0) { executeAction() }
                   actionLayout.addView(goBtnLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
-                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second) {
+                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0) {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
                   actionLayout.addView(cancelBtnLayout, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
@@ -1067,7 +1082,7 @@ jobs:
                   hashView = text("", 11f, Color.CYAN).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(hashView, lp())
 
-                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
+                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 0) { copyHash() }
                   card3.addView(copyBtnLayout, lp())
                   mainCol.addView(card3, lpCard())
 
@@ -1080,7 +1095,7 @@ jobs:
                           setImageResource(busRes)
                           visibility = View.GONE
                       }
-                      val busLp = FrameLayout.LayoutParams(dp(140), dp(90)).apply {
+                      val busLp = FrameLayout.LayoutParams(dp(160), dp(100)).apply {
                           gravity = Gravity.TOP or Gravity.START
                       }
                       rootFrameLayout.addView(busImageView, busLp)
@@ -1127,7 +1142,7 @@ jobs:
                               true
                           }
                           4 -> {
-                              toast("PS PKG Freedom Hub v2.9.43")
+                              toast("PS PKG Freedom Hub v2.9.44")
                               true
                           }
                           else -> false
@@ -1886,15 +1901,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.43
+      - name: Build APK v2.9.44
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.43
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.43.apk
+      - name: Renommer l'APK v2.9.44
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.44.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.43-apk
-          path: PkgMerger-v2.9.43.apk
+          name: pkg-merger-v2.9.44-apk
+          path: PkgMerger-v2.9.44.apk
           if-no-files-found: error
