@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.40
+      - name: Nettoyage et Normalisation des Ressources et Sources v2.9.41
         run: |
           echo "Nettoyage des fichiers obsolètes ou parasites..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.40
+      - name: Générer le projet Android v2.9.41
         env:
           FORCE: '1'
         run: |
@@ -120,8 +120,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2940
-                  versionName = "2.9.40"
+                  versionCode = 2941
+                  versionName = "2.9.41"
               }
 
               compileOptions {
@@ -277,6 +277,7 @@ jobs:
               private var lastHash: String? = null
               private var appMode = "MERGE"
               private var currentTheme = "CLASSIC"
+              private var currentLang = "fr"
 
               private var bgVideoView: AspectRatioVideoView? = null
               private var musicPlayer: MediaPlayer? = null
@@ -463,10 +464,35 @@ jobs:
                   }
               }
 
+              private fun tr(key: String): String {
+                  val map = mapOf(
+                      "app_title" to mapOf("fr" to "⚡ PS PKG FREEDOM HUB", "en" to "⚡ PS PKG FREEDOM HUB", "es" to "⚡ PS PKG FREEDOM HUB"),
+                      "universe" to mapOf("fr" to "UNIVERS", "en" to "UNIVERSE", "es" to "UNIVERSO"),
+                      "mode_btn" to mapOf("fr" to "⚙️ MODE", "en" to "⚙️ MODE", "es" to "⚙️ MODO"),
+                      "sec1" to mapOf("fr" to "1. FICHIERS SOURCE (PKG / PARTIES)", "en" to "1. SOURCE FILES (PKG / PARTS)", "es" to "1. ARCHIVOS DE ORIGEN (PKG / PARTES)"),
+                      "btn_pick" to mapOf("fr" to "CHOISIR LES FICHIERS", "en" to "CHOOSE FILES", "es" to "ELEGIR ARCHIVOS"),
+                      "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER", "es" to "ELEGIR CARPETA"),
+                      "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER", "es" to "INVERTIR ORDEN DE PARTES"),
+                      "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING", "es" to "2. SALIDA Y PROCESAMIENTO"),
+                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION", "es" to "DEFINIR UBICACIÓN DE SALIDA"),
+                      "out_lbl" to mapOf("fr" to "Sortie : —", "en" to "Output : —", "es" to "Salida : —"),
+                      "btn_go" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE", "es" to "▶️ INICIAR FUSIÓN"),
+                      "btn_cancel" to mapOf("fr" to "❌ ANNULER", "en" to "❌ CANCEL", "es" to "❌ CANCELAR"),
+                      "status_ready" to mapOf("fr" to "Prêt.", "en" to "Ready.", "es" to "Listo."),
+                      "sec3" to mapOf("fr" to "3. SÉCURITÉ & VÉRIFICATION", "en" to "3. SECURITY & CHECKSUM", "es" to "3. SEGURIDAD Y VERIFICACIÓN"),
+                      "chk_verify" to mapOf("fr" to "Contrôle d'intégrité après écriture", "en" to "Integrity check after write", "es" to "Control de integridad tras escritura"),
+                      "chk_delete" to mapOf("fr" to "Supprimer les sources après succès", "en" to "Delete sources after success", "es" to "Eliminar fuentes tras éxito"),
+                      "hash_hint" to mapOf("fr" to "Coller un hash SHA-256 de contrôle", "en" to "Paste control SHA-256 hash", "es" to "Pegar hash SHA-256 de control"),
+                      "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256", "es" to "📋 Copiar SHA-256")
+                  )
+                  return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
+              }
+
               override fun onCreate(state: Bundle?) {
                   super.onCreate(state)
                   prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
                   currentTheme = prefs.getString("theme", "CLASSIC") ?: "CLASSIC"
+                  currentLang = prefs.getString("lang", "fr") ?: "fr"
                   
                   createNotificationChannel()
                   checkPermissions()
@@ -503,8 +529,8 @@ jobs:
                               setImageResource(treeRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val treeLp = FrameLayout.LayoutParams(dp(50), dp(75), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
-                              if (treeSide == 1) leftMargin = dp(4) else rightMargin = dp(4)
+                          val treeLp = FrameLayout.LayoutParams(dp(42), dp(64), Gravity.CENTER_VERTICAL or if (treeSide == 1) Gravity.START else Gravity.END).apply {
+                              if (treeSide == 1) leftMargin = dp(2) else rightMargin = dp(2)
                           }
                           outerFrame.addView(treeIv, treeLp)
                       }
@@ -539,9 +565,9 @@ jobs:
                   buttonContent.addView(tv, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
 
                   val contentLp = FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
-                      topMargin = dp(16)
-                      leftMargin = dp(24)
-                      rightMargin = dp(24)
+                      topMargin = dp(12)
+                      leftMargin = dp(16)
+                      rightMargin = dp(16)
                   }
                   outerFrame.addView(buttonContent, contentLp)
 
@@ -554,8 +580,8 @@ jobs:
                               setImageResource(closedRes)
                               scaleType = ImageView.ScaleType.FIT_CENTER
                           }
-                          val chestLp = FrameLayout.LayoutParams(dp(36), dp(36), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
-                              topMargin = -dp(20)
+                          val chestLp = FrameLayout.LayoutParams(dp(30), dp(30), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
+                              topMargin = dp(0)
                           }
                           outerFrame.addView(chestIv, chestLp)
 
@@ -662,7 +688,7 @@ jobs:
 
               private fun startFortniteBusAnimation() {
                   stopFortniteBusAnimation()
-                  scheduleNextBusRun(300)
+                  scheduleNextBusRun(200)
               }
 
               private fun stopFortniteBusAnimation() {
@@ -671,7 +697,7 @@ jobs:
               }
 
               private fun scheduleNextBusRun(initialDelay: Long = 0) {
-                  val delay = if (initialDelay > 0) initialDelay else (2000 + random.nextInt(2500)).toLong()
+                  val delay = if (initialDelay > 0) initialDelay else (1500 + random.nextInt(2000)).toLong()
                   busHandler.postDelayed({
                       runFortniteBus()
                   }, delay)
@@ -685,7 +711,7 @@ jobs:
                   val goRight = random.nextBoolean()
                   val startX = if (goRight) -dp(180).toFloat() else screenWidth + dp(180).toFloat()
                   val endX = if (goRight) screenWidth + dp(180).toFloat() else -dp(180).toFloat()
-                  val randomY = dp(30) + random.nextFloat() * (screenHeight * 0.45f)
+                  val randomY = dp(20) + random.nextFloat() * (screenHeight * 0.4f)
 
                   bus.translationY = randomY
                   bus.translationX = startX
@@ -704,7 +730,7 @@ jobs:
 
                   bus.animate()
                       .translationX(endX)
-                      .setDuration(4000)
+                      .setDuration(3500)
                       .withEndAction {
                           bus.visibility = View.GONE
                           scheduleNextBusRun()
@@ -746,7 +772,7 @@ jobs:
 
                   titleView.setTextColor(cfg.primaryText)
                   subtitleView.setTextColor(cfg.secondaryText)
-                  subtitleView.text = "UNIVERSE : ${cfg.name.uppercase()}"
+                  subtitleView.text = "${tr("universe")} : ${cfg.name.uppercase()}"
 
                   section1Title.setTextColor(cfg.secondaryText)
                   section2Title.setTextColor(cfg.secondaryText)
@@ -777,6 +803,7 @@ jobs:
                   }
                   menuBtn.background = modeBtnStyleBg
                   menuBtn.setTextColor(cfg.secondaryText)
+                  menuBtn.text = tr("mode_btn")
                   menuBtn.setOnClickListener { showMenu(menuBtn) }
 
                   setupBackgroundMedia()
@@ -800,15 +827,15 @@ jobs:
 
                   val actionContainer = goBtnLayout.parent as? LinearLayout
 
-                  pickBtnLayout = createCustomButton("CHOISIR LES FICHIERS", cfg.btnPick.first, cfg.btnPick.second, 1, true) { pick() }
-                  dirBtnLayout = createCustomButton("CHOISIR UN DOSSIER COMPLET", cfg.btnDir.first, cfg.btnDir.second, 2, false) { pickFolder() }
-                  revBtnLayout = createCustomButton("INVERSER L'ORDRE DES PARTIES", cfg.btnRev.first, cfg.btnRev.second, 1, false) { reversed = !reversed; refresh() }
-                  outBtnLayout = createCustomButton("DÉFINIR EMPLACEMENT DE SORTIE", cfg.btnOut.first, cfg.btnOut.second, 2, true) { pickOutput() }
-                  goBtnLayout = createCustomButton("▶️ LANCER LA FUSION", cfg.btnGo.first, cfg.btnGo.second, 0, true) { executeAction() }
-                  cancelBtnLayout = createCustomButton("❌ ANNULER", cfg.btnCancel.first, cfg.btnCancel.second, 0, false) {
+                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1, true) { pick() }
+                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2, false) { pickFolder() }
+                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1, false) { reversed = !reversed; refresh() }
+                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2, true) { pickOutput() }
+                  goBtnLayout = createCustomButton(tr("btn_go"), cfg.btnGo.first, cfg.btnGo.second, 0, true) { executeAction() }
+                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0, false) {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
-                  copyBtnLayout = createCustomButton("📋 Copier le SHA-256", cfg.btnRev.first, cfg.btnRev.second, 1, false) { copyHash() }
+                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 1, false) { copyHash() }
 
                   if (parentCard1 != null && idxPick != -1) {
                       parentCard1.removeViewAt(idxPick); parentCard1.addView(pickBtnLayout, idxPick, lp())
@@ -933,14 +960,14 @@ jobs:
                       orientation = LinearLayout.VERTICAL
                   }
                   titleView = TextView(this).apply {
-                      text = "⚡ PS PKG FREEDOM HUB"
+                      text = tr("app_title")
                       textSize = 20f
                       setTypeface(null, Typeface.BOLD)
                   }
                   titlesLayout.addView(titleView)
                   
                   subtitleView = TextView(this).apply {
-                      text = "UNIVERSE"
+                      text = tr("universe")
                       textSize = 10f
                       typeface = Typeface.MONOSPACE
                       setPadding(0, dp(2), 0, 0)
@@ -949,7 +976,7 @@ jobs:
                   headerLayout.addView(titlesLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
                   menuBtn = Button(this).apply {
-                      text = "⚙️ MODE"
+                      text = tr("mode_btn")
                   }
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
                   mainCol.addView(headerLayout)
@@ -957,16 +984,16 @@ jobs:
                   val cfg = getThemeConfig(currentTheme)
 
                   val card1 = createCard()
-                  section1Title = text("1. SOURCE FILES (PKG / PARTS)", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
+                  section1Title = text(tr("sec1"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(section1Title)
                   
-                  pickBtnLayout = createCustomButton("CHOISIR LES FICHIERS", cfg.btnPick.first, cfg.btnPick.second, 1, true) { pick() }
+                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1, true) { pick() }
                   card1.addView(pickBtnLayout, lp())
 
-                  dirBtnLayout = createCustomButton("CHOISIR UN DOSSIER COMPLET", cfg.btnDir.first, cfg.btnDir.second, 2, false) { pickFolder() }
+                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2, false) { pickFolder() }
                   card1.addView(dirBtnLayout, lp())
 
-                  revBtnLayout = createCustomButton("INVERSER L'ORDRE DES PARTIES", cfg.btnRev.first, cfg.btnRev.second, 1, false) { reversed = !reversed; refresh() }
+                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1, false) { reversed = !reversed; refresh() }
                   card1.addView(revBtnLayout, lp())
 
                   listContainer = LinearLayout(this).apply {
@@ -995,13 +1022,13 @@ jobs:
                   mainCol.addView(card1, lpCard())
 
                   val card2 = createCard()
-                  section2Title = text("2. OUTPUT & PROCESSING", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
+                  section2Title = text(tr("sec2"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card2.addView(section2Title)
 
-                  outBtnLayout = createCustomButton("DÉFINIR EMPLACEMENT DE SORTIE", cfg.btnOut.first, cfg.btnOut.second, 2, true) { pickOutput() }
+                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2, true) { pickOutput() }
                   card2.addView(outBtnLayout, lp())
 
-                  outView = text("Sortie : —", 11f, Color.GRAY).apply { 
+                  outView = text(tr("out_lbl"), 11f, Color.GRAY).apply { 
                       typeface = Typeface.MONOSPACE
                       setPadding(0, dp(6), 0, dp(8))
                   }
@@ -1010,10 +1037,10 @@ jobs:
                   val actionLayout = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
                   }
-                  goBtnLayout = createCustomButton("▶️ LANCER LA FUSION", cfg.btnGo.first, cfg.btnGo.second, 0, true) { executeAction() }
+                  goBtnLayout = createCustomButton(tr("btn_go"), cfg.btnGo.first, cfg.btnGo.second, 0, true) { executeAction() }
                   actionLayout.addView(goBtnLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
-                  cancelBtnLayout = createCustomButton("❌ ANNULER", cfg.btnCancel.first, cfg.btnCancel.second, 0, false) {
+                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0, false) {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
                   actionLayout.addView(cancelBtnLayout, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
@@ -1026,30 +1053,30 @@ jobs:
                   }
                   card2.addView(bar, lp())
 
-                  statusView = text("Prêt.", 13f, Color.MAGENTA).apply { setTypeface(Typeface.MONOSPACE, Typeface.BOLD) }
+                  statusView = text(tr("status_ready"), 13f, Color.MAGENTA).apply { setTypeface(Typeface.MONOSPACE, Typeface.BOLD) }
                   card2.addView(statusView, lp())
                   mainCol.addView(card2, lpCard())
 
                   val card3 = createCard()
-                  section3Title = text("3. SECURITY & CHECKSUM", 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
+                  section3Title = text(tr("sec3"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(section3Title)
 
                   verifyBox = CheckBox(this).apply {
-                      text = "Contrôle d'intégrité après écriture"
+                      text = tr("chk_verify")
                       isChecked = true
                       textSize = 12f
                   }
                   card3.addView(verifyBox, lp())
 
                   deleteBox = CheckBox(this).apply {
-                      text = "Supprimer les sources après succès"
+                      text = tr("chk_delete")
                       isChecked = false
                       textSize = 12f
                   }
                   card3.addView(deleteBox, lp())
 
                   hashField = EditText(this).apply {
-                      hint = "Coller un hash SHA-256 de contrôle"
+                      hint = tr("hash_hint")
                       setTextColor(Color.WHITE)
                       setHintTextColor(Color.GRAY)
                       textSize = 11f
@@ -1060,7 +1087,7 @@ jobs:
                   hashView = text("", 11f, Color.CYAN).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(hashView, lp())
 
-                  copyBtnLayout = createCustomButton("📋 Copier le SHA-256", cfg.btnRev.first, cfg.btnRev.second, 1, false) { copyHash() }
+                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 1, false) { copyHash() }
                   card3.addView(copyBtnLayout, lp())
                   mainCol.addView(card3, lpCard())
 
@@ -1090,7 +1117,8 @@ jobs:
                   val popup = PopupMenu(this, v)
                   popup.menu.add(0, 1, 0, if (appMode == "MERGE") "📂 Mode Splitter" else "🔗 Mode Fusion")
                   popup.menu.add(0, 2, 1, "🎨 Changer d'Univers")
-                  popup.menu.add(0, 3, 2, "ℹ️ À propos")
+                  popup.menu.add(0, 3, 2, "🌐 Changer la Langue / Language")
+                  popup.menu.add(0, 4, 3, "ℹ️ À propos")
                   popup.setOnMenuItemClickListener { item ->
                       when (item.itemId) {
                           1 -> {
@@ -1100,12 +1128,12 @@ jobs:
                                   section1Title.text = "1. FICHIER SOURCE UNIQUE (.PKG)"
                                   statusView.text = "Prêt à découper."
                               } else {
-                                  titleView.text = "⚡ PS PKG FREEDOM HUB"
-                                  section1Title.text = "1. SOURCE FILES (PKG / PARTS)"
-                                  statusView.text = "Prêt à fusionner."
+                                  titleView.text = tr("app_title")
+                                  section1Title.text = tr("sec1")
+                                  statusView.text = tr("status_ready")
                               }
                               output = null
-                              outView.text = "Sortie : —"
+                              outView.text = tr("out_lbl")
                               rebuildButtons()
                               true
                           }
@@ -1114,7 +1142,11 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Freedom Hub v2.9.40")
+                              showLanguageDialog()
+                              true
+                          }
+                          4 -> {
+                              toast("PS PKG Freedom Hub v2.9.41")
                               true
                           }
                           else -> false
@@ -1141,6 +1173,23 @@ jobs:
                       .setSingleChoiceItems(themes, checkedItem) { dialog, which ->
                           currentTheme = keys[which]
                           prefs.edit().putString("theme", currentTheme).apply()
+                          applyTheme()
+                          dialog.dismiss()
+                      }
+                      .setNegativeButton("Fermer", null)
+                      .show()
+              }
+
+              private fun showLanguageDialog() {
+                  val langs = arrayOf("Français 🇫🇷", "English 🇺🇸", "Español 🇪🇸")
+                  val codes = arrayOf("fr", "en", "es")
+                  val checkedItem = codes.indexOf(currentLang).coerceAtLeast(0)
+
+                  AlertDialog.Builder(this)
+                      .setTitle("🌐 Choisir la langue / Language")
+                      .setSingleChoiceItems(langs, checkedItem) { dialog, which ->
+                          currentLang = codes[which]
+                          prefs.edit().putString("lang", currentLang).apply()
                           applyTheme()
                           dialog.dismiss()
                       }
@@ -1804,15 +1853,15 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.40
+      - name: Build APK v2.9.41
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.9.40
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.40.apk
+      - name: Renommer l'APK v2.9.41
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.41.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.40-apk
-          path: PkgMerger-v2.9.40.apk
+          name: pkg-merger-v2.9.41-apk
+          path: PkgMerger-v2.9.41.apk
           if-no-files-found: error
