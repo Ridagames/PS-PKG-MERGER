@@ -31,13 +31,13 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.1.7 UI Ultra
+      - name: Générer le projet Android v2.1.8 UI Fix
         env:
           FORCE: '1'
         run: |
           set -e
           rm -rf app/src/main/kotlin
-          rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
+          rm -rf app/src/main/java
           mkdir -p app/src/main/java/com/venice/pkgmerger
           mkdir -p app/src/main/res/drawable
 
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 217
-                  versionName = "2.1.7"
+                  versionCode = 218
+                  versionName = "2.1.8"
               }
 
               compileOptions {
@@ -557,7 +557,7 @@ jobs:
                               true
                           }
                           2 -> {
-                              toast("PS PKG Manager v2.1.7")
+                              toast("PS PKG Manager v2.1.8")
                               true
                           }
                           else -> false
@@ -1214,12 +1214,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.1.7
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.1.7.apk
+      - name: Renommer l'APK v2.1.8
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.1.8.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.1.7-apk
-          path: PkgMerger-v2.1.7.apk
+          name: pkg-merger-v2.1.8-apk
+          path: PkgMerger-v2.1.8.apk
           if-no-files-found: error
