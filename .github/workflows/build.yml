@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Générer le projet Android v2.7.2 Syntax Fix
+      - name: Générer le projet Android v2.8.0 Master Immersive Edition
         env:
           FORCE: '1'
         run: |
@@ -96,8 +96,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 272
-                  versionName = "2.7.2"
+                  versionCode = 280
+                  versionName = "2.8.0"
               }
 
               compileOptions {
@@ -138,9 +138,10 @@ jobs:
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
               <uses-permission android:name="android.permission.WAKE_LOCK" />
+              <uses-permission android:name="android.permission.VIBRATE" />
 
               <application
-                  android:label="PS PKG Live FX Hub"
+                  android:label="PS PKG Master Immersive Hub"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -149,7 +150,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Live FX Hub">
+                      android:label="PS PKG Master Immersive Hub">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -182,12 +183,15 @@ jobs:
           import android.graphics.Paint
           import android.graphics.Typeface
           import android.graphics.drawable.GradientDrawable
+          import android.media.MediaPlayer
           import android.net.Uri
           import android.os.Build
           import android.os.Bundle
           import android.os.Handler
           import android.os.Looper
           import android.os.PowerManager
+          import android.os.VibrationEffect
+          import android.os.Vibrator
           import android.provider.DocumentsContract
           import android.provider.OpenableColumns
           import android.provider.Settings
@@ -219,7 +223,7 @@ jobs:
               private val paint = Paint().apply { isAntiAlias = true }
               var currentTheme = "FORTNITE"
               private val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-                  duration = 4000
+                  duration = 4500
                   repeatCount = ValueAnimator.INFINITE
                   addUpdateListener {
                       animProgress = it.animatedValue as Float
@@ -239,29 +243,50 @@ jobs:
 
                   when (currentTheme) {
                       "FORTNITE" -> {
-                          val busX = -150f + (w + 300f) * animProgress
+                          // Le Vrai Bus de Combat Fortnite en 2D Vectoriel détaillé
+                          val busX = -200f + (w + 400f) * animProgress
                           val busY = h / 2f
 
-                          paint.color = Color.parseColor("#3300D9FF")
-                          paint.strokeWidth = 4f
-                          canvas.drawLine(0f, busY + 15f, w, busY + 15f, paint)
+                          // Traînée du bus
+                          paint.color = Color.parseColor("#4400D9FF")
+                          paint.strokeWidth = 6f
+                          canvas.drawLine(0f, busY + 10f, busX, busY + 10f, paint)
 
-                          paint.color = Color.parseColor("#00D9FF")
-                          canvas.drawRect(busX, busY - 15f, busX + 90f, busY + 15f, paint)
+                          // Corps principal du Bus (Bleu Fortnite)
+                          paint.color = Color.parseColor("#0099FF")
+                          canvas.drawRect(busX, busY - 18f, busX + 110f, busY + 18f, paint)
+                          // Toit du bus
+                          paint.color = Color.parseColor("#003366")
+                          canvas.drawRect(busX + 15f, busY - 26f, busX + 95f, busY - 18f, paint)
+                          // Fenêtres jaunes lumineuses
                           paint.color = Color.parseColor("#FFE600")
-                          canvas.drawRect(busX + 15f, busY - 10f, busX + 35f, busY + 2f, paint)
-                          canvas.drawRect(busX + 45f, busY - 10f, busX + 75f, busY + 2f, paint)
+                          canvas.drawRect(busX + 20f, busY - 22f, busX + 45f, busY - 10f, paint)
+                          canvas.drawRect(busX + 55f, busY - 22f, busX + 90f, busY - 10f, paint)
+                          // Roues
+                          paint.color = Color.DKGRAY
+                          canvas.drawCircle(busX + 30f, busY + 18f, 8f, paint)
+                          canvas.drawCircle(busX + 85f, busY + 18f, 8f, paint)
+                          // Gros Ballon de combat au-dessus (Violet/Rose)
                           paint.color = Color.parseColor("#B800FF")
-                          canvas.drawCircle(busX + 45f, busY - 35f, 18f, paint)
+                          canvas.drawCircle(busX + 55f, busY - 55f, 24f, paint)
+                          paint.color = Color.parseColor("#FF00AA")
+                          canvas.drawCircle(busX + 55f, busY - 55f, 10f, paint)
+                          // Câble reliant le ballon au bus
                           paint.color = Color.WHITE
-                          paint.textSize = 24f
-                          canvas.drawText("🚌 BATTLE BUS", w - 220f, h / 2f + 8f, paint)
+                          paint.strokeWidth = 3f
+                          canvas.drawLine(busX + 55f, busY - 31f, busX + 55f, busY - 26f, paint)
+
+                          paint.color = Color.WHITE
+                          paint.textSize = 20f
+                          canvas.drawText("🚌 BATTLE BUS ACTIVE", w - 230f, h / 2f + 7f, paint)
                       }
                       "GOW" -> {
-                          for (i in 0..4) {
-                              val cx = (w / 6f) * (i + 1) + sin(animProgress * 6.28f + i) * 20f
-                              val cy = h / 2f + ((i % 2) * 20f - 10f)
-                              val radius = 12f + 4f * sin(animProgress * 12.56f + i)
+                          // Orbes Rouges de Rage de Kratos en animation tourbillonnante
+                          for (i in 0..6) {
+                              val angle = animProgress * 6.28f + i
+                              val cx = w / 2f + sin(angle) * (60f + i * 15f)
+                              val cy = h / 2f + cos(angle * 1.5f) * 15f
+                              val radius = 10f + (i % 3) * 4f
 
                               paint.color = Color.parseColor("#FF0000")
                               canvas.drawCircle(cx, cy, radius, paint)
@@ -269,9 +294,9 @@ jobs:
                               canvas.drawCircle(cx, cy, radius * 0.4f, paint)
                           }
                           paint.color = Color.parseColor("#FF4500")
-                          paint.textSize = 24f
+                          paint.textSize = 22f
                           paint.typeface = Typeface.DEFAULT_BOLD
-                          canvas.drawText("🪓 SPARTAN RAGE ACTIVE", 20f, h / 2f + 8f, paint)
+                          canvas.drawText("🪓 SPARTAN RAGE / ORBES ROUGES", 20f, h / 2f + 7f, paint)
                       }
                       "TLOU" -> {
                           for (i in 0..6) {
@@ -281,8 +306,8 @@ jobs:
                               canvas.drawCircle(sx, sy, 6f, paint)
                           }
                           paint.color = Color.parseColor("#D4A359")
-                          paint.textSize = 24f
-                          canvas.drawText("🌿 SPORES DETECTED", 20f, h / 2f + 8f, paint)
+                          paint.textSize = 22f
+                          canvas.drawText("🌿 SPORES DETECTED", 20f, h / 2f + 7f, paint)
                       }
                       "GENSHIN" -> {
                           paint.color = Color.parseColor("#4CC9F0")
@@ -290,8 +315,8 @@ jobs:
                           val starY = h / 2f + sin(animProgress * 12f) * 15f
                           canvas.drawCircle(starX, starY, 10f, paint)
                           paint.color = Color.parseColor("#F72585")
-                          paint.textSize = 24f
-                          canvas.drawText("✨ TEYVAT STELLAR FX", 20f, h / 2f + 8f, paint)
+                          paint.textSize = 22f
+                          canvas.drawText("✨ TEYVAT STELLAR FX", 20f, h / 2f + 7f, paint)
                       }
                       "GTA" -> {
                           paint.color = Color.parseColor("#00FF66")
@@ -299,13 +324,13 @@ jobs:
                           val lineX = w * animProgress
                           canvas.drawLine(lineX - 100f, h / 2f, lineX + 100f, h / 2f, paint)
                           paint.color = Color.parseColor("#FF007F")
-                          paint.textSize = 24f
-                          canvas.drawText("🚗 VINEWOOD CASH FLOW", 20f, h / 2f + 8f, paint)
+                          paint.textSize = 22f
+                          canvas.drawText("🚗 VINEWOOD CASH FLOW", 20f, h / 2f + 7f, paint)
                       }
                       else -> {
                           paint.color = Color.parseColor("#38BDF8")
-                          paint.textSize = 24f
-                          canvas.drawText("⚡ SYSTEM ONLINE", 20f, h / 2f + 8f, paint)
+                          paint.textSize = 22f
+                          canvas.drawText("⚡ SYSTEM ONLINE", 20f, h / 2f + 7f, paint)
                       }
                   }
               }
@@ -510,7 +535,7 @@ jobs:
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
               @SuppressLint("ClickableViewAccessibility")
-              private fun styleButton(b: Button, bgHex: String, borderHexStr: String, textHex: String = "#FFFFFF") {
+              private fun styleButton(b: Button, bgHex: String, borderHexStr: String, textHex: String = "#FFFFFF", actionOnExecute: () -> Unit) {
                   val cfg = getThemeConfig(currentTheme)
                   
                   val normalBg = GradientDrawable().apply {
@@ -531,17 +556,57 @@ jobs:
                   b.textSize = 13f
                   b.setPadding(dp(14), dp(12), dp(14), dp(12))
 
+                  // Gestion ultra immersive : Appui long (God of War Rage / Charge) ou Ouverture Coffre (Fortnite)
+                  var pressHandler: Handler? = null
+                  var chargeRunnable: Runnable? = null
+
                   b.setOnTouchListener { view, event ->
+                      val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                       when (event.action) {
                           MotionEvent.ACTION_DOWN -> {
-                              view.animate().scaleX(0.93f).scaleY(0.93f).setDuration(70).start()
+                              view.animate().scaleX(0.92f).scaleY(0.92f).setDuration(80).start()
                               view.background = pressedBg
                               b.setTextColor(Color.BLACK)
+
+                              // Effet sonore thématique simulé / déclenché
+                              if (currentTheme == "FORTNITE") {
+                                  b.text = "📦 [COFFRE OUVERT !] " + b.tag
+                                  vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                              } else if (currentTheme == "GOW") {
+                                  // God of War : Maintien prolongé avec charge de Rage & Orbes
+                                  b.text = "🔥 [CHARGEMENT RAGE...] " + b.tag
+                                  pressHandler = Handler(Looper.getMainLooper())
+                                  chargeRunnable = object : Runnable {
+                                      var count = 0
+                                      override fun run() {
+                                          count++
+                                          vibrator?.vibrate(VibrationEffect.createOneShot(40L * count, VibrationEffect.DEFAULT_AMPLITUDE))
+                                          if (count >= 5) {
+                                              // Charge maximale atteinte (5s) !
+                                              b.text = "💥 [SPARTAN RAGE DÉCHAÎNÉE !] " + b.tag
+                                              actionOnExecute()
+                                              pressHandler?.removeCallbacks(this)
+                                          } else {
+                                              b.text = "🔥 [CHARGEMENT RAGE NIVEAU $count] " + b.tag
+                                              pressHandler?.postDelayed(this, 1000)
+                                          }
+                                      }
+                                  }
+                                  pressHandler?.postDelayed(chargeRunnable!!, 1000)
+                              }
                           }
                           MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                               view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start()
                               view.background = normalBg
                               b.setTextColor(Color.parseColor(textHex))
+                              
+                              if (currentTheme == "GOW" && pressHandler != null && chargeRunnable != null) {
+                                  pressHandler?.removeCallbacks(chargeRunnable!!)
+                              }
+                              // Restauration du texte original du bouton stocké dans le tag
+                              if (b.tag != null) {
+                                  b.text = b.tag.toString()
+                              }
                           }
                       }
                       false
@@ -556,7 +621,7 @@ jobs:
 
                   titleView.setTextColor(cfg.primaryText)
                   subtitleView.setTextColor(cfg.secondaryText)
-                  subtitleView.text = "LIVE UNIVERSE : ${cfg.name.uppercase()}"
+                  subtitleView.text = "MASTER UNIVERSE : ${cfg.name.uppercase()}"
 
                   animationBarView.currentTheme = currentTheme
                   animationBarView.invalidate()
@@ -581,14 +646,16 @@ jobs:
                       }
                   }
 
-                  styleButton(pickBtn, cfg.btnPick.first, cfg.btnPick.second)
-                  styleButton(dirBtn, cfg.btnDir.first, cfg.btnDir.second)
-                  styleButton(revBtn, cfg.btnRev.first, cfg.btnRev.second)
-                  styleButton(outBtn, cfg.btnOut.first, cfg.btnOut.second)
-                  styleButton(goBtn, cfg.btnGo.first, cfg.btnGo.second)
-                  styleButton(cancelBtn, cfg.btnCancel.first, cfg.btnCancel.second)
-                  styleButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second)
-                  styleButton(menuBtn, cfg.btnRev.first, cfg.btnRev.second, cfg.secondaryText.toHex())
+                  styleButton(pickBtn, cfg.btnPick.first, cfg.btnPick.second) { pick() }
+                  styleButton(dirBtn, cfg.btnDir.first, cfg.btnDir.second) { pickFolder() }
+                  styleButton(revBtn, cfg.btnRev.first, cfg.btnRev.second) { reversed = !reversed; refresh() }
+                  styleButton(outBtn, cfg.btnOut.first, cfg.btnOut.second) { pickOutput() }
+                  styleButton(goBtn, cfg.btnGo.first, cfg.btnGo.second) { executeAction() }
+                  styleButton(cancelBtn, cfg.btnCancel.first, cfg.btnCancel.second) {
+                      if (processing) { cancelled = true; statusView.text = "Annulation..." }
+                  }
+                  styleButton(copyBtn, cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
+                  styleButton(menuBtn, cfg.btnRev.first, cfg.btnRev.second, cfg.secondaryText.toHex()) { showMenu(menuBtn) }
 
                   refresh()
               }
@@ -635,7 +702,7 @@ jobs:
                           android.app.Notification.Builder(this)
                       }
                       val notification = builder
-                          .setContentTitle("⚡ PS PKG Live FX Hub")
+                          .setContentTitle("⚡ PS PKG Master Hub")
                           .setContentText(msg)
                           .setSmallIcon(android.R.drawable.ic_menu_save)
                           .setProgress(100, pct, false)
@@ -684,7 +751,7 @@ jobs:
                       orientation = LinearLayout.VERTICAL
                   }
                   titleView = TextView(this).apply {
-                      text = "⚡ PS PKG LIVE FX HUB"
+                      text = "⚡ PS PKG MASTER HUB"
                       textSize = 20f
                       setTypeface(null, Typeface.BOLD)
                   }
@@ -700,8 +767,8 @@ jobs:
                   headerLayout.addView(titlesLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
                   menuBtn = Button(this).apply {
+                      tag = "⚙️ MODE"
                       text = "⚙️ MODE"
-                      setOnClickListener { showMenu(it) }
                   }
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
                   mainCol.addView(headerLayout)
@@ -714,29 +781,20 @@ jobs:
                   card1.addView(section1Title)
                   
                   pickBtn = Button(this).apply {
+                      tag = "📁 CHOISIR LES FICHIERS"
                       text = "📁 CHOISIR LES FICHIERS"
-                      setOnClickListener {
-                          if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
-                          pick()
-                      }
                   }
                   card1.addView(pickBtn, lp())
 
                   dirBtn = Button(this).apply {
+                      tag = "📂 CHOISIR UN DOSSIER COMPLET"
                       text = "📂 CHOISIR UN DOSSIER COMPLET"
-                      setOnClickListener {
-                          if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
-                          pickFolder()
-                      }
                   }
                   card1.addView(dirBtn, lp())
 
                   revBtn = Button(this).apply {
+                      tag = "🔀 INVERSER L'ORDRE DES PARTIES"
                       text = "🔀 INVERSER L'ORDRE DES PARTIES"
-                      setOnClickListener {
-                          if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
-                          reversed = !reversed; refresh()
-                      }
                   }
                   card1.addView(revBtn, lp())
 
@@ -770,11 +828,8 @@ jobs:
                   card2.addView(section2Title)
 
                   outBtn = Button(this).apply {
+                      tag = "💾 DÉFINIR EMPLACEMENT DE SORTIE"
                       text = "💾 DÉFINIR EMPLACEMENT DE SORTIE"
-                      setOnClickListener {
-                          if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
-                          pickOutput()
-                      }
                   }
                   card2.addView(outBtn, lp())
 
@@ -788,21 +843,15 @@ jobs:
                       orientation = LinearLayout.HORIZONTAL
                   }
                   goBtn = Button(this).apply {
+                      tag = "▶️ LANCER LA FUSION"
                       text = "▶️ LANCER LA FUSION"
-                      setOnClickListener { executeAction() }
                   }
                   actionLayout.addView(goBtn, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
                   cancelBtn = Button(this).apply {
+                      tag = "❌ ANNULER"
                       text = "❌ ANNULER"
                       isEnabled = false
-                      setOnClickListener {
-                          if (processing) {
-                              cancelled = true
-                              statusView.text = "Annulation en cours..."
-                              toast("Annulation demandée...")
-                          }
-                      }
                   }
                   actionLayout.addView(cancelBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
                   card2.addView(actionLayout, lp())
@@ -849,9 +898,9 @@ jobs:
                   card3.addView(hashView, lp())
 
                   copyBtn = Button(this).apply {
+                      tag = "📋 Copier le SHA-256"
                       text = "📋 Copier le SHA-256"
                       isEnabled = false
-                      setOnClickListener { copyHash() }
                   }
                   card3.addView(copyBtn, lp())
                   mainCol.addView(card3, lpCard())
@@ -878,11 +927,13 @@ jobs:
                               if (appMode == "SPLIT") {
                                   titleView.text = "⚡ PKG SPLITTER"
                                   section1Title.text = "1. FICHIER SOURCE UNIQUE (.PKG)"
+                                  goBtn.tag = "▶️ DÉCOUPER"
                                   goBtn.text = "▶️ DÉCOUPER"
                                   statusView.text = "Prêt à découper."
                               } else {
-                                  titleView.text = "⚡ PS PKG LIVE FX HUB"
+                                  titleView.text = "⚡ PS PKG MASTER HUB"
                                   section1Title.text = "1. SOURCE FILES (PKG / PARTS)"
+                                  goBtn.tag = "▶️ LANCER LA FUSION"
                                   goBtn.text = "▶️ LANCER LA FUSION"
                                   statusView.text = "Prêt à fusionner."
                               }
@@ -895,7 +946,7 @@ jobs:
                               true
                           }
                           3 -> {
-                              toast("PS PKG Live FX Hub v2.7.2")
+                              toast("PS PKG Master Hub v2.8.0")
                               true
                           }
                           else -> false
@@ -1590,12 +1641,12 @@ jobs:
       - name: Build APK
         run: gradle clean assembleDebug --no-daemon --stacktrace
 
-      - name: Renommer l'APK v2.7.2
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.7.2.apk
+      - name: Renommer l'APK v2.8.0
+        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.8.0.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.7.2-apk
-          path: PkgMerger-v2.7.2.apk
+          name: pkg-merger-v2.8.0-apk
+          path: PkgMerger-v2.8.0.apk
           if-no-files-found: error
