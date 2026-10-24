@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.66 (Fix flux de lecture Splitter & openInputStream)
+      - name: Générer le projet Android v2.9.67 (Fix OutputStream natif Splitter)
         env:
           FORCE: '1'
         run: |
@@ -119,7 +119,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2966
+                  versionCode = 2967
                   versionName = "2.1.0"
               }
 
@@ -1730,7 +1730,7 @@ jobs:
                       "es" -> "Reiniciar"
                       "pt" -> "Reiniciar"
                       "de" -> "Neustart"
-                      else -> "Plus tard"
+                      else -> "Redémarrer"
                   }
                   val cancelBtn = when (currentLang) {
                       "en" -> "Later"
@@ -2196,7 +2196,6 @@ jobs:
                       val cleanBase = if (baseName.lowercase().endsWith(".pkg")) baseName.substringBeforeLast(".") else baseName
 
                       var currentOut: OutputStream? = null
-                      var currentPfd: ParcelFileDescriptor? = null
 
                       try {
                           persist(sourceUri, false)
@@ -2209,7 +2208,6 @@ jobs:
                               try {
                                   currentOut?.flush()
                                   currentOut?.close()
-                                  currentPfd?.close()
                               } catch (_: Exception) {}
 
                               val partName = "$cleanBase.${String.format(Locale.US, "%02d", partIndex)}"
@@ -2218,12 +2216,11 @@ jobs:
                               val newFile = targetDir.createFile("application/octet-stream", partName)
                                   ?: throw IllegalStateException("Création de $partName échouée")
 
-                              val pfd = contentResolver.openFileDescriptor(newFile.uri, "w")
+                              val os = contentResolver.openOutputStream(newFile.uri)
                                   ?: throw IllegalStateException("Ouverture du flux d'écriture impossible pour $partName")
                               
-                              currentPfd = pfd
                               partIndex++
-                              val stream = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
+                              val stream = BufferedOutputStream(os, 1 shl 20)
                               currentOut = stream
                               return stream
                           }
@@ -2234,7 +2231,7 @@ jobs:
                               ?: throw IllegalStateException("Impossible d'ouvrir le fichier source en lecture")
 
                           BufferedInputStream(inputStream, 1 shl 20).use { input ->
-                              log("Flux source ouvert. Écriture en cours...")
+                              log("Flux source ouvert. Écriture active...")
                               val buf = ByteArray(1 shl 20)
                               var bytesInCurrentPart = 0L
                               var lastYieldTime = System.currentTimeMillis()
@@ -2271,6 +2268,7 @@ jobs:
                           }
 
                           currentOut?.flush()
+                          currentOut?.close()
                           if (!cancelled) {
                               success = true
                               log("Découpage terminé avec succès !")
@@ -2282,7 +2280,6 @@ jobs:
                       } finally {
                           try {
                               currentOut?.close()
-                              currentPfd?.close()
                           } catch (_: Exception) {}
                       }
 
@@ -2514,12 +2511,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.9.66
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.66.apk
+      - name: Renommer l'APK v2.9.67
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.67.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.66-apk
-          path: PkgMerger-v2.9.66.apk
+          name: pkg-merger-v2.9.67-apk
+          path: PkgMerger-v2.9.67.apk
           if-no-files-found: error
