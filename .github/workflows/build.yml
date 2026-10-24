@@ -359,6 +359,7 @@ jobs:
               private lateinit var outView: TextView
               private lateinit var statusView: TextView
               private lateinit var consoleLogView: TextView
+              private lateinit var consoleScroll: ScrollView
               private lateinit var hashView: TextView
               private lateinit var hashField: EditText
               private lateinit var verifyBox: CheckBox
@@ -393,6 +394,9 @@ jobs:
                       logBuffer.append("• $msg\n")
                       if (::consoleLogView.isInitialized) {
                           consoleLogView.text = logBuffer.toString()
+                          if (::consoleScroll.isInitialized) {
+                              consoleScroll.fullScroll(View.FOCUS_DOWN)
+                          }
                       }
                   }
               }
@@ -1238,8 +1242,8 @@ jobs:
                   statusView = text(tr("status_ready"), 13f, Color.MAGENTA).apply { setTypeface(Typeface.MONOSPACE, Typeface.BOLD) }
                   card2.addView(statusView, lp())
 
-                  // Cadre console de logs en direct
-                  val consoleScroll = ScrollView(this).apply {
+                  // Cadre console de logs en direct avec auto-scroll
+                  consoleScroll = ScrollView(this).apply {
                       layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, dp(120)).apply { topMargin = dp(8) }
                       background = GradientDrawable().apply {
                           setColor(Color.parseColor("#0A0D14"))
