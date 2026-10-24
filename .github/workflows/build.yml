@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.60 (Intégral + Correction Signature)
+      - name: Générer le projet Android v2.9.61 (Correctifs Fusion & Splitter)
         env:
           FORCE: '1'
         run: |
@@ -119,8 +119,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2960
-                  versionName = "2.1.0"
+                  versionCode = 2961
+                  versionName = "2.1.1"
               }
 
               compileOptions {
@@ -527,11 +527,11 @@ jobs:
                       "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe", "es" to "🎨 Cambiar de Universo", "pt" to "🎨 Mudar de Universo", "de" to "🎨 Universum wechseln"),
                       "menu_lang" to mapOf("fr" to "🌐 Changer la Langue / Language", "en" to "🌐 Change Language", "es" to "🌐 Cambiar Idioma", "pt" to "🌐 Mudar Idioma", "de" to "🌐 Sprache ändern"),
                       "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates", "es" to "🔄 Buscar actualizaciones", "pt" to "🔄 Verificar atualizações", "de" to "🔄 Nach Updates suchen"),
-                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.0)", "en" to "ℹ️ About (v2.1.0)", "es" to "ℹ️ Acerca de (v2.1.0)", "pt" to "ℹ️ Sobre (v2.1.0)", "de" to "ℹ️ Über (v2.1.0)"),
+                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.1)", "en" to "ℹ️ About (v2.1.1)", "es" to "ℹ️ Acerca de (v2.1.1)", "pt" to "ℹ️ Sobre (v2.1.1)", "de" to "ℹ️ Über (v2.1.1)"),
                       "dialog_universe_title" to mapOf("fr" to "🌟 CHOISIS TON UNIVERS GAMING", "en" to "🌟 CHOOSE YOUR GAMING UNIVERSE", "es" to "🌟 ELIGE TU UNIVERSO GAMING", "pt" to "🌟 ESCOLHA SEU UNIVERSO GAMER", "de" to "🌟 WÄHLE DEIN GAMING-UNIVERSUM"),
                       "dialog_lang_title" to mapOf("fr" to "🌐 CHOISIR LA LANGUE / LANGUAGE", "en" to "🌐 CHOOSE LANGUAGE", "es" to "🌐 SELECCIONAR IDIOMA", "pt" to "🌐 SELECIONAR IDIOMA", "de" to "🌐 SPRACHE AUSWÄHLEN"),
                       "toast_checking_updates" to mapOf("fr" to "🔍 Recherche de mises à jour...", "en" to "🔍 Checking for updates...", "es" to "🔍 Buscando actualizaciones...", "pt" to "🔍 Procurando atualizações...", "de" to "🔍 Suche nach Updates..."),
-                      "toast_already_up_to_date" to mapOf("fr" to "✅ Ton application est déjà à jour (v2.1.0) !", "en" to "✅ Your application is already up to date (v2.1.0) !", "es" to "✅ ¡Tu aplicación ya está actualizada (v2.1.0)!", "pt" to "✅ Seu aplicativo já está atualizado (v2.1.0)!", "de" to "✅ Deine App ist bereits auf dem neuesten Stand (v2.1.0)!"),
+                      "toast_already_up_to_date" to mapOf("fr" to "✅ Ton application est déjà à jour (v2.1.1) !", "en" to "✅ Your application is already up to date (v2.1.1) !", "es" to "✅ ¡Tu aplicación ya está actualizada (v2.1.1)!", "pt" to "✅ Seu aplicativo já está atualizado (v2.1.1)!", "de" to "✅ Deine App ist bereits auf dem neuesten Stand (v2.1.1)!"),
                       "toast_no_apk_found" to mapOf("fr" to "⚠️ Aucun fichier APK trouvé dans la dernière release.", "en" to "⚠️ No APK file found in the latest release.", "es" to "⚠️ No se encontró ningún archivo APK en la última versión.", "pt" to "⚠️ Nenhum arquivo APK encontrado na versão mais recente.", "de" to "⚠️ Keine APK-Datei im neuesten Release gefunden."),
                       "toast_server_error" to mapOf("fr" to "❌ Erreur serveur GitHub", "en" to "❌ GitHub server error", "es" to "❌ Error del servidor de GitHub", "pt" to "❌ Erro no servidor do GitHub", "de" to "❌ GitHub-Serverfehler"),
                       "toast_check_failed" to mapOf("fr" to "❌ Échec de la vérification", "en" to "❌ Check failed", "es" to "❌ Falló la verificación", "pt" to "❌ Falha na verificação", "de" to "❌ Überprüfung fehlgeschlagen"),
@@ -551,7 +551,7 @@ jobs:
                   showMergerScreen()
                   applyTheme()
 
-                  log("Application démarrée. Version 2.1.0")
+                  log("Application démarrée. Version 2.1.1")
                   checkFirstRunWelcome()
               }
 
@@ -1409,7 +1409,7 @@ jobs:
 
                   addMenuOption(tr("menu_about")) {
                       dialog.dismiss()
-                      toast("PS PKG Freedom Hub v2.1.0")
+                      toast("PS PKG Freedom Hub v2.1.1")
                   }
 
                   dialog.show()
@@ -1434,7 +1434,7 @@ jobs:
                               if (tagMatch != null && apkUrlMatch != null) {
                                   val latestTag = tagMatch.groupValues[1].replace("v", "")
                                   val apkUrl = apkUrlMatch.groupValues[1]
-                                  val currentVersion = "2.1.0"
+                                  val currentVersion = "2.1.1"
 
                                   ui.post {
                                       if (isVersionNewer(latestTag, currentVersion)) {
@@ -1830,7 +1830,7 @@ jobs:
                   log("Ouverture du sélecteur de dossier...")
                   startActivityForResult(
                       Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-                          addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                          addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                       }, 3
                   )
               }
@@ -1841,15 +1841,23 @@ jobs:
                       log("Erreur: Tentative de définir la sortie sans source.")
                       return
                   }
-                  val defaultTitle = suggestName()
-                  log("Ouverture de la création de document pour : $defaultTitle")
-                  startActivityForResult(
-                      Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                          addCategory(Intent.CATEGORY_OPENABLE)
-                          type = "application/octet-stream"
-                          putExtra(Intent.EXTRA_TITLE, "$defaultTitle.00")
-                      }, 4
-                  )
+                  if (appMode == "SPLIT") {
+                      startActivityForResult(
+                          Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                              addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                          }, 5
+                      )
+                  } else {
+                      val defaultTitle = suggestName()
+                      log("Ouverture de la création de document pour : $defaultTitle")
+                      startActivityForResult(
+                          Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                              addCategory(Intent.CATEGORY_OPENABLE)
+                              type = "application/octet-stream"
+                              putExtra(Intent.EXTRA_TITLE, "$defaultTitle.pkg")
+                          }, 4
+                      )
+                  }
               }
 
               @Deprecated("Deprecated in Java")
@@ -1883,13 +1891,19 @@ jobs:
                       if (::outView.isInitialized) {
                           outView.text = "Sortie : ${u.lastPathSegment}"
                       }
-                  } else if (req == 3) {
+                  } else if (req == 3 || req == 5) {
                       val tree = data?.data ?: return
                       try {
-                          contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                          contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                       } catch (_: Exception) {}
-                      log("Dossier sélectionné via Tree API")
-                      loadTree(tree)
+                      if (req == 5) {
+                          output = tree
+                          if (::outView.isInitialized) outView.text = "Dossier de sortie défini"
+                          log("Dossier de destination du Splitter défini.")
+                      } else {
+                          log("Dossier sélectionné via Tree API")
+                          loadTree(tree)
+                      }
                   }
               }
 
@@ -2131,14 +2145,11 @@ jobs:
                       log("Erreur : Aucune source sélectionnée.")
                       return
                   }
-                  val info = analyzePkg(uris[0])
-                  if (!info.valid) {
-                      toast("Erreur : En-tête PKG invalide !")
-                      statusView.text = "Erreur : En-tête PKG invalide !"
-                      log("Erreur : En-tête PKG invalide pour ${names[0]}")
+                  if (output == null) {
+                      toast("Définis d'abord l'emplacement de sortie !")
+                      log("Erreur : Sortie non définie.")
                       return
                   }
-
                   if (appMode == "SPLIT") {
                       splitPkg()
                   } else {
@@ -2147,229 +2158,92 @@ jobs:
               }
 
               private fun splitPkg() {
-                  val baseOutputUri = output
-                  if (baseOutputUri == null) {
-                      toast("Choisis d'abord l'emplacement de sortie.")
-                      log("Erreur : Emplacement de sortie non défini.")
-                      return
-                  }
-
+                  val treeUri = output ?: return
                   val sourceUri = uris[0]
-                  val info = analyzePkg(sourceUri)
-                  if (!info.valid) {
-                      toast("Erreur : En-tête PKG invalide !")
-                      log("Erreur Split : PKG source invalide.")
-                      return
-                  }
-
                   processing = true
                   cancelled = false
                   goBtnLayout.isEnabled = false
                   cancelBtnLayout.isEnabled = true
                   rewardChestView?.visibility = View.GONE
                   bar.progress = 0
-                  statusView.text = "Découpage ${info.console} en cours…"
-                  log("=== DÉBUT DU DÉCOUPAGE (${info.console}) ===")
+                  statusView.text = "Découpage en cours…"
+                  log("=== DÉBUT DU DÉCOUPAGE ===")
 
                   Thread {
                       val total = size(sourceUri)
-                      var done = 0.toLong()
-                      var lastPush = 0.toLong()
+                      var done = 0L
                       var success = false
-                      val t0 = System.currentTimeMillis()
-                      val sha256 = if (verifyBox.isChecked) MessageDigest.getInstance("SHA-256") else null
-
                       try {
-                          val maxPartSize = 4.toLong() * 1024.toLong() * 1024.toLong() * 1024.toLong()
+                          val maxPartSize = 4L * 1024 * 1024 * 1024
                           var partIndex = 0
-
-                          val baseName = getFileName(baseOutputUri).let { 
-                              if (it.contains(".")) it.substringBeforeLast(".") else it 
-                          }
-                          
+                          val baseName = getFileName(sourceUri).let { if (it.contains(".")) it.substringBeforeLast(".") else it }
                           var currentOutputStream: OutputStream? = null
-                          var currentPartUri: Uri = baseOutputUri
+
+                          val docId = DocumentsContract.getTreeDocumentId(treeUri)
+                          val parentUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId)
 
                           fun openNextPart() {
-                              try { 
-                                  currentOutputStream?.flush()
-                                  currentOutputStream?.close() 
-                              } catch (_: Exception) {}
-
+                              try { currentOutputStream?.flush(); currentOutputStream?.close() } catch (_: Exception) {}
                               val partName = "$baseName.${String.format(Locale.US, "%02d", partIndex)}"
-                              log("Préparation de la partie : $partName (Index: $partIndex)")
+                              log("Création de la partie : $partName")
                               
-                              if (partIndex > 0) {
-                                  try {
-                                      val parentUri = DocumentsContract.getDocumentId(baseOutputUri)?.let { docId ->
-                                          val parentId = docId.substringBeforeLast('/', "")
-                                          if (parentId.isNotEmpty()) {
-                                              DocumentsContract.buildDocumentUriUsingTree(baseOutputUri, parentId)
-                                          } else null
-                                      }
-                                      if (parentUri != null) {
-                                          val created = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)
-                                          if (created != null) {
-                                              currentPartUri = created
-                                              log("Fichier partie créé avec succès via DocumentsContract : $partName")
-                                          }
-                                      }
-                                  } catch (e: Exception) {
-                                      log("⚠️ Avertissement création document tree : ${e.message}")
-                                      val baseUriStr = baseOutputUri.toString()
-                                      val parsed = Uri.parse("${baseUriStr.substringBeforeLast("/")}/$partName")
-                                      if (parsed != null) {
-                                          currentPartUri = parsed
-                                          log("Fallback URI parsée : $currentPartUri")
-                                      }
-                                  }
-                              }
+                              val createdUri = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)
+                                  ?: throw IllegalStateException("Impossible de créer $partName dans le dossier")
 
-                              try {
-                                  val pfdOut = contentResolver.openFileDescriptor(currentPartUri, "w")
-                                      ?: throw IllegalStateException("Descripteur de sortie impossible pour $partName")
-                                  currentOutputStream = BufferedOutputStream(
-                                      FileOutputStream(pfdOut.fileDescriptor), 
-                                      1 shl 20
-                                  )
-                                  log("Flux ouvert avec succès pour : $partName")
-                              } catch (e: Exception) {
-                                  log("❌ ERREUR flux de sortie pour $partName : ${e.message}")
-                                  throw e
-                              }
+                              val pfdOut = contentResolver.openFileDescriptor(createdUri, "w") ?: throw IllegalStateException("Sortie impossible pour $partName")
+                              currentOutputStream = BufferedOutputStream(FileOutputStream(pfdOut.fileDescriptor), 1 shl 20)
                               partIndex++
                           }
 
                           openNextPart()
-                          log("Ouverture du descripteur de fichier natif source...")
-
-                          val pfdSource = contentResolver.openFileDescriptor(sourceUri, "r")
-                              ?: throw IllegalStateException("Ouverture du descripteur source impossible")
-                          
+                          val pfdSource = contentResolver.openFileDescriptor(sourceUri, "r") ?: throw IllegalStateException("Source impossible")
                           pfdSource.use { pfd ->
                               FileInputStream(pfd.fileDescriptor).use { input ->
-                                  log("Flux source ouvert avec succès. Taille totale : ${fmt(total)}")
+                                  log("Flux source ouvert. Taille totale : ${fmt(total)}")
                                   val buf = ByteArray(1 shl 20)
-                                  var currentPartBytes = 0.toLong()
-                                  
-                                  while (true) {
-                                      if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
+                                  var currentPartBytes = 0L
+                                  var lastYieldTime = System.currentTimeMillis()
+                                  while (!cancelled) {
                                       val bytesRead = input.read(buf)
-                                      if (bytesRead <= 0) {
-                                          log("Fin du flux source atteinte (bytesRead = $bytesRead).")
-                                          break
-                                      }
-
+                                      if (bytesRead <= 0) break
                                       var offset = 0
-                                      while (offset < bytesRead) {
-                                          if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
-                                          if (currentPartBytes >= maxPartSize) {
-                                              log("Partie pleine (${fmt(currentPartBytes)}). Passage à la suivante...")
-                                              openNextPart()
-                                              currentPartBytes = 0.toLong()
-                                          }
+                                      while (offset < bytesRead && !cancelled) {
+                                          if (currentPartBytes >= maxPartSize) { openNextPart(); currentPartBytes = 0L }
                                           val chunkToWrite = minOf(bytesRead - offset, (maxPartSize - currentPartBytes).toInt())
                                           currentOutputStream!!.write(buf, offset, chunkToWrite)
-                                          sha256?.update(buf, offset, chunkToWrite)
-                                          offset += chunkToWrite
-                                          currentPartBytes += chunkToWrite.toLong()
-                                          done += chunkToWrite.toLong()
-
+                                          offset += chunkToWrite; currentPartBytes += chunkToWrite; done += chunkToWrite
+                                          val pct = if (total > 0) (done * 100 / total).toInt() else 0
+                                          
                                           val now = System.currentTimeMillis()
-                                          if (now - lastPush > 250) {
-                                              lastPush = now
-                                              currentOutputStream!!.flush()
-
-                                              val elapsedSecs = (now - t0) / 1000.0
-                                              val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
-                                              val speedStr = fmt(speedBps.toLong()) + "/s"
-                                              val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0.toLong()
-                                              val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
-                                              
-                                              val pct = if (total > 0.toLong()) (done * 100 / total).toInt() else 0
-                                              val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
-                                              
-                                              ui.post {
-                                                  bar.progress = pct * 10
-                                                  statusView.text = msg
-                                              }
+                                          if (now - lastYieldTime > 50) {
+                                              lastYieldTime = now
+                                              ui.post { bar.progress = pct * 10; statusView.text = "${fmt(done)} / ${fmt(total)}" }
+                                              Thread.sleep(5)
                                           }
                                       }
                                   }
                               }
                           }
-
-                          try { 
-                              currentOutputStream?.flush()
-                              currentOutputStream?.close() 
-                          } catch (_: Exception) {}
-                          success = true
-                          log("Découpage terminé avec succès sur tous les blocs.")
+                          currentOutputStream?.flush(); currentOutputStream?.close()
+                          if (!cancelled) { success = true; log("Découpage terminé avec succès.") } else { log("Découpage annulé par l'utilisateur.") }
                       } catch (e: Throwable) {
-                          log("❌ EXCEPTION FATALE pendant le découpage : ${e.message}")
-                          ui.post {
-                              statusView.text = "Erreur : ${e.message}"
-                              showResultNotif("PS PKG Manager", "Échec : ${e.message}")
-                              processing = false
-                              doneUi()
-                          }
-                          return@Thread
+                          log("❌ ERREUR : ${e.message}")
                       }
-
-                      if (!success) {
-                          processing = false
-                          return@Thread
-                      }
-
-                      val h256 = sha256?.let { hex(it.digest()) }
-                      val secs = (System.currentTimeMillis() - t0) / 1000
-
-                      ui.post {
-                          bar.progress = 1000
-                          lastHash = h256
-                          copyBtnLayout.isEnabled = h256 != null
-                          if (h256 != null) {
-                              hashView.text = "SHA-256 : $h256"
-                              log("SHA-256 calculé : $h256")
-                          }
-                          statusView.text = "Découpage réussi en ${secs}s !"
-                          showResultNotif("PS PKG Manager", "Découpage terminé en ${secs}s !")
-                          processing = false
-                          doneUi()
-                          triggerSuccessReward()
-                      }
+                      ui.post { processing = false; doneUi(); if (success) statusView.text = "Découpage réussi !" else if (cancelled) statusView.text = "Annulé." }
                   }.start()
               }
 
               private fun mergePkg() {
-                  if (uris.size < 2) {
-                      toast("Sélectionne au moins 2 parties.")
-                      log("Erreur Fusion : Pas assez de parties.")
-                      return
-                  }
-                  val out = output
-                  if (out == null) {
-                      toast("Choisis d'abord le fichier de sortie.")
-                      log("Erreur Fusion : Sortie non définie.")
-                      return
-                  }
-
+                  val out = output ?: return
                   val list = order().map { uris[it] }
-                  val info = analyzePkg(list[0])
-                  if (!info.valid) {
-                      toast("Erreur : En-tête PKG invalide !")
-                      log("Erreur Fusion : En-tête invalide.")
-                      return
-                  }
-
                   processing = true
                   cancelled = false
                   goBtnLayout.isEnabled = false
                   cancelBtnLayout.isEnabled = true
                   rewardChestView?.visibility = View.GONE
                   bar.progress = 0
-                  statusView.text = "Fusion ${info.console} en cours…"
-                  log("=== DÉBUT DE LA FUSION (${info.console}) ===")
+                  statusView.text = "Fusion en cours…"
+                  log("=== DÉBUT DE LA FUSION ===")
 
                   Thread {
                       val total = list.sumOf { size(it) }
@@ -2571,12 +2445,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.9.60
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.60.apk
+      - name: Renommer l'APK v2.9.61
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.61.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.60-apk
-          path: PkgMerger-v2.9.60.apk
+          name: pkg-merger-v2.9.61-apk
+          path: PkgMerger-v2.9.61.apk
           if-no-files-found: error
