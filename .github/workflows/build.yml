@@ -772,6 +772,19 @@ jobs:
                               musicPlayer?.start()
                           }
                       } else if (currentTheme == "FORTNITE") {
+                          bgVideoView?.visibility = View.VISIBLE
+                          val videoResId = resources.getIdentifier("fn_bg", "raw", packageName)
+                          if (videoResId != 0 && bgVideoView != null) {
+                              val uri = Uri.parse("android.resource://$packageName/$videoResId")
+                              bgVideoView?.setVideoURI(uri)
+                              bgVideoView?.setOnPreparedListener { mp ->
+                                  mp.isLooping = true
+                                  mp.setVolume(0f, 0f)
+                                  bgVideoView?.setVideoSize(mp.videoWidth, mp.videoHeight)
+                                  bgVideoView?.start()
+                              }
+                          }
+
                           val fnMusicRes = resources.getIdentifier("fn_music", "raw", packageName)
                           if (fnMusicRes != 0) {
                               musicPlayer = MediaPlayer.create(this, fnMusicRes)
@@ -832,19 +845,15 @@ jobs:
                       showInteractivePopup(tr("bus_pop"))
                   }
 
-                  busHandler.postDelayed({
-                      if (currentTheme == "FORTNITE") {
-                          try {
-                              var busSoundRes = resources.getIdentifier("fn_bus", "raw", packageName)
-                              if (busSoundRes == 0) busSoundRes = resources.getIdentifier("img_fn_bus", "raw", packageName)
-                              if (busSoundRes != 0) {
-                                  fnBusPlayer?.release()
-                                  fnBusPlayer = MediaPlayer.create(this, busSoundRes)
-                                  fnBusPlayer?.start()
-                              }
-                          } catch (_: Exception) {}
+                  try {
+                      var busSoundRes = resources.getIdentifier("fn_bus", "raw", packageName)
+                      if (busSoundRes == 0) busSoundRes = resources.getIdentifier("img_fn_bus", "raw", packageName)
+                      if (busSoundRes != 0) {
+                          fnBusPlayer?.release()
+                          fnBusPlayer = MediaPlayer.create(this, busSoundRes)
+                          fnBusPlayer?.start()
                       }
-                  }, 300)
+                  } catch (_: Exception) {}
 
                   bus.animate()
                       .translationX(endX)
