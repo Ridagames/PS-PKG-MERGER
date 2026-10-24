@@ -18,14 +18,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Compiler le projet avec Gradle
+      - name: Compiler le projet avec Gradle (Windows)
+        shell: pwsh
         run: |
-          chmod +x gradlew || true
-          ./gradlew createDistribution
+          ./gradlew.bat createDistribution
 
       - name: Préparer l'archive finale
+        shell: pwsh
         run: |
-          # Le dossier généré par jpackage / compose contient l'exe, runtime et app
           Compress-Archive -Path "build/compose/binaries/main/msi/*" -DestinationPath "PS5PkgMerger-Windows.zip" -Force
 
       - name: Sauvegarder l'artefact Windows
