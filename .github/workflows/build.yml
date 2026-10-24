@@ -31,12 +31,36 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage des Fichiers
+      - name: Nettoyage et Normalisation Stricte des Ressources
         run: |
-          echo "Nettoyage des ressources..."
+          echo "Nettoyage des fichiers obsolètes..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
 
-      - name: Générer le projet Android v2.1.9
+          echo "Correction et renommage strict des fichiers ressources..."
+          for dir in app/src/main/res/drawable app/src/main/res/raw; do
+            if [ -d "$dir" ]; then
+              for f in "$dir"/*; do
+                if [ -f "$f" ]; then
+                  filename=$(basename "$f")
+                  # Nettoyer les caractères invisibles, espaces et caractères spéciaux
+                  clean_name=$(echo "$filename" | tr -d '\342\200\213' | tr -d '\r' | sed 's/\.png\.png$/\.png/g' | sed 's/\.mp3\.mp3$/\.mp3/g' | sed 's/\.ogg\.ogg$/\.ogg/g')
+                  clean_name=$(echo "$clean_name" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_.-')
+                  
+                  # S'assurer que le nom commence obligatoirement par une lettre minuscule
+                  if ! echo "$clean_name" | grep -q '^[a-z]'; then
+                    clean_name="res_${clean_name}"
+                  fi
+
+                  if [ "$filename" != "$clean_name" ]; then
+                    echo "Renommage : '$filename' -> '$clean_name'"
+                    mv "$f" "$dir/$clean_name"
+                  fi
+                fi
+              done
+            fi
+          done
+
+      - name: Générer le projet Android v2.1.10
         env:
           FORCE: '1'
         run: |
@@ -101,8 +125,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2190
-                  versionName = "2.1.9"
+                  versionCode = 2110
+                  versionName = "2.1.10"
               }
 
               compileOptions {
@@ -421,7 +445,7 @@ jobs:
                       "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe"),
                       "menu_lang" to mapOf("fr" to "🌐 Langue / Language", "en" to "🌐 Language / Langue"),
                       "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for updates"),
-                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.9)", "en" to "ℹ️ About (v2.1.9)")
+                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.10)", "en" to "ℹ️ About (v2.1.10)")
                   )
                   return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
               }
@@ -435,7 +459,7 @@ jobs:
                   checkPermissions()
                   showMergerScreen()
                   applyTheme()
-                  log("Application démarrée. Version 2.1.9")
+                  log("Application démarrée. Version 2.1.10")
               }
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
@@ -771,7 +795,7 @@ jobs:
                   addMenuOption(tr("menu_universe")) { dialog.dismiss(); showThemeDialog() }
                   addMenuOption(tr("menu_lang")) { dialog.dismiss(); showLangDialog() }
                   addMenuOption(tr("menu_update")) { dialog.dismiss(); toast("Vérification des mises à jour...") }
-                  addMenuOption(tr("menu_about")) { dialog.dismiss(); toast("PS PKG Freedom Hub v2.1.9") }
+                  addMenuOption(tr("menu_about")) { dialog.dismiss(); toast("PS PKG Freedom Hub v2.1.10") }
                   dialog.show()
               }
 
@@ -1156,12 +1180,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.1.9
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.1.9.apk
+      - name: Renommer l'APK v2.1.10
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.1.10.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.1.9-apk
-          path: PkgMerger-v2.1.9.apk
+          name: pkg-merger-v2.1.10-apk
+          path: PkgMerger-v2.1.10.apk
           if-no-files-found: error
