@@ -773,7 +773,7 @@ jobs:
                   val bus = busImageView ?: return
                   val parentWidth = rootFrameLayout.width
                   val screenWidth = if (parentWidth > 0) parentWidth.toFloat() else resources.displayMetrics.widthPixels.toFloat()
-                  val screenHeight = rootFrameLayout.height.toFloat().takeIf { it > 0f } ?: resources.displayMetrics.heightPixels.toFloat()
+                  val screenHeight = rootFrameLayout.height.toFloat().takeIf { it > 0f } else resources.displayMetrics.heightPixels.toFloat()
 
                   val goRight = random.nextBoolean()
                   val startX = if (goRight) -dp(240).toFloat() else screenWidth + dp(240).toFloat()
@@ -1068,7 +1068,7 @@ jobs:
                               }?.start()
                               
                               val actionWord = if (appMode == "SPLIT") "découpage" else "fusion"
-                              showInteractivePopup("-$actionWord réussie grâce à moi ! Le coffre")
+                              showInteractivePopup("$actionWord réussie grâce à moi ! Le coffre")
                           }
 
                           rewardChestView?.animate()?.scaleX(1.3f)?.scaleY(1.3f)?.setDuration(220)?.withEndAction {
@@ -2142,14 +2142,15 @@ jobs:
                               val docUri = DocumentsContract.createDocument(contentResolver, baseDirUri, "application/octet-stream", partName)
                                   ?: throw IllegalStateException("Création de $partName impossible")
                               
-                              currentOutputStream = contentResolver.openOutputStream(docUri, "w")
-                                  ?: throw IllegalStateException("Ouverture du flux écriture impossible")
+                              val pfd = contentResolver.openFileDescriptor(docUri, "w")
+                                  ?: throw IllegalStateException("Ouverture du descripteur impossible")
+                              currentOutputStream = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
                               partIndex++
                           }
 
                           openNextPart()
 
-                          val buf = ByteArray(512 * 1024)
+                          val buf = ByteArray(1 shl 20)
                           var currentPartBytes = 0.toLong()
                           
                           contentResolver.openInputStream(sourceUri)?.use { input ->
