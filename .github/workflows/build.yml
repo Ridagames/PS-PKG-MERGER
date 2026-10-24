@@ -2140,16 +2140,13 @@ jobs:
                                           } else null
                                       }
                                       if (parentUri != null) {
-                                          val created = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)
-                                          if (created != null) {
-                                              currentPartUri = created
-                                          }
+                                          currentPartUri = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName) ?: currentPartUri
                                       }
                                   } catch (_: Exception) {
                                       val baseUriStr = baseOutputUri.toString()
-                                      val parsedUri = Uri.parse("${baseUriStr.substringBeforeLast("/")}/$partName")
-                                      if (parsedUri != null) {
-                                          currentPartUri = parsedUri
+                                      val parsed = Uri.parse("${baseUriStr.substringBeforeLast("/")}/$partName")
+                                      if (parsed != null) {
+                                          currentPartUri = parsed
                                       }
                                   }
                               }
