@@ -519,44 +519,44 @@ jobs:
 
               private fun tr(key: String): String {
                   val map = mapOf(
-                      "app_title" to mapOf("fr" to "⚡ PS PKG FREEDOM HUB", "en" to "⚡ PS PKG FREEDOM HUB"),
-                      "universe" to mapOf("fr" to "UNIVERS", "en" to "UNIVERSE"),
-                      "menu_btn" to mapOf("fr" to "⚙️ MENU", "en" to "⚙️ MENU"),
-                      "sec1" to mapOf("fr" to "1. FICHIERS SOURCE (PKG / PARTIES)", "en" to "1. SOURCE FILES (PKG / PARTS)"),
-                      "sec1_split" to mapOf("fr" to "1. FICHIER SOURCE UNIQUE (.PKG)", "en" to "1. SINGLE SOURCE FILE (.PKG)"),
-                      "btn_pick" to mapOf("fr" to "CHOISIR LES FICHIERS", "en" to "CHOOSE FILES"),
-                      "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER"),
-                      "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER"),
-                      "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING"),
-                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION"),
-                      "out_lbl" to mapOf("fr" to "Sortie : —", "en" to "Output : —"),
-                      "out_dir_lbl" to mapOf("fr" to "Dossier de sortie : Dossier sélectionné", "en" to "Output folder : Selected folder"),
-                      "btn_go_merge" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE"),
-                      "btn_go_split" to mapOf("fr" to "▶️ LANCER LE DÉCOUPAGE", "en" to "▶️ START SPLITTING"),
-                      "btn_cancel" to mapOf("fr" to "❌ ANNULER", "en" to "❌ CANCEL"),
-                      "status_ready" to mapOf("fr" to "Prêt.", "en" to "Ready."),
-                      "status_split_ready" to mapOf("fr" to "Prêt à découper.", "en" to "Ready to split."),
-                      "sec3" to mapOf("fr" to "3. SÉCURITÉ & VÉRIFICATION", "en" to "3. SECURITY & CHECKSUM"),
-                      "chk_verify" to mapOf("fr" to "Contrôle d'intégrité après écriture", "en" to "Integrity check after write"),
-                      "chk_delete" to mapOf("fr" to "Supprimer les sources après succès", "en" to "Delete sources after success"),
-                      "hash_hint" to mapOf("fr" to "Coller un hash SHA-256 de contrôle", "en" to "Paste control SHA-256 hash"),
-                      "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256"),
-                      "menu_options" to mapOf("fr" to "⚙️ OPTIONS & MENU", "en" to "⚙️ OPTIONS & MENU"),
-                      "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode"),
-                      "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode"),
-                      "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe"),
-                      "menu_lang" to mapOf("fr" to "🌐 Changer la Langue / Language", "en" to "🌐 Change Language"),
-                      "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates"),
-                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.0)", "en" to "ℹ️ About (v2.1.0)"),
-                      "dialog_universe_title" to mapOf("fr" to "🌟 CHOISIS TON UNIVERS GAMING", "en" to "🌟 CHOOSE YOUR GAMING UNIVERSE"),
-                      "dialog_lang_title" to mapOf("fr" to "🌐 CHOISIR LA LANGUE / LANGUAGE", "en" to "🌐 CHOOSE LANGUAGE"),
-                      "toast_checking_updates" to mapOf("fr" to "🔍 Recherche de mises à jour...", "en" to "🔍 Checking for updates..."),
-                      "toast_already_up_to_date" to mapOf("fr" to "✅ Ton application est déjà à jour (v2.1.0) !", "en" to "✅ Your application is already up to date (v2.1.0) !"),
-                      "toast_no_apk_found" to mapOf("fr" to "⚠️ Aucun fichier APK trouvé dans la dernière release.", "en" to "⚠️ No APK file found in the latest release."),
-                      "toast_server_error" to mapOf("fr" to "❌ Erreur serveur GitHub", "en" to "❌ GitHub server error"),
-                      "toast_check_failed" to mapOf("fr" to "❌ Échec de la vérification", "en" to "❌ Check failed"),
-                      "bus_pop" to mapOf("fr" to "Tout le monde descend !", "en" to "Everyone out!"),
-                      "chest_pop" to mapOf("fr" to "Conversion réussie grâce à moi ! Le coffre", "en" to "Conversion successful thanks to me! The chest")
+                      "app_title" to mapOf("fr" to "⚡ PS PKG FREEDOM HUB", "en" to "⚡ PS PKG FREEDOM HUB", "es" to "⚡ PS PKG FREEDOM HUB", "pt" to "⚡ PS PKG FREEDOM HUB", "de" to "⚡ PS PKG FREEDOM HUB"),
+                      "universe" to mapOf("fr" to "UNIVERS", "en" to "UNIVERSE", "es" to "UNIVERSO", "pt" to "UNIVERSO", "de" to "UNIVERSUM"),
+                      "menu_btn" to mapOf("fr" to "⚙️ MENU", "en" to "⚙️ MENU", "es" to "⚙️ MENÚ", "pt" to "⚙️ MENU", "de" to "⚙️ MENÜ"),
+                      "sec1" to mapOf("fr" to "1. FICHIERS SOURCE (PKG / PARTIES)", "en" to "1. SOURCE FILES (PKG / PARTS)", "es" to "1. ARCHIVOS DE ORIGEN (PKG / PARTES)", "pt" to "1. ARQUIVOS DE ORIGEM (PKG / PARTES)", "de" to "1. QUELLESDATEIEN (PKG / TEILE)"),
+                      "sec1_split" to mapOf("fr" to "1. FICHIER SOURCE UNIQUE (.PKG)", "en" to "1. SINGLE SOURCE FILE (.PKG)", "es" to "1. ARCHIVO DE ORIGEN ÚNICO (.PKG)", "pt" to "1. ARQUIVO DE ORIGEM ÚNICO (.PKG)", "de" to "1. EINZELNE QUELLDATEI (.PKG)"),
+                      "btn_pick" to mapOf("fr" to "CHOISIR LES FICHIERS", "en" to "CHOOSE FILES", "es" to "ELEGIR ARCHIVOS", "pt" to "ESCOLHER ARQUIVOS", "de" to "DATEIEN AUSWÄHLEN"),
+                      "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER", "es" to "ELEGIR CARPETA", "pt" to "ESCOLHER PASTA", "de" to "ORDNER AUSWÄHLEN"),
+                      "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER", "es" to "INVERTIR ORDEN DE PARTES", "pt" to "INVERTER ORDEM DAS PARTES", "de" to "TEILERREIHENFOLGE UMKEHREN"),
+                      "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING", "es" to "2. SALIDA Y PROCESAMIENTO", "pt" to "2. SAÍDA E PROCESSAMENTO", "de" to "2. AUSGABE & VERARBEITUNG"),
+                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION", "es" to "DEFINIR UBICACIÓN DE SALIDA", "pt" to "DEFINIR LOCAL DE SAÍDA", "de" to "AUSGABEORT FESTLEGEN"),
+                      "out_lbl" to mapOf("fr" to "Sortie : —", "en" to "Output : —", "es" to "Salida : —", "pt" to "Saída : —", "de" to "Ausgabe : —"),
+                      "out_dir_lbl" to mapOf("fr" to "Dossier de sortie : Dossier sélectionné", "en" to "Output folder : Selected folder", "es" to "Carpeta de salida : Carpeta seleccionada", "pt" to "Pasta de saída : Pasta selecionada", "de" to "Ausgabeordner : Ausgewählter Ordner"),
+                      "btn_go_merge" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE", "es" to "▶️ INICIAR FUSIÓN", "pt" to "▶️ INICIAR FUSÃO", "de" to "▶️ ZUSAMMENFÜHRUNG STARTEN"),
+                      "btn_go_split" to mapOf("fr" to "▶️ LANCER LE DÉCOUPAGE", "en" to "▶️ START SPLITTING", "es" to "▶️ INICIAR DIVISIÓN", "pt" to "▶️ INICIAR DIVISÃO", "de" to "▶️ TEILUNG STARTEN"),
+                      "btn_cancel" to mapOf("fr" to "❌ ANNULER", "en" to "❌ CANCEL", "es" to "❌ CANCELAR", "pt" to "❌ CANCELAR", "de" to "❌ ABBRECHEN"),
+                      "status_ready" to mapOf("fr" to "Prêt.", "en" to "Ready.", "es" to "Listo.", "pt" to "Pronto.", "de" to "Bereit."),
+                      "status_split_ready" to mapOf("fr" to "Prêt à découper.", "en" to "Ready to split.", "es" to "Listo para dividir.", "pt" to "Pronto para dividir.", "de" to "Bereit zum Teilen."),
+                      "sec3" to mapOf("fr" to "3. SÉCURITÉ & VÉRIFICATION", "en" to "3. SECURITY & CHECKSUM", "es" to "3. SEGURIDAD Y VERIFICACIÓN", "pt" to "3. SEGURANÇA E VERIFICAÇÃO", "de" to "3. SICHERHEIT & PRÜFUNG"),
+                      "chk_verify" to mapOf("fr" to "Contrôle d'intégrité après écriture", "en" to "Integrity check after write", "es" to "Control de integridad tras escritura", "pt" to "Verificação de integridade após gravação", "de" to "Integritätsprüfung nach dem Schreiben"),
+                      "chk_delete" to mapOf("fr" to "Supprimer les sources après succès", "en" to "Delete sources after success", "es" to "Eliminar fuentes tras éxito", "pt" to "Excluir fontes após sucesso", "de" to "Quellen nach Erfolg löschen"),
+                      "hash_hint" to mapOf("fr" to "Coller un hash SHA-256 de contrôle", "en" to "Paste control SHA-256 hash", "es" to "Pegar hash SHA-256 de control", "pt" to "Colar hash SHA-256 de controle", "de" to "Kontroll-SHA-256-Hash einfügen"),
+                      "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256", "es" to "📋 Copiar SHA-256", "pt" to "📋 Copiar SHA-256", "de" to "📋 SHA-256 kopieren"),
+                      "menu_options" to mapOf("fr" to "⚙️ OPTIONS & MENU", "en" to "⚙️ OPTIONS & MENU", "es" to "⚙️ OPCIONES Y MENÚ", "pt" to "⚙️ OPÇÕES E MENU", "de" to "⚙️ OPTIONEN & MENÜ"),
+                      "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode", "es" to "📂 Cambiar a Modo Divisor", "pt" to "📂 Mudar para o Modo Divisor", "de" to "📂 In den Splitter-Modus wechseln"),
+                      "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode", "es" to "🔗 Cambiar a Modo Fusión", "pt" to "🔗 Mudar para o Modo Fusão", "de" to "🔗 In den Zusammenführungs-Modus wechseln"),
+                      "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe", "es" to "🎨 Cambiar de Universo", "pt" to "🎨 Mudar de Universo", "de" to "🎨 Universum wechseln"),
+                      "menu_lang" to mapOf("fr" to "🌐 Changer la Langue / Language", "en" to "🌐 Change Language", "es" to "🌐 Cambiar Idioma", "pt" to "🌐 Mudar Idioma", "de" to "🌐 Sprache ändern"),
+                      "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates", "es" to "🔄 Buscar actualizaciones", "pt" to "🔄 Verificar atualizações", "de" to "🔄 Nach Updates suchen"),
+                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.0)", "en" to "ℹ️ About (v2.1.0)", "es" to "ℹ️ Acerca de (v2.1.0)", "pt" to "ℹ️ Sobre (v2.1.0)", "de" to "ℹ️ Über (v2.1.0)"),
+                      "dialog_universe_title" to mapOf("fr" to "🌟 CHOISIS TON UNIVERS GAMING", "en" to "🌟 CHOOSE YOUR GAMING UNIVERSE", "es" to "🌟 ELIGE TU UNIVERSO GAMING", "pt" to "🌟 ESCOLHA SEU UNIVERSO GAMER", "de" to "🌟 WÄHLE DEIN GAMING-UNIVERSUM"),
+                      "dialog_lang_title" to mapOf("fr" to "🌐 CHOISIR LA LANGUE / LANGUAGE", "en" to "🌐 CHOOSE LANGUAGE", "es" to "🌐 SELECCIONAR IDIOMA", "pt" to "🌐 SELECIONAR IDIOMA", "de" to "🌐 SPRACHE AUSWÄHLEN"),
+                      "toast_checking_updates" to mapOf("fr" to "🔍 Recherche de mises à jour...", "en" to "🔍 Checking for updates...", "es" to "🔍 Buscando actualizaciones...", "pt" to "🔍 Procurando atualizações...", "de" to "🔍 Suche nach Updates..."),
+                      "toast_already_up_to_date" to mapOf("fr" to "✅ Ton application est déjà à jour (v2.1.0) !", "en" to "✅ Your application is already up to date (v2.1.0) !", "es" to "✅ ¡Tu aplicación ya está actualizada (v2.1.0)!", "pt" to "✅ Seu aplicativo já está atualizado (v2.1.0)!", "de" to "✅ Deine App ist bereits auf dem neuesten Stand (v2.1.0)!"),
+                      "toast_no_apk_found" to mapOf("fr" to "⚠️ Aucun fichier APK trouvé dans la dernière release.", "en" to "⚠️ No APK file found in the latest release.", "es" to "⚠️ No se encontró ningún archivo APK en la última versión.", "pt" to "⚠️ Nenhum arquivo APK encontrado na versão mais recente.", "de" to "⚠️ Keine APK-Datei im neuesten Release gefunden."),
+                      "toast_server_error" to mapOf("fr" to "❌ Erreur serveur GitHub", "en" to "❌ GitHub server error", "es" to "❌ Error del servidor de GitHub", "pt" to "❌ Erro no servidor do GitHub", "de" to "❌ GitHub-Serverfehler"),
+                      "toast_check_failed" to mapOf("fr" to "❌ Échec de la vérification", "en" to "❌ Check failed", "es" to "❌ Falló la verificación", "pt" to "❌ Falha na verificação", "de" to "❌ Überprüfung fehlgeschlagen"),
+                      "bus_pop" to mapOf("fr" to "Tout le monde descend !", "en" to "Everyone out!", "es" to "¡Todo el mundo abajo!", "pt" to "Todo mundo descendo!", "de" to "Alle aussteigen!"),
+                      "chest_pop" to mapOf("fr" to "Conversion réussie grâce à moi ! Le coffre", "en" to "Conversion successful thanks to me! The chest", "es" to "¡Conversión exitosa gracias a mí! El cofre", "pt" to "Conversão bem-sucedida graças a mim! O baú", "de" to "Erfolgreiche Konvertierung dank mir! Die Truhe")
                   )
                   return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
               }
@@ -1627,8 +1627,8 @@ jobs:
 
               private fun showLanguageDialog() {
                   val cfg = getThemeConfig(currentTheme)
-                  val langs = arrayOf("Français 🇫🇷", "English 🇺🇸")
-                  val codes = arrayOf("fr", "en")
+                  val langs = arrayOf("Français 🇫🇷", "English 🇺🇸", "Español 🇪🇸", "Português 🇧🇷", "Deutsch 🇩🇪")
+                  val codes = arrayOf("fr", "en", "es", "pt", "de")
                   val checkedItem = codes.indexOf(currentLang).coerceAtLeast(0)
 
                   val dialogView = LinearLayout(this).apply {
@@ -1683,9 +1683,27 @@ jobs:
 
               private fun showRestartPrompt() {
                   val cfg = getThemeConfig(currentTheme)
-                  val restartMsg = if (currentLang == "en") "Please restart the application to apply changes." else "Veuillez redémarrer l'application pour appliquer les changements."
-                  val restartBtn = if (currentLang == "en") "Restart" else "Redémarrer"
-                  val cancelBtn = if (currentLang == "en") "Later" else "Plus tard"
+                  val restartMsg = when (currentLang) {
+                      "en" -> "Please restart the application to apply changes."
+                      "es" -> "Reinicia la aplicación para aplicar los cambios."
+                      "pt" -> "Reinicie o aplicativo para aplicar as alterações."
+                      "de" -> "Bitte starte die App neu, um die Änderungen zu übernehmen."
+                      else -> "Veuillez redémarrer l'application pour appliquer les changements."
+                  }
+                  val restartBtn = when (currentLang) {
+                      "en" -> "Restart"
+                      "es" -> "Reiniciar"
+                      "pt" -> "Reiniciar"
+                      "de" -> "Neustart"
+                      else -> "Redémarrer"
+                  }
+                  val cancelBtn = when (currentLang) {
+                      "en" -> "Later"
+                      "es" -> "Más tarde"
+                      "pt" -> "Mais tarde"
+                      "de" -> "Später"
+                      else -> "Plus tard"
+                  }
 
                   val dialogView = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
@@ -2008,7 +2026,13 @@ jobs:
                   val cfg = getThemeConfig(currentTheme)
 
                   if (uris.isEmpty()) {
-                      val emptyMsg = if (currentLang == "en") "NO FILES SELECTED" else "AUCUN FICHIER SÉLECTIONNÉ"
+                      val emptyMsg = when (currentLang) {
+                          "en" -> "NO FILES SELECTED"
+                          "es" -> "NINGÚN ARCHIVO SELECCIONADO"
+                          "pt" -> "NENHUM ARQUIVO SELECIONADO"
+                          "de" -> "KEINE DATEIEN AUSGEWÄHLT"
+                          else -> "AUCUN FICHIER SÉLECTIONNÉ"
+                      }
                       listContainer.addView(text(emptyMsg, 11f, cfg.dim).apply { typeface = Typeface.MONOSPACE })
                       checkView.text = ""
                       pkgIconView.visibility = View.GONE
