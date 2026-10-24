@@ -773,7 +773,7 @@ jobs:
                   val bus = busImageView ?: return
                   val parentWidth = rootFrameLayout.width
                   val screenWidth = if (parentWidth > 0) parentWidth.toFloat() else resources.displayMetrics.widthPixels.toFloat()
-                  val screenHeight = rootFrameLayout.height.toFloat().takeIf { it > 0f } else resources.displayMetrics.heightPixels.toFloat()
+                  val screenHeight = rootFrameLayout.height.toFloat().takeIf { it > 0f } ?: resources.displayMetrics.heightPixels.toFloat()
 
                   val goRight = random.nextBoolean()
                   val startX = if (goRight) -dp(240).toFloat() else screenWidth + dp(240).toFloat()
@@ -2133,21 +2133,25 @@ jobs:
                           var currentOutputStream: OutputStream? = null
 
                           fun openNextPart() {
-                              try { currentOutputStream?.flush(); currentOutputStream?.close() } catch (_: Exception) {}
+                              try { 
+                                  currentOutputStream?.flush()
+                                  currentOutputStream?.close() 
+                              } catch (_: Exception) {}
 
                               val partName = "$sourceName.${String.format(Locale.US, "%02d", partIndex)}"
                               val docUri = DocumentsContract.createDocument(contentResolver, baseDirUri, "application/octet-stream", partName)
                                   ?: throw IllegalStateException("Création de $partName impossible")
                               
-                              currentOutputStream = BufferedOutputStream(contentResolver.openOutputStream(docUri)
-                                  ?: throw IllegalStateException("Ouverture du flux écriture impossible"), 1 shl 20)
+                              currentOutputStream = contentResolver.openOutputStream(docUri, "w")
+                                  ?: throw IllegalStateException("Ouverture du flux écriture impossible")
                               partIndex++
                           }
 
                           openNextPart()
 
-                          val buf = ByteArray(1 shl 20)
+                          val buf = ByteArray(512 * 1024)
                           var currentPartBytes = 0.toLong()
+                          
                           contentResolver.openInputStream(sourceUri)?.use { input ->
                               while (true) {
                                   if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
@@ -2171,6 +2175,8 @@ jobs:
                                       val now = System.currentTimeMillis()
                                       if (now - lastPush > 250) {
                                           lastPush = now
+                                          currentOutputStream!!.flush()
+
                                           val elapsedSecs = (now - t0) / 1000.0
                                           val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
                                           val speedStr = fmt(speedBps.toLong()) + "/s"
@@ -2184,15 +2190,14 @@ jobs:
                                               bar.progress = pct * 10
                                               statusView.text = msg
                                           }
-                                          if (now - lastNotifTime > 2000 || pct == 100) {
-                                              lastNotifTime = now
-                                              updateProgressNotif("Découpage : $pct%", pct)
-                                          }
                                       }
                                   }
                               }
                           }
-                          try { currentOutputStream?.flush(); currentOutputStream?.close() } catch (_: Exception) {}
+                          try { 
+                              currentOutputStream?.flush()
+                              currentOutputStream?.close() 
+                          } catch (_: Exception) {}
                           success = true
                       } catch (e: Throwable) {
                           ui.post {
