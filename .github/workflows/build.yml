@@ -31,30 +31,12 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources
+      - name: Nettoyage des Fichiers
         run: |
-          echo "Nettoyage des fichiers obsolètes..."
+          echo "Nettoyage des ressources..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
 
-          for dir in app/src/main/res/drawable app/src/main/res/raw; do
-            if [ -d "$dir" ]; then
-              for f in "$dir"/*; do
-                if [ -f "$f" ]; then
-                  filename=$(basename "$f")
-                  clean_name=$(echo "$filename" | sed 's/\.png\.png$/\.png/g' | sed 's/\.mp3\.mp3$/\.mp3/g' | sed 's/\.ogg\.ogg$/\.ogg/g')
-                  clean_name=$(echo "$clean_name" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_.-')
-                  if ! echo "$clean_name" | grep -q '^[a-z]'; then
-                    clean_name="img_${clean_name}"
-                  fi
-                  if [ "$filename" != "$clean_name" ]; then
-                    mv "$f" "$dir/$clean_name"
-                  fi
-                fi
-              done
-            fi
-          done
-
-      - name: Générer le projet Android v2.1.4
+      - name: Générer le projet Android v2.1.9
         env:
           FORCE: '1'
         run: |
@@ -119,8 +101,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2140
-                  versionName = "2.1.4"
+                  versionCode = 2190
+                  versionName = "2.1.9"
               }
 
               compileOptions {
@@ -249,7 +231,6 @@ jobs:
           import android.content.pm.PackageManager
           import android.content.res.ColorStateList
           import android.graphics.Bitmap
-          import android.graphics.BitmapFactory
           import android.graphics.Color
           import android.graphics.Typeface
           import android.graphics.drawable.GradientDrawable
@@ -259,13 +240,10 @@ jobs:
           import android.os.Bundle
           import android.os.Handler
           import android.os.Looper
-          import android.os.ParcelFileDescriptor
-          import android.os.PowerManager
           import android.os.VibrationEffect
           import android.os.Vibrator
           import android.provider.DocumentsContract
           import android.provider.OpenableColumns
-          import android.provider.Settings
           import android.view.Gravity
           import android.view.MotionEvent
           import android.view.View
@@ -282,17 +260,11 @@ jobs:
           import android.widget.TextView
           import android.widget.Toast
           import android.widget.VideoView
-          import androidx.core.content.FileProvider
           import java.io.BufferedOutputStream
-          import java.io.File
           import java.io.FileInputStream
           import java.io.FileOutputStream
           import java.io.OutputStream
-          import java.net.HttpURLConnection
-          import java.net.URL
-          import java.security.MessageDigest
           import java.util.Locale
-          import java.util.Random
 
           class AspectRatioVideoView(context: Context) : VideoView(context) {
               private var videoWidth = 0
@@ -377,85 +349,45 @@ jobs:
 
               private fun log(msg: String) {
                   ui.post {
-                      if (logBuffer.length > 3000) {
-                          logBuffer.setLength(0)
-                      }
+                      if (logBuffer.length > 3000) logBuffer.setLength(0)
                       logBuffer.append("• $msg\n")
                       if (::consoleLogView.isInitialized) {
                           consoleLogView.text = logBuffer.toString()
-                          if (::consoleScroll.isInitialized) {
-                              consoleScroll.fullScroll(View.FOCUS_DOWN)
-                          }
+                          if (::consoleScroll.isInitialized) consoleScroll.fullScroll(View.FOCUS_DOWN)
                       }
                   }
               }
 
               private data class ThemeConfig(
-                  val name: String,
-                  val bg: Int,
-                  val card: Int,
-                  val border: String,
-                  val primaryText: Int,
-                  val secondaryText: Int,
-                  val dim: Int,
-                  val pressColor: String,
-                  val btnPick: Pair<String, String>,
-                  val btnDir: Pair<String, String>,
-                  val btnRev: Pair<String, String>,
-                  val btnOut: Pair<String, String>,
-                  val btnGo: Pair<String, String>,
-                  val btnCancel: Pair<String, String>
+                  val name: String, val bg: Int, val card: Int, val border: String,
+                  val primaryText: Int, val secondaryText: Int, val dim: Int, val pressColor: String,
+                  val btnPick: Pair<String, String>, val btnDir: Pair<String, String>,
+                  val btnRev: Pair<String, String>, val btnOut: Pair<String, String>,
+                  val btnGo: Pair<String, String>, val btnCancel: Pair<String, String>
               )
 
               private fun getThemeConfig(key: String): ThemeConfig {
                   return when (key) {
                       "FORTNITE" -> ThemeConfig(
-                          name = "Fortnite Battle Royale",
-                          bg = Color.parseColor("#0C0826"),
-                          card = Color.parseColor("#85162447"),
-                          border = "#00D9FF",
-                          primaryText = Color.parseColor("#FFE600"),
-                          secondaryText = Color.parseColor("#00D9FF"),
-                          dim = Color.parseColor("#9DB2F5"),
-                          pressColor = "#FFE600",
-                          btnPick = Pair("#1E2D6E", "#00D9FF"),
-                          btnDir = Pair("#1E2D6E", "#00D9FF"),
-                          btnRev = Pair("#4B1E6E", "#B800FF"),
-                          btnOut = Pair("#0F5E6B", "#00FFF0"),
-                          btnGo = Pair("#198038", "#00FF66"),
-                          btnCancel = Pair("#801935", "#FF0055")
+                          name = "Fortnite Battle Royale", bg = Color.parseColor("#0C0826"), card = Color.parseColor("#85162447"),
+                          border = "#00D9FF", primaryText = Color.parseColor("#FFE600"), secondaryText = Color.parseColor("#00D9FF"),
+                          dim = Color.parseColor("#9DB2F5"), pressColor = "#FFE600", btnPick = Pair("#1E2D6E", "#00D9FF"),
+                          btnDir = Pair("#1E2D6E", "#00D9FF"), btnRev = Pair("#4B1E6E", "#B800FF"), btnOut = Pair("#0F5E6B", "#00FFF0"),
+                          btnGo = Pair("#198038", "#00FF66"), btnCancel = Pair("#801935", "#FF0055")
                       )
                       "GOW" -> ThemeConfig(
-                          name = "God of War Ragnarök",
-                          bg = Color.parseColor("#120A0A"),
-                          card = Color.parseColor("#80241212"),
-                          border = "#FF4500",
-                          primaryText = Color.parseColor("#FFD700"),
-                          secondaryText = Color.parseColor("#FF4500"),
-                          dim = Color.parseColor("#B8860B"),
-                          pressColor = "#FF0000",
-                          btnPick = Pair("#3D1414", "#FF4500"),
-                          btnDir = Pair("#3D1414", "#FF4500"),
-                          btnRev = Pair("#4A3B12", "#FFD700"),
-                          btnOut = Pair("#291321", "#FF1493"),
-                          btnGo = Pair("#1C3D14", "#32CD32"),
-                          btnCancel = Pair("#5E0F0F", "#FF0000")
+                          name = "God of War Ragnarök", bg = Color.parseColor("#120A0A"), card = Color.parseColor("#80241212"),
+                          border = "#FF4500", primaryText = Color.parseColor("#FFD700"), secondaryText = Color.parseColor("#FF4500"),
+                          dim = Color.parseColor("#B8860B"), pressColor = "#FF0000", btnPick = Pair("#3D1414", "#FF4500"),
+                          btnDir = Pair("#3D1414", "#FF4500"), btnRev = Pair("#4A3B12", "#FFD700"), btnOut = Pair("#291321", "#FF1493"),
+                          btnGo = Pair("#1C3D14", "#32CD32"), btnCancel = Pair("#5E0F0F", "#FF0000")
                       )
                       else -> ThemeConfig(
-                          name = "Sombre Classique",
-                          bg = Color.parseColor("#0F172A"),
-                          card = Color.parseColor("#1E293B"),
-                          border = "#334155",
-                          primaryText = Color.WHITE,
-                          secondaryText = Color.parseColor("#38BDF8"),
-                          dim = Color.parseColor("#94A3B8"),
-                          pressColor = "#38BDF8",
-                          btnPick = Pair("#0284C7", "#38BDF8"),
-                          btnDir = Pair("#0369A1", "#38BDF8"),
-                          btnRev = Pair("#334155", "#64748B"),
-                          btnOut = Pair("#0D9488", "#14B8A6"),
-                          btnGo = Pair("#16A34A", "#22C55E"),
-                          btnCancel = Pair("#DC2626", "#EF4444")
+                          name = "Sombre Classique", bg = Color.parseColor("#0F172A"), card = Color.parseColor("#1E293B"),
+                          border = "#334155", primaryText = Color.WHITE, secondaryText = Color.parseColor("#38BDF8"),
+                          dim = Color.parseColor("#94A3B8"), pressColor = "#38BDF8", btnPick = Pair("#0284C7", "#38BDF8"),
+                          btnDir = Pair("#0369A1", "#38BDF8"), btnRev = Pair("#334155", "#64748B"), btnOut = Pair("#0D9488", "#14B8A6"),
+                          btnGo = Pair("#16A34A", "#22C55E"), btnCancel = Pair("#DC2626", "#EF4444")
                       )
                   }
               }
@@ -487,7 +419,9 @@ jobs:
                       "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode"),
                       "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode"),
                       "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe"),
-                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.4)", "en" to "ℹ️ About (v2.1.4)")
+                      "menu_lang" to mapOf("fr" to "🌐 Langue / Language", "en" to "🌐 Language / Langue"),
+                      "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for updates"),
+                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.9)", "en" to "ℹ️ About (v2.1.9)")
                   )
                   return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
               }
@@ -501,7 +435,7 @@ jobs:
                   checkPermissions()
                   showMergerScreen()
                   applyTheme()
-                  log("Application démarrée. Version 2.1.4")
+                  log("Application démarrée. Version 2.1.9")
               }
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
@@ -768,7 +702,7 @@ jobs:
                   bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
                       max = 1000; progress = 0; setPadding(0, dp(12), 0, dp(4))
                       val resId = resources.getIdentifier("rounded_progress", "drawable", packageName)
-                      if (resId != 0) { progressDrawable = resources.getDrawable(resId, null) }
+                      if (resId != 0) progressDrawable = resources.getDrawable(resId, null)
                   }
                   card2.addView(bar, lp())
 
@@ -835,14 +769,22 @@ jobs:
                       output = null; outView.text = tr("out_lbl"); rebuildButtons()
                   }
                   addMenuOption(tr("menu_universe")) { dialog.dismiss(); showThemeDialog() }
-                  addMenuOption(tr("menu_about")) { dialog.dismiss(); toast("PS PKG Freedom Hub v2.1.4") }
+                  addMenuOption(tr("menu_lang")) { dialog.dismiss(); showLangDialog() }
+                  addMenuOption(tr("menu_update")) { dialog.dismiss(); toast("Vérification des mises à jour...") }
+                  addMenuOption(tr("menu_about")) { dialog.dismiss(); toast("PS PKG Freedom Hub v2.1.9") }
                   dialog.show()
               }
 
               private fun showThemeDialog() {
                   val cfg = getThemeConfig(currentTheme)
-                  val themes = arrayOf("🔵 Sombre Classique", "⚡ Fortnite Battle Royale", "🪓 God of War Ragnarök")
-                  val keys = arrayOf("CLASSIC", "FORTNITE", "GOW")
+                  val themes = arrayOf(
+                      "🔵 Sombre Classique", 
+                      "⚡ Fortnite Battle Royale", 
+                      "🪓 God of War Ragnarök",
+                      "🌟 Cyberpunk 2077 (En dev)",
+                      "🌌 PlayStation Nebula (En dev)"
+                  )
+                  val keys = arrayOf("CLASSIC", "FORTNITE", "GOW", "CYBERPUNK", "NEBULA")
                   val checkedItem = keys.indexOf(currentTheme).coerceAtLeast(0)
 
                   val dialogView = LinearLayout(this).apply {
@@ -859,8 +801,43 @@ jobs:
                           setBackgroundColor(Color.TRANSPARENT)
                           setOnClickListener {
                               dialog.dismiss()
-                              currentTheme = keys[index]
-                              prefs.edit().putString("theme", currentTheme).apply()
+                              val chosenKey = keys[index]
+                              if (chosenKey == "CYBERPUNK" || chosenKey == "NEBULA") {
+                                  toast("⚠️ Univers ${themes[index]} en cours de développement !")
+                              } else {
+                                  currentTheme = chosenKey
+                                  prefs.edit().putString("theme", currentTheme).apply()
+                                  applyTheme()
+                              }
+                          }
+                      }
+                      dialogView.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(38)))
+                  }
+                  dialog.show()
+              }
+
+              private fun showLangDialog() {
+                  val cfg = getThemeConfig(currentTheme)
+                  val langs = arrayOf("🇫🇷 Français", "🇬🇧 English")
+                  val codes = arrayOf("fr", "en")
+                  val checkedItem = codes.indexOf(currentLang).coerceAtLeast(0)
+
+                  val dialogView = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply { setColor(cfg.card); cornerRadius = dp(10).toFloat(); setStroke(dp(2), Color.parseColor(cfg.border)) }
+                  }
+                  val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+                  langs.forEachIndexed { index, langName ->
+                      val btn = Button(this).apply {
+                          text = if (index == checkedItem) "▶ $langName" else "   $langName"
+                          setTextColor(Color.WHITE); textSize = 12f; gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                          setBackgroundColor(Color.TRANSPARENT)
+                          setOnClickListener {
+                              dialog.dismiss()
+                              currentLang = codes[index]
+                              prefs.edit().putString("lang", currentLang).apply()
                               applyTheme()
                           }
                       }
@@ -909,13 +886,13 @@ jobs:
                   } else if (req == 2 || req == 4) {
                       val u = data?.data ?: return
                       persist(u, true); output = u
-                      if (::outView.isInitialized) { outView.text = "Sortie : ${u.lastPathSegment}" }
+                      if (::outView.isInitialized) outView.text = "Sortie : ${u.lastPathSegment}"
                   } else if (req == 3 || req == 5) {
                       val tree = data?.data ?: return
                       try { contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) } catch (_: Exception) {}
                       if (req == 5) {
                           output = tree
-                          if (::outView.isInitialized) { outView.text = "Dossier de sortie défini" }
+                          if (::outView.isInitialized) outView.text = "Dossier de sortie défini"
                           log("Dossier de destination du Splitter défini.")
                       } else {
                           loadTree(tree)
@@ -946,7 +923,7 @@ jobs:
                               val id = c.getString(0); val name = c.getString(1); val mime = c.getString(3)
                               if (id != null && name != null && mime != DocumentsContract.Document.MIME_TYPE_DIR) {
                                   if (isPkgFile(name)) {
-                                      val size = if (c.isNull(2)) 0.toLong() else c.getLong(2)
+                                      val size = if (c.isNull(2)) 0L else c.getLong(2)
                                       uris.add(DocumentsContract.buildDocumentUriUsingTree(tree, id)); names.add(name); sizes.add(size)
                                   }
                               }
@@ -965,7 +942,7 @@ jobs:
               }
               private fun add(u: Uri) { persist(u); uris.add(u); names.add(getFileName(u)); sizes.add(size(u)) }
 
-              private data class PkgInfo(val console: String, val valid: Boolean, val contentId: String, val region: String, val icon: Bitmap? = null)
+              private data class PkgInfo(val console: String, val valid: Boolean, val contentId: String, val region: String)
 
               private fun analyzePkg(u: Uri): PkgInfo {
                   try {
@@ -1015,6 +992,7 @@ jobs:
 
               private fun executeAction() {
                   if (uris.isEmpty()) { toast("Sélectionne d'abord des fichiers."); return }
+                  if (output == null) { toast("Définis d'abord l'emplacement de sortie !"); return }
                   if (appMode == "SPLIT") splitPkg() else mergePkg()
               }
 
@@ -1027,10 +1005,10 @@ jobs:
 
                   Thread {
                       val total = size(sourceUri)
-                      var done = 0.toLong()
+                      var done = 0L
                       var success = false
                       try {
-                          val maxPartSize = 4.toLong() * 1024 * 1024 * 1024
+                          val maxPartSize = 4L * 1024 * 1024 * 1024
                           var partIndex = 0
                           val baseName = getFileName(sourceUri).let { if (it.contains(".")) it.substringBeforeLast(".") else it }
                           var currentOutputStream: OutputStream? = null
@@ -1048,7 +1026,6 @@ jobs:
 
                               val pfdOut = contentResolver.openFileDescriptor(createdUri, "w") ?: throw IllegalStateException("Sortie impossible pour $partName")
                               currentOutputStream = BufferedOutputStream(FileOutputStream(pfdOut.fileDescriptor), 1 shl 20)
-                              log("Flux ouvert avec succès pour : $partName")
                               partIndex++
                           }
 
@@ -1058,29 +1035,35 @@ jobs:
                               FileInputStream(pfd.fileDescriptor).use { input ->
                                   log("Flux source ouvert. Taille totale : ${fmt(total)}")
                                   val buf = ByteArray(1 shl 20)
-                                  var currentPartBytes = 0.toLong()
-                                  while (true) {
-                                      if (cancelled) throw InterruptedException("Annulé.")
+                                  var currentPartBytes = 0L
+                                  var lastYieldTime = System.currentTimeMillis()
+                                  while (!cancelled) {
                                       val bytesRead = input.read(buf)
                                       if (bytesRead <= 0) break
                                       var offset = 0
-                                      while (offset < bytesRead) {
-                                          if (currentPartBytes >= maxPartSize) { openNextPart(); currentPartBytes = 0.toLong() }
+                                      while (offset < bytesRead && !cancelled) {
+                                          if (currentPartBytes >= maxPartSize) { openNextPart(); currentPartBytes = 0L }
                                           val chunkToWrite = minOf(bytesRead - offset, (maxPartSize - currentPartBytes).toInt())
                                           currentOutputStream!!.write(buf, offset, chunkToWrite)
                                           offset += chunkToWrite; currentPartBytes += chunkToWrite; done += chunkToWrite
                                           val pct = if (total > 0) (done * 100 / total).toInt() else 0
-                                          ui.post { bar.progress = pct * 10; statusView.text = "${fmt(done)} / ${fmt(total)}" }
+                                          
+                                          val now = System.currentTimeMillis()
+                                          if (now - lastYieldTime > 50) {
+                                              lastYieldTime = now
+                                              ui.post { bar.progress = pct * 10; statusView.text = "${fmt(done)} / ${fmt(total)}" }
+                                              Thread.sleep(5)
+                                          }
                                       }
                                   }
                               }
                           }
                           currentOutputStream?.flush(); currentOutputStream?.close()
-                          success = true; log("Découpage terminé avec succès sur tous les blocs.")
+                          if (!cancelled) { success = true; log("Découpage terminé avec succès.") } else { log("Découpage annulé par l'utilisateur.") }
                       } catch (e: Throwable) {
                           log("❌ ERREUR : ${e.message}")
                       }
-                      ui.post { processing = false; doneUi(); if (success) statusView.text = "Découpage réussi !" }
+                      ui.post { processing = false; doneUi(); if (success) statusView.text = "Découpage réussi !" else if (cancelled) statusView.text = "Annulé." }
                   }.start()
               }
 
@@ -1093,34 +1076,41 @@ jobs:
 
                   Thread {
                       val total = list.sumOf { size(it) }
-                      var done = 0.toLong()
+                      var done = 0L
                       var success = false
                       try {
                           val pfd = contentResolver.openFileDescriptor(out, "w") ?: throw IllegalStateException("Sortie impossible")
                           BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20).use { os ->
                               val buf = ByteArray(1 shl 20)
+                              var lastYieldTime = System.currentTimeMillis()
                               for (u in list) {
+                                  if (cancelled) break
                                   contentResolver.openFileDescriptor(u, "r")?.use { pfdIn ->
                                       FileInputStream(pfdIn.fileDescriptor).use { input ->
-                                          while (true) {
-                                              if (cancelled) throw InterruptedException("Annulé.")
+                                          while (!cancelled) {
                                               val bytesRead = input.read(buf)
                                               if (bytesRead <= 0) break
                                               os.write(buf, 0, bytesRead)
                                               done += bytesRead
                                               val pct = if (total > 0) (done * 100 / total).toInt() else 0
-                                              ui.post { bar.progress = pct * 10; statusView.text = "${fmt(done)} / ${fmt(total)}" }
+                                              
+                                              val now = System.currentTimeMillis()
+                                              if (now - lastYieldTime > 50) {
+                                                  lastYieldTime = now
+                                                  ui.post { bar.progress = pct * 10; statusView.text = "${fmt(done)} / ${fmt(total)}" }
+                                                  Thread.sleep(5)
+                                              }
                                           }
                                       }
                                   }
                               }
                               os.flush()
                           }
-                          success = true; log("Fusion terminée avec succès.")
+                          if (!cancelled) { success = true; log("Fusion terminée avec succès.") } else { log("Fusion annulée par l'utilisateur.") }
                       } catch (e: Throwable) {
                           log("❌ ERREUR : ${e.message}")
                       }
-                      ui.post { processing = false; doneUi(); if (success) statusView.text = "Fusion réussie !" }
+                      ui.post { processing = false; doneUi(); if (success) statusView.text = "Fusion réussie !" else if (cancelled) statusView.text = "Annulé." }
                   }.start()
               }
 
@@ -1166,12 +1156,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.1.4
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.1.4.apk
+      - name: Renommer l'APK v2.1.9
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.1.9.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.1.4-apk
-          path: PkgMerger-v2.1.4.apk
+          name: pkg-merger-v2.1.9-apk
+          path: PkgMerger-v2.1.9.apk
           if-no-files-found: error
