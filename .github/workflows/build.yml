@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.62 (Correctifs Extension, Splitter & Verrouillage)
+      - name: Générer le projet Android v2.9.63 (Correctifs Bouton Annuler & Splitter SAF)
         env:
           FORCE: '1'
         run: |
@@ -119,8 +119,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2962
-                  versionName = "2.1.2"
+                  versionCode = 2963
+                  versionName = "2.1.3"
               }
 
               compileOptions {
@@ -527,11 +527,11 @@ jobs:
                       "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe", "es" to "🎨 Cambiar de Universo", "pt" to "🎨 Mudar de Universo", "de" to "🎨 Universum wechseln"),
                       "menu_lang" to mapOf("fr" to "🌐 Changer la Langue / Language", "en" to "🌐 Change Language", "es" to "🌐 Cambiar Idioma", "pt" to "🌐 Mudar Idioma", "de" to "🌐 Sprache ändern"),
                       "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates", "es" to "🔄 Buscar actualizaciones", "pt" to "🔄 Verificar atualizações", "de" to "🔄 Nach Updates suchen"),
-                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.2)", "en" to "ℹ️ About (v2.1.2)", "es" to "ℹ️ Acerca de (v2.1.2)", "pt" to "ℹ️ Sobre (v2.1.2)", "de" to "ℹ️ Über (v2.1.2)"),
+                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.3)", "en" to "ℹ️ About (v2.1.3)", "es" to "ℹ️ Acerca de (v2.1.3)", "pt" to "ℹ️ Sobre (v2.1.3)", "de" to "ℹ️ Über (v2.1.3)"),
                       "dialog_universe_title" to mapOf("fr" to "🌟 CHOISIS TON UNIVERS GAMING", "en" to "🌟 CHOOSE YOUR GAMING UNIVERSE", "es" to "🌟 ELIGE TU UNIVERSO GAMING", "pt" to "🌟 ESCOLHA SEU UNIVERSO GAMER", "de" to "🌟 WÄHLE DEIN GAMING-UNIVERSUM"),
                       "dialog_lang_title" to mapOf("fr" to "🌐 CHOISIR LA LANGUE / LANGUAGE", "en" to "🌐 CHOOSE LANGUAGE", "es" to "🌐 SELECCIONAR IDIOMA", "pt" to "🌐 SELECIONAR IDIOMA", "de" to "🌐 SPRACHE AUSWÄHLEN"),
                       "toast_checking_updates" to mapOf("fr" to "🔍 Recherche de mises à jour...", "en" to "🔍 Checking for updates...", "es" to "🔍 Buscando actualizaciones...", "pt" to "🔍 Procurando atualizações...", "de" to "🔍 Suche nach Updates..."),
-                      "toast_already_up_to_date" to mapOf("fr" to "✅ Ton application est déjà à jour (v2.1.2) !", "en" to "✅ Your application is already up to date (v2.1.2) !", "es" to "✅ ¡Tu aplicación ya está actualizada (v2.1.2)!", "pt" to "✅ Seu aplicativo já está atualizado (v2.1.2)!", "de" to "✅ Deine App ist bereits auf dem neuesten Stand (v2.1.2)!"),
+                      "toast_already_up_to_date" to mapOf("fr" to "✅ Ton application est déjà à jour (v2.1.3) !", "en" to "✅ Your application is already up to date (v2.1.3) !", "es" to "✅ ¡Tu aplicación ya está actualizada (v2.1.3)!", "pt" to "✅ Seu aplicativo já está atualizado (v2.1.3)!", "de" to "✅ Deine App ist bereits auf dem neuesten Stand (v2.1.3)!"),
                       "toast_no_apk_found" to mapOf("fr" to "⚠️ Aucun fichier APK trouvé dans la dernière release.", "en" to "⚠️ No APK file found in the latest release.", "es" to "⚠️ No se encontró ningún archivo APK en la última versión.", "pt" to "⚠️ Nenhum arquivo APK encontrado na versão mais recente.", "de" to "⚠️ Keine APK-Datei im neuesten Release gefunden."),
                       "toast_server_error" to mapOf("fr" to "❌ Erreur serveur GitHub", "en" to "❌ GitHub server error", "es" to "❌ Error del servidor de GitHub", "pt" to "❌ Erro no servidor do GitHub", "de" to "❌ GitHub-Serverfehler"),
                       "toast_check_failed" to mapOf("fr" to "❌ Échec de la vérification", "en" to "❌ Check failed", "es" to "❌ Falló la verificación", "pt" to "❌ Falha na verificação", "de" to "❌ Überprüfung fehlgeschlagen"),
@@ -551,7 +551,7 @@ jobs:
                   showMergerScreen()
                   applyTheme()
 
-                  log("Application démarrée. Version 2.1.2")
+                  log("Application démarrée. Version 2.1.3")
                   checkFirstRunWelcome()
               }
 
@@ -613,7 +613,7 @@ jobs:
               }
 
               @SuppressLint("ClickableViewAccessibility")
-              private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, treeSide: Int, onClickAction: () -> Unit): View {
+              private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, treeSide: Int, allowDuringProcessing: Boolean = false, onClickAction: () -> Unit): View {
                   val cfg = getThemeConfig(currentTheme)
                   val container = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
@@ -681,7 +681,7 @@ jobs:
                   }
 
                   buttonContent.setOnClickListener {
-                      if (processing) {
+                      if (processing && !allowDuringProcessing) {
                           toast("⚠️ Traitement en cours, veuillez patienter...")
                           return@setOnClickListener
                       }
@@ -696,7 +696,7 @@ jobs:
                   }
 
                   buttonContent.setOnTouchListener { view, event ->
-                      if (processing) return@setOnTouchListener false
+                      if (processing && !allowDuringProcessing) return@setOnTouchListener false
                       when (event.action) {
                           MotionEvent.ACTION_DOWN -> {
                               view.animate().scaleX(0.96f).scaleY(0.96f).setDuration(60).start()
@@ -979,16 +979,16 @@ jobs:
 
                   val actionContainer = goBtnLayout.parent as? LinearLayout
 
-                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1) { pick() }
-                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2) { pickFolder() }
-                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1) { reversed = !reversed; refresh() }
-                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2) { pickOutput() }
+                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1, false) { pick() }
+                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2, false) { pickFolder() }
+                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1, false) { reversed = !reversed; refresh() }
+                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2, false) { pickOutput() }
                   val goTextKey = if (appMode == "SPLIT") "btn_go_split" else "btn_go_merge"
-                  goBtnLayout = createCustomButton(tr(goTextKey), cfg.btnGo.first, cfg.btnGo.second, 0) { executeAction() }
-                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0) {
+                  goBtnLayout = createCustomButton(tr(goTextKey), cfg.btnGo.first, cfg.btnGo.second, 0, false) { executeAction() }
+                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0, true) {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
-                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 0) { copyHash() }
+                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 0, false) { copyHash() }
 
                   if (parentCard1 != null && idxPick != -1) {
                       parentCard1.removeViewAt(idxPick); parentCard1.addView(pickBtnLayout, idxPick, lp())
@@ -1169,13 +1169,13 @@ jobs:
                   section1Title = text(tr("sec1"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(section1Title)
                   
-                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1) { pick() }
+                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1, false) { pick() }
                   card1.addView(pickBtnLayout, lp())
 
-                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2) { pickFolder() }
+                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2, false) { pickFolder() }
                   card1.addView(dirBtnLayout, lp())
 
-                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1) { reversed = !reversed; refresh() }
+                  revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1, false) { reversed = !reversed; refresh() }
                   card1.addView(revBtnLayout, lp())
 
                   listContainer = LinearLayout(this).apply {
@@ -1207,7 +1207,7 @@ jobs:
                   section2Title = text(tr("sec2"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card2.addView(section2Title)
 
-                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2) { pickOutput() }
+                  outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2, false) { pickOutput() }
                   card2.addView(outBtnLayout, lp())
 
                   outView = text(tr("out_lbl"), 11f, Color.GRAY).apply { 
@@ -1221,10 +1221,10 @@ jobs:
                       gravity = Gravity.CENTER_VERTICAL
                   }
                   val goInitialText = if (appMode == "SPLIT") tr("btn_go_split") else tr("btn_go_merge")
-                  goBtnLayout = createCustomButton(goInitialText, cfg.btnGo.first, cfg.btnGo.second, 0) { executeAction() }
+                  goBtnLayout = createCustomButton(goInitialText, cfg.btnGo.first, cfg.btnGo.second, 0, false) { executeAction() }
                   actionLayout.addView(goBtnLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
-                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0) {
+                  cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0, true) {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
                   actionLayout.addView(cancelBtnLayout, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
@@ -1307,7 +1307,7 @@ jobs:
                   hashView = text("", 11f, Color.CYAN).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(hashView, lp())
 
-                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 0) { copyHash() }
+                  copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 0, false) { copyHash() }
                   card3.addView(copyBtnLayout, lp())
                   mainCol.addView(card3, lpCard())
 
@@ -1414,7 +1414,7 @@ jobs:
 
                   addMenuOption(tr("menu_about")) {
                       dialog.dismiss()
-                      toast("PS PKG Freedom Hub v2.1.2")
+                      toast("PS PKG Freedom Hub v2.1.3")
                   }
 
                   dialog.show()
@@ -1439,7 +1439,7 @@ jobs:
                               if (tagMatch != null && apkUrlMatch != null) {
                                   val latestTag = tagMatch.groupValues[1].replace("v", "")
                                   val apkUrl = apkUrlMatch.groupValues[1]
-                                  val currentVersion = "2.1.2"
+                                  val currentVersion = "2.1.3"
 
                                   ui.post {
                                       if (isVersionNewer(latestTag, currentVersion)) {
@@ -2188,7 +2188,7 @@ jobs:
                           var currentOutputStream: OutputStream? = null
 
                           val docId = DocumentsContract.getTreeDocumentId(treeUri)
-                          val parentUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId)
+                          val parentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
 
                           fun openNextPart() {
                               try { currentOutputStream?.flush(); currentOutputStream?.close() } catch (_: Exception) {}
@@ -2462,12 +2462,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.9.62
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.62.apk
+      - name: Renommer l'APK v2.9.63
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.63.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.62-apk
-          path: PkgMerger-v2.9.62.apk
+          name: pkg-merger-v2.9.63-apk
+          path: PkgMerger-v2.9.63.apk
           if-no-files-found: error
