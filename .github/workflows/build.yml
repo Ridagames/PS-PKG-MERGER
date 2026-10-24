@@ -1788,21 +1788,13 @@ jobs:
                       return
                   }
                   val defaultTitle = suggestName()
-                  if (appMode == "SPLIT") {
-                      startActivityForResult(
-                          Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-                              addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                          }, 4
-                      )
-                  } else {
-                      startActivityForResult(
-                          Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                              addCategory(Intent.CATEGORY_OPENABLE)
-                              type = "application/octet-stream"
-                              putExtra(Intent.EXTRA_TITLE, defaultTitle)
-                          }, 2
-                      )
-                  }
+                  startActivityForResult(
+                      Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                          addCategory(Intent.CATEGORY_OPENABLE)
+                          type = "application/octet-stream"
+                          putExtra(Intent.EXTRA_TITLE, "$defaultTitle.00")
+                      }, 4
+                  )
               }
 
               @Deprecated("Deprecated in Java")
@@ -1838,13 +1830,11 @@ jobs:
                       } catch (_: Exception) {}
                       loadTree(tree)
                   } else if (req == 4) {
-                      val tree = data?.data ?: return
-                      try {
-                          contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                      } catch (_: Exception) {}
-                      output = tree
+                      val u = data?.data ?: return
+                      persist(u, true)
+                      output = u
                       if (::outView.isInitialized) {
-                          outView.text = tr("out_dir_lbl")
+                          outView.text = "Sortie : ${u.lastPathSegment}"
                       }
                   }
               }
@@ -2096,14 +2086,10 @@ jobs:
               }
 
               private fun splitPkg() {
-                  val treeUri = output
-                  if (treeUri == null) { toast("Choisis d'abord le dossier de sortie."); return }
+                  val baseOutputUri = output
+                  if (baseOutputUri == null) { toast("Choisis d'abord l'emplacement de sortie."); return }
 
                   val sourceUri = uris[0]
-                  var sourceName = getFileName(sourceUri)
-                  if (sourceName.isBlank() || sourceName == "game.pkg") {
-                      sourceName = "pkg_game.pkg"
-                  }
                   val info = analyzePkg(sourceUri)
                   if (!info.valid) {
                       toast("Erreur : En-tête PKG invalide !")
@@ -2129,8 +2115,10 @@ jobs:
                       try {
                           val maxPartSize = 4.toLong() * 1024.toLong() * 1024.toLong() * 1024.toLong()
                           var partIndex = 0
-                          val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
-                          val baseDirUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocId)
+                          
+                          val pathStr = baseOutputUri.toString()
+                          val cleanPath = if (pathStr.contains(Regex("\\.\\d+$"))) pathStr.replace(Regex("\\.\\d+$"), "") else pathStr
+
                           var currentOutputStream: OutputStream? = null
 
                           fun openNextPart() {
@@ -2139,23 +2127,19 @@ jobs:
                                   currentOutputStream?.close() 
                               } catch (_: Exception) {}
 
-                              val partName = "$sourceName.${String.format(Locale.US, "%02d", partIndex)}"
-                              val docUri = DocumentsContract.createDocument(contentResolver, baseDirUri, "application/octet-stream", partName)
-                                  ?: throw IllegalStateException("Création de $partName impossible")
+                              val partUri = if (partIndex == 0) baseOutputUri else {
+                                  val newUriStr = "$cleanPath.${String.format(Locale.US, "%02d", partIndex)}"
+                                  Uri.parse(newUriStr)
+                              }
                               
-                              // Utilisation du flux de sortie standard sécurisé avec tampon de 1 Mo pour éviter tout blocage SAF
-                              currentOutputStream = BufferedOutputStream(contentResolver.openOutputStream(docUri, "w")
-                                  ?: throw IllegalStateException("Ouverture du flux de sortie impossible"), 1 shl 20)
+                              currentOutputStream = BufferedOutputStream(contentResolver.openOutputStream(partUri, "w")
+                                  ?: throw IllegalStateException("Ouverture de la partie $partIndex impossible"), 1 shl 20)
                               partIndex++
                           }
 
                           openNextPart()
 
-                          val pfdIn = contentResolver.openFileDescriptor(sourceUri, "r")
-                              ?: throw IllegalStateException("Ouverture du descripteur source impossible")
-                          
-                          try {
-                              val input = java.io.FileInputStream(pfdIn.fileDescriptor)
+                          contentResolver.openInputStream(sourceUri)?.use { input ->
                               val buf = ByteArray(1 shl 20)
                               var currentPartBytes = 0.toLong()
                               
@@ -2199,9 +2183,7 @@ jobs:
                                       }
                                   }
                               }
-                          } finally {
-                              pfdIn.close()
-                          }
+                          } ?: throw IllegalStateException("Ouverture du flux source impossible")
 
                           try { 
                               currentOutputStream?.flush()
