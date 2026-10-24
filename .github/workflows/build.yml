@@ -434,54 +434,6 @@ jobs:
                           btnGo = Pair("#1C3D14", "#32CD32"),
                           btnCancel = Pair("#5E0F0F", "#FF0000")
                       )
-                      "TLOU" -> ThemeConfig(
-                          name = "The Last of Us Part II",
-                          bg = Color.parseColor("#0A0F0D"),
-                          card = Color.parseColor("#14211A"),
-                          border = "#4A6B53",
-                          primaryText = Color.parseColor("#D4A359"),
-                          secondaryText = Color.parseColor("#7FA98B"),
-                          dim = Color.parseColor("#8C9E91"),
-                          pressColor = "#D4A359",
-                          btnPick = Pair("#1C3325", "#7FA98B"),
-                          btnDir = Pair("#1C3325", "#7FA98B"),
-                          btnRev = Pair("#3A3020", "#D4A359"),
-                          btnOut = Pair("#243D31", "#7FA98B"),
-                          btnGo = Pair("#2B4D21", "#52A336"),
-                          btnCancel = Pair("#4D2121", "#A33636")
-                      )
-                      "GENSHIN" -> ThemeConfig(
-                          name = "Genshin Impact Teyvat",
-                          bg = Color.parseColor("#0B132B"),
-                          card = Color.parseColor("#1C2541"),
-                          border = "#5BC0BE",
-                          primaryText = Color.parseColor("#F72585"),
-                          secondaryText = Color.parseColor("#4CC9F0"),
-                          dim = Color.parseColor("#8093F1"),
-                          pressColor = "#F72585",
-                          btnPick = Pair("#22223B", "#4CC9F0"),
-                          btnDir = Pair("#22223B", "#4CC9F0"),
-                          btnRev = Pair("#4A4E69", "#F72585"),
-                          btnOut = Pair("#1C2541", "#5BC0BE"),
-                          btnGo = Pair("#1A4314", "#38B000"),
-                          btnCancel = Pair("#5A189A", "#E0115F")
-                      )
-                      "GTA" -> ThemeConfig(
-                          name = "GTA V Los Santos",
-                          bg = Color.parseColor("#050B05"),
-                          card = Color.parseColor("#0D1A0E"),
-                          border = "#00FF66",
-                          primaryText = Color.parseColor("#FF007F"),
-                          secondaryText = Color.parseColor("#00FF66"),
-                          dim = Color.parseColor("#7FA98B"),
-                          pressColor = "#00FF66",
-                          btnPick = Pair("#123015", "#00FF66"),
-                          btnDir = Pair("#123015", "#00FF66"),
-                          btnRev = Pair("#3B0D29", "#FF007F"),
-                          btnOut = Pair("#0D2E2B", "#00FFFF"),
-                          btnGo = Pair("#16521A", "#00FF00"),
-                          btnCancel = Pair("#521616", "#FF0033")
-                      )
                       "CLASSIC" -> ThemeConfig(
                           name = "Sombre Classique",
                           bg = Color.parseColor("#0F172A"),
@@ -499,20 +451,20 @@ jobs:
                           btnCancel = Pair("#DC2626", "#EF4444")
                       )
                       else -> ThemeConfig(
-                          name = "Cyberpunk Neo Hub",
-                          bg = Color.parseColor("#0D0814"),
-                          card = Color.parseColor("#170F26"),
-                          border = "#FF007F",
-                          primaryText = Color.parseColor("#FF007F"),
-                          secondaryText = Color.parseColor("#00F0FF"),
-                          dim = Color.parseColor("#A899C2"),
-                          pressColor = "#00F0FF",
-                          btnPick = Pair("#182045", "#00F0FF"),
-                          btnDir = Pair("#182045", "#00F0FF"),
-                          btnRev = Pair("#2A1845", "#FF007F"),
-                          btnOut = Pair("#0D3838", "#00F0FF"),
-                          btnGo = Pair("#0F4D2A", "#00FF66"),
-                          btnCancel = Pair("#4D0F1A", "#FF0055")
+                          name = "Sombre Classique",
+                          bg = Color.parseColor("#0F172A"),
+                          card = Color.parseColor("#1E293B"),
+                          border = "#334155",
+                          primaryText = Color.WHITE,
+                          secondaryText = Color.parseColor("#38BDF8"),
+                          dim = Color.parseColor("#94A3B8"),
+                          pressColor = "#38BDF8",
+                          btnPick = Pair("#0284C7", "#38BDF8"),
+                          btnDir = Pair("#0369A1", "#38BDF8"),
+                          btnRev = Pair("#334155", "#64748B"),
+                          btnOut = Pair("#0D9488", "#14B8A6"),
+                          btnGo = Pair("#16A34A", "#22C55E"),
+                          btnCancel = Pair("#DC2626", "#EF4444")
                       )
                   }
               }
@@ -555,8 +507,7 @@ jobs:
                       "toast_no_apk_found" to mapOf("fr" to "⚠️ Aucun fichier APK trouvé dans la dernière release.", "en" to "⚠️ No APK file found in the latest release.", "es" to "⚠️ No se encontró ningún archivo APK en la última versión.", "pt" to "⚠️ Nenhum arquivo APK encontrado na versão mais recente.", "de" to "⚠️ Keine APK-Datei im neuesten Release gefunden."),
                       "toast_server_error" to mapOf("fr" to "❌ Erreur serveur GitHub", "en" to "❌ GitHub server error", "es" to "❌ Error del servidor de GitHub", "pt" to "❌ Erro no servidor do GitHub", "de" to "❌ GitHub-Serverfehler"),
                       "toast_check_failed" to mapOf("fr" to "❌ Échec de la vérification", "en" to "❌ Check failed", "es" to "❌ Falló la verificación", "pt" to "❌ Falha na verificação", "de" to "❌ Überprüfung fehlgeschlagen"),
-                      "bus_pop" to mapOf("fr" to "Tout le monde descend !", "en" to "Everyone out!", "es" to "¡Todo el mundo abajo!", "pt" to "Todo mundo descendo!", "de" to "Alle aussteigen!"),
-                      "chest_pop" to mapOf("fr" to "Conversion réussie grâce à moi ! Le coffre", "en" to "Conversion successful thanks to me! The chest", "es" to "¡Conversión exitosa gracias a mí! El cofre", "pt" to "Conversão bem-sucedida graças a mim! O baú", "de" to "Erfolgreiche Konvertierung dank mir! Die Truhe")
+                      "bus_pop" to mapOf("fr" to "Tout le monde descend !", "en" to "Everyone out!", "es" to "¡Todo el mundo abajo!", "pt" to "Todo mundo descendo!", "de" to "Alle aussteigen!")
                   )
                   return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
               }
@@ -599,7 +550,7 @@ jobs:
                       dialogView.addView(tvTitle)
 
                       val tvMsg = TextView(this).apply {
-                          text = "Bienvenue dans PS PKG Freedom Hub !\n\nDes thèmes immersifs (God of War, Fortnite, Genshin, GTA V...) sont désormais disponibles !"
+                          text = "Bienvenue dans PS PKG Freedom Hub !\n\nDes thèmes immersifs (God of War, Fortnite...) sont désormais disponibles !"
                           textSize = 12f
                           setTextColor(Color.WHITE)
                           setPadding(0, 0, 0, dp(12))
@@ -822,7 +773,7 @@ jobs:
                   val bus = busImageView ?: return
                   val parentWidth = rootFrameLayout.width
                   val screenWidth = if (parentWidth > 0) parentWidth.toFloat() else resources.displayMetrics.widthPixels.toFloat()
-                  val screenHeight = rootFrameLayout.height.toFloat().takeIf { it > 0f } ?: resources.displayMetrics.heightPixels.toFloat()
+                  val screenHeight = rootFrameLayout.height.toFloat().takeIf { it > 0f } else resources.displayMetrics.heightPixels.toFloat()
 
                   val goRight = random.nextBoolean()
                   val startX = if (goRight) -dp(240).toFloat() else screenWidth + dp(240).toFloat()
@@ -1115,7 +1066,9 @@ jobs:
                               rewardChestView?.animate()?.scaleX(1.35f)?.scaleY(1.35f)?.setDuration(90)?.withEndAction {
                                   rewardChestView?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(90)?.start()
                               }?.start()
-                              showInteractivePopup(tr("chest_pop"))
+                              
+                              val actionWord = if (appMode == "SPLIT") "découpage" else "fusion"
+                              showInteractivePopup("-$actionWord réussie grâce à moi ! Le coffre")
                           }
 
                           rewardChestView?.animate()?.scaleX(1.3f)?.scaleY(1.3f)?.setDuration(220)?.withEndAction {
@@ -1576,12 +1529,13 @@ jobs:
                       "🔵 Sombre Classique",
                       "⚡ Fortnite Battle Royale", 
                       "🪓 God of War Ragnarök", 
-                      "🌿 The Last of Us Part II", 
-                      "🌌 Genshin Impact Teyvat", 
-                      "🚗 GTA V Los Santos",
-                      "🌐 Cyberpunk Neo Hub"
+                      "🌿 The Last of Us Part II (En cours)", 
+                      "🌌 Genshin Impact Teyvat (En cours)", 
+                      "🚗 GTA V Los Santos (En cours)",
+                      "🌐 Cyberpunk Neo Hub (En cours)"
                   )
                   val keys = arrayOf("CLASSIC", "FORTNITE", "GOW", "TLOU", "GENSHIN", "GTA", "CYBERPUNK")
+                  val enabledStatus = arrayOf(true, true, true, false, false, false, false)
                   val checkedItem = keys.indexOf(currentTheme).coerceAtLeast(0)
 
                   val dialogView = LinearLayout(this).apply {
@@ -1613,18 +1567,23 @@ jobs:
                   }
 
                   themes.forEachIndexed { index, themeName ->
+                      val isEnabled = enabledStatus[index]
                       val btn = Button(this).apply {
                           text = if (index == checkedItem) "▶ $themeName" else "   $themeName"
-                          setTextColor(Color.WHITE)
+                          setTextColor(if (isEnabled) Color.WHITE else Color.parseColor("#64748B"))
                           textSize = 12f
                           gravity = Gravity.START or Gravity.CENTER_VERTICAL
                           setBackgroundColor(Color.TRANSPARENT)
                           setOnClickListener {
-                              dialog.dismiss()
-                              currentTheme = keys[index]
-                              prefs.edit().putString("theme", currentTheme).apply()
-                              rewardChestView?.visibility = View.GONE
-                              applyTheme()
+                              if (isEnabled) {
+                                  dialog.dismiss()
+                                  currentTheme = keys[index]
+                                  prefs.edit().putString("theme", currentTheme).apply()
+                                  rewardChestView?.visibility = View.GONE
+                                  applyTheme()
+                              } else {
+                                  toast("⚠️ Bientôt disponible (En cours de développement)")
+                              }
                           }
                       }
                       listLayout.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(38)))
