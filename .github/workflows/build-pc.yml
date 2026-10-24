@@ -10,7 +10,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            name: Windows
+            artifact_name: PkgHub-Windows.exe
+          - os: ubuntu-latest
+            name: Linux
+            artifact_name: PkgHub-Linux.tar.gz
+          - os: macos-latest
+            name: macOS
+            artifact_name: PkgHub-Mac.dmg
 
     steps:
       - name: Checkout du code
@@ -21,43 +30,48 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Installer les dépendances graphiques (Tkinter / PyInstaller)
+      - name: Installer PyInstaller et dépendances
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
 
-      - name: Compiler l'application pour Windows (.exe avec interface native)
-        if: matrix.os == 'windows-latest'
+      - name: Compiler l'application (Windows & Linux)
+        if: matrix.os != 'macos-latest'
         run: |
-          pyinstaller --noconsole --onefile --name "PS-PKG-Freedom-Hub-PC" main.py
+          pyinstaller --noconsole --onefile --name "PS-PKG-Freedom-Hub" main.py
 
-      - name: Compiler l'application pour Linux
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          pyinstaller --noconsole --onefile --name "PS-PKG-Freedom-Hub-Linux" main.py
-
-      - name: Compiler l'application pour macOS
+      - name: Compiler l'application (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          pyinstaller --noconsole --onefile --name "PS-PKG-Freedom-Hub-Mac" main.py
+          pyinstaller --noconsole --onefile --windowed --name "PS-PKG-Freedom-Hub" main.py
+
+      - name: Empaqueter pour Linux (.tar.gz)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          tar -czvf PkgHub-Linux.tar.gz -C dist PS-PKG-Freedom-Hub
+
+      - name: Empaqueter pour macOS (.dmg)
+        if: matrix.os == 'macos-latest'
+        run: |
+          hdiutil create -volname "PS PKG Freedom Hub" -srcfolder "dist/PS-PKG-Freedom-Hub.app" -ov PkgHub-Mac.dmg
 
       - name: Sauvegarder l'artefact Windows
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: pkg-hub-windows
-          path: dist/PS-PKG-Freedom-Hub-PC.exe
+          path: dist/PS-PKG-Freedom-Hub.exe
 
       - name: Sauvegarder l'artefact Linux
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: pkg-hub-linux
-          path: dist/PS-PKG-Freedom-Hub-Linux
+          path: PkgHub-Linux.tar.gz
 
       - name: Sauvegarder l'artefact macOS
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4
-        with:
+          with:
           name: pkg-hub-mac
-          path: dist/PS-PKG-Freedom-Hub-Mac
+          path: PkgHub-Mac.dmg
