@@ -773,7 +773,8 @@ jobs:
                   val bus = busImageView ?: return
                   val parentWidth = rootFrameLayout.width
                   val screenWidth = if (parentWidth > 0) parentWidth.toFloat() else resources.displayMetrics.widthPixels.toFloat()
-                  val screenHeight = rootFrameLayout.height.toFloat().takeIf { it > 0f } else resources.displayMetrics.heightPixels.toFloat()
+                  val rawHeight = rootFrameLayout.height.toFloat()
+                  val screenHeight = if (rawHeight > 0f) rawHeight else resources.displayMetrics.heightPixels.toFloat()
 
                   val goRight = random.nextBoolean()
                   val startX = if (goRight) -dp(240).toFloat() else screenWidth + dp(240).toFloat()
