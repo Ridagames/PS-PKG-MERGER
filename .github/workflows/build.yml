@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.67 (Fix OutputStream natif Splitter)
+      - name: Générer le projet Android v2.9.68 (Fix Ultime Splitter Buffer & SAF Flush)
         env:
           FORCE: '1'
         run: |
@@ -119,7 +119,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2967
+                  versionCode = 2968
                   versionName = "2.1.0"
               }
 
@@ -1730,7 +1730,7 @@ jobs:
                       "es" -> "Reiniciar"
                       "pt" -> "Reiniciar"
                       "de" -> "Neustart"
-                      else -> "Redémarrer"
+                      else -> "Plus tard"
                   }
                   val cancelBtn = when (currentLang) {
                       "en" -> "Later"
@@ -2211,16 +2211,16 @@ jobs:
                               } catch (_: Exception) {}
 
                               val partName = "$cleanBase.${String.format(Locale.US, "%02d", partIndex)}"
-                              log("Création de la partie $partIndex : $partName")
+                              log("Création partie $partIndex : $partName")
 
                               val newFile = targetDir.createFile("application/octet-stream", partName)
                                   ?: throw IllegalStateException("Création de $partName échouée")
 
                               val os = contentResolver.openOutputStream(newFile.uri)
-                                  ?: throw IllegalStateException("Ouverture du flux d'écriture impossible pour $partName")
+                                  ?: throw IllegalStateException("Ouverture écriture impossible : $partName")
                               
                               partIndex++
-                              val stream = BufferedOutputStream(os, 1 shl 20)
+                              val stream = BufferedOutputStream(os, 64 * 1024)
                               currentOut = stream
                               return stream
                           }
@@ -2230,14 +2230,21 @@ jobs:
                           val inputStream = contentResolver.openInputStream(sourceUri)
                               ?: throw IllegalStateException("Impossible d'ouvrir le fichier source en lecture")
 
-                          BufferedInputStream(inputStream, 1 shl 20).use { input ->
-                              log("Flux source ouvert. Écriture active...")
-                              val buf = ByteArray(1 shl 20)
+                          BufferedInputStream(inputStream, 64 * 1024).use { input ->
+                              log("Flux source ouvert. Transfert en cours...")
+                              val buf = ByteArray(64 * 1024)
                               var bytesInCurrentPart = 0L
                               var lastYieldTime = System.currentTimeMillis()
+                              var flushCounter = 0
 
                               while (!cancelled) {
-                                  val read = input.read(buf)
+                                  val read = try {
+                                      input.read(buf)
+                                  } catch (e: Exception) {
+                                      log("❌ Erreur de lecture : ${e.message}")
+                                      -1
+                                  }
+                                  
                                   if (read <= 0) break
 
                                   var offset = 0
@@ -2248,11 +2255,21 @@ jobs:
                                       }
 
                                       val toWrite = minOf(read - offset, (maxPartSize - bytesInCurrentPart).toInt())
-                                      currentStream.write(buf, offset, toWrite)
+                                      try {
+                                          currentStream.write(buf, offset, toWrite)
+                                      } catch (e: Exception) {
+                                          log("❌ Erreur d'écriture : ${e.message}")
+                                          throw e
+                                      }
                                       
                                       offset += toWrite
                                       bytesInCurrentPart += toWrite
                                       done += toWrite
+
+                                      flushCounter++
+                                      if (flushCounter % 16 == 0) {
+                                          currentStream.flush()
+                                      }
 
                                       val now = System.currentTimeMillis()
                                       if (now - lastYieldTime > 150) {
@@ -2511,12 +2528,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.9.67
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.67.apk
+      - name: Renommer l'APK v2.9.68
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.68.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.67-apk
-          path: PkgMerger-v2.9.67.apk
+          name: pkg-merger-v2.9.68-apk
+          path: PkgMerger-v2.9.68.apk
           if-no-files-found: error
