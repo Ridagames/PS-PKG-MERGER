@@ -18,10 +18,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Compiler le projet avec Gradle (Windows)
+      - name: Configurer Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Compiler le projet avec Gradle
         shell: pwsh
         run: |
-          ./gradlew.bat createDistribution
+          gradle createDistribution
 
       - name: Préparer l'archive finale
         shell: pwsh
