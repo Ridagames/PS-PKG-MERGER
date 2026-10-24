@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.63 (Correctifs Bouton Annuler & Splitter SAF)
+      - name: Générer le projet Android v2.9.64 (Fix Splitter, Audio Resume & Version 2.1.0)
         env:
           FORCE: '1'
         run: |
@@ -119,8 +119,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2963
-                  versionName = "2.1.3"
+                  versionCode = 2964
+                  versionName = "2.1.0"
               }
 
               compileOptions {
@@ -145,6 +145,7 @@ jobs:
 
           dependencies {
               implementation("androidx.core:core-ktx:1.12.0")
+              implementation("androidx.documentfile:documentfile:1.0.1")
           }
           EOF
 
@@ -291,6 +292,7 @@ jobs:
           import android.widget.Toast
           import android.widget.VideoView
           import androidx.core.content.FileProvider
+          import androidx.documentfile.provider.DocumentFile
           import java.io.BufferedOutputStream
           import java.io.File
           import java.io.FileInputStream
@@ -523,15 +525,15 @@ jobs:
                       "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256", "es" to "📋 Copiar SHA-256", "pt" to "📋 Copiar SHA-256", "de" to "📋 SHA-256 kopieren"),
                       "menu_options" to mapOf("fr" to "⚙️ OPTIONS & MENU", "en" to "⚙️ OPTIONS & MENU", "es" to "⚙️ OPCIONES Y MENÚ", "pt" to "⚙️ OPÇÕES E MENU", "de" to "⚙️ OPTIONEN & MENÜ"),
                       "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode", "es" to "📂 Cambiar a Modo Divisor", "pt" to "📂 Mudar para o Modo Divisor", "de" to "📂 In den Splitter-Modus wechseln"),
-                      "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode", "es" to "🔗 Cambiar a Modo Fusión", "pt" to "🔗 Mudar para o Modo Fusão", "de" to "🔗 In den Zusammenführungs-Modus wechseln"),
+                      "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode", "es" to "🔗 Cambiar a Modo Fusão", "pt" to "🔗 Mudar para o Modo Zusammenführung"),
                       "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe", "es" to "🎨 Cambiar de Universo", "pt" to "🎨 Mudar de Universo", "de" to "🎨 Universum wechseln"),
                       "menu_lang" to mapOf("fr" to "🌐 Changer la Langue / Language", "en" to "🌐 Change Language", "es" to "🌐 Cambiar Idioma", "pt" to "🌐 Mudar Idioma", "de" to "🌐 Sprache ändern"),
                       "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates", "es" to "🔄 Buscar actualizaciones", "pt" to "🔄 Verificar atualizações", "de" to "🔄 Nach Updates suchen"),
-                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.3)", "en" to "ℹ️ About (v2.1.3)", "es" to "ℹ️ Acerca de (v2.1.3)", "pt" to "ℹ️ Sobre (v2.1.3)", "de" to "ℹ️ Über (v2.1.3)"),
+                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.0)", "en" to "ℹ️ About (v2.1.0)", "es" to "ℹ️ Acerca de (v2.1.0)", "pt" to "ℹ️ Sobre (v2.1.0)", "de" to "ℹ️ Über (v2.1.0)"),
                       "dialog_universe_title" to mapOf("fr" to "🌟 CHOISIS TON UNIVERS GAMING", "en" to "🌟 CHOOSE YOUR GAMING UNIVERSE", "es" to "🌟 ELIGE TU UNIVERSO GAMING", "pt" to "🌟 ESCOLHA SEU UNIVERSO GAMER", "de" to "🌟 WÄHLE DEIN GAMING-UNIVERSUM"),
                       "dialog_lang_title" to mapOf("fr" to "🌐 CHOISIR LA LANGUE / LANGUAGE", "en" to "🌐 CHOOSE LANGUAGE", "es" to "🌐 SELECCIONAR IDIOMA", "pt" to "🌐 SELECIONAR IDIOMA", "de" to "🌐 SPRACHE AUSWÄHLEN"),
                       "toast_checking_updates" to mapOf("fr" to "🔍 Recherche de mises à jour...", "en" to "🔍 Checking for updates...", "es" to "🔍 Buscando actualizaciones...", "pt" to "🔍 Procurando atualizações...", "de" to "🔍 Suche nach Updates..."),
-                      "toast_already_up_to_date" to mapOf("fr" to "✅ Ton application est déjà à jour (v2.1.3) !", "en" to "✅ Your application is already up to date (v2.1.3) !", "es" to "✅ ¡Tu aplicación ya está actualizada (v2.1.3)!", "pt" to "✅ Seu aplicativo já está atualizado (v2.1.3)!", "de" to "✅ Deine App ist bereits auf dem neuesten Stand (v2.1.3)!"),
+                      "toast_already_up_to_date" to mapOf("fr" to "✅ Ton application est déjà à jour (v2.1.0) !", "en" to "✅ Your application is already up to date (v2.1.0) !", "es" to "✅ ¡Tu aplicación ya está actualizada (v2.1.0)!", "pt" to "✅ Seu aplicativo já está atualizado (v2.1.0)!", "de" to "✅ Deine App ist bereits auf dem neuesten Stand (v2.1.0)!"),
                       "toast_no_apk_found" to mapOf("fr" to "⚠️ Aucun fichier APK trouvé dans la dernière release.", "en" to "⚠️ No APK file found in the latest release.", "es" to "⚠️ No se encontró ningún archivo APK en la última versión.", "pt" to "⚠️ Nenhum arquivo APK encontrado na versão mais recente.", "de" to "⚠️ Keine APK-Datei im neuesten Release gefunden."),
                       "toast_server_error" to mapOf("fr" to "❌ Erreur serveur GitHub", "en" to "❌ GitHub server error", "es" to "❌ Error del servidor de GitHub", "pt" to "❌ Erro no servidor do GitHub", "de" to "❌ GitHub-Serverfehler"),
                       "toast_check_failed" to mapOf("fr" to "❌ Échec de la vérification", "en" to "❌ Check failed", "es" to "❌ Falló la verificación", "pt" to "❌ Falha na verificação", "de" to "❌ Überprüfung fehlgeschlagen"),
@@ -551,7 +553,7 @@ jobs:
                   showMergerScreen()
                   applyTheme()
 
-                  log("Application démarrée. Version 2.1.3")
+                  log("Application démarrée. Version 2.1.0")
                   checkFirstRunWelcome()
               }
 
@@ -727,13 +729,17 @@ jobs:
 
               private fun setupBackgroundMedia() {
                   try {
+                      if (musicPlayer != null) {
+                          if (!musicPlayer!!.isPlaying) {
+                              musicPlayer?.start()
+                          }
+                          bgVideoView?.start()
+                          return
+                      }
+
                       bgVideoView?.stopPlayback()
                       bgVideoView?.visibility = View.GONE
                       
-                      try { musicPlayer?.stop() } catch (_: Exception) {}
-                      musicPlayer?.release()
-                      musicPlayer = null
-
                       stopFortniteBusAnimation()
 
                       if (currentTheme == "GOW") {
@@ -1414,7 +1420,7 @@ jobs:
 
                   addMenuOption(tr("menu_about")) {
                       dialog.dismiss()
-                      toast("PS PKG Freedom Hub v2.1.3")
+                      toast("PS PKG Freedom Hub v2.1.0")
                   }
 
                   dialog.show()
@@ -1439,7 +1445,7 @@ jobs:
                               if (tagMatch != null && apkUrlMatch != null) {
                                   val latestTag = tagMatch.groupValues[1].replace("v", "")
                                   val apkUrl = apkUrlMatch.groupValues[1]
-                                  val currentVersion = "2.1.3"
+                                  val currentVersion = "2.1.0"
 
                                   ui.post {
                                       if (isVersionNewer(latestTag, currentVersion)) {
@@ -1634,6 +1640,9 @@ jobs:
                           setOnClickListener {
                               if (isEnabled) {
                                   dialog.dismiss()
+                                  musicPlayer?.stop()
+                                  musicPlayer?.release()
+                                  musicPlayer = null
                                   currentTheme = keys[index]
                                   prefs.edit().putString("theme", currentTheme).apply()
                                   rewardChestView?.visibility = View.GONE
@@ -2187,18 +2196,20 @@ jobs:
                           val cleanBase = if (baseName.lowercase().endsWith(".pkg")) baseName.substringBeforeLast(".") else baseName
                           var currentOutputStream: OutputStream? = null
 
-                          val docId = DocumentsContract.getTreeDocumentId(treeUri)
-                          val parentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                          val targetDir = DocumentFile.fromTreeUri(this, treeUri)
+                              ?: throw IllegalStateException("Impossible d'accéder au dossier de destination")
 
                           fun openNextPart() {
                               try { currentOutputStream?.flush(); currentOutputStream?.close() } catch (_: Exception) {}
                               val partName = "$cleanBase.${String.format(Locale.US, "%02d", partIndex)}"
                               log("Création de la partie : $partName")
                               
-                              val createdUri = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)
-                                  ?: throw IllegalStateException("Impossible de créer $partName dans le dossier")
+                              val newFile = targetDir.createFile("application/octet-stream", partName)
+                                  ?: throw IllegalStateException("Impossible de créer $partName")
 
-                              val pfdOut = contentResolver.openFileDescriptor(createdUri, "w") ?: throw IllegalStateException("Sortie impossible pour $partName")
+                              val pfdOut = contentResolver.openFileDescriptor(newFile.uri, "w")
+                                  ?: throw IllegalStateException("Sortie impossible pour $partName")
+
                               currentOutputStream = BufferedOutputStream(FileOutputStream(pfdOut.fileDescriptor), 1 shl 20)
                               partIndex++
                           }
@@ -2462,12 +2473,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.9.63
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.63.apk
+      - name: Renommer l'APK v2.9.64
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.64.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.63-apk
-          path: PkgMerger-v2.9.63.apk
+          name: pkg-merger-v2.9.64-apk
+          path: PkgMerger-v2.9.64.apk
           if-no-files-found: error
