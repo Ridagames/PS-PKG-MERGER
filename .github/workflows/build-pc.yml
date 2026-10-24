@@ -72,6 +72,6 @@ jobs:
       - name: Sauvegarder l'artefact macOS
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4
-          with:
+        with:
           name: pkg-hub-mac
           path: PkgHub-Mac.dmg
