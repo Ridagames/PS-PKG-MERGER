@@ -31,28 +31,22 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation Stricte des Ressources
+      - name: Nettoyage et Normalisation des Ressources et Sources
         run: |
           echo "Nettoyage des fichiers obsolètes..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
 
-          echo "Correction et renommage strict des fichiers ressources..."
           for dir in app/src/main/res/drawable app/src/main/res/raw; do
             if [ -d "$dir" ]; then
               for f in "$dir"/*; do
                 if [ -f "$f" ]; then
                   filename=$(basename "$f")
-                  # Nettoyer les caractères invisibles, espaces et caractères spéciaux
-                  clean_name=$(echo "$filename" | tr -d '\342\200\213' | tr -d '\r' | sed 's/\.png\.png$/\.png/g' | sed 's/\.mp3\.mp3$/\.mp3/g' | sed 's/\.ogg\.ogg$/\.ogg/g')
+                  clean_name=$(echo "$filename" | sed 's/\.png\.png$/\.png/g' | sed 's/\.mp3\.mp3$/\.mp3/g' | sed 's/\.ogg\.ogg$/\.ogg/g')
                   clean_name=$(echo "$clean_name" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_.-')
-                  
-                  # S'assurer que le nom commence obligatoirement par une lettre minuscule
                   if ! echo "$clean_name" | grep -q '^[a-z]'; then
-                    clean_name="res_${clean_name}"
+                    clean_name="img_${clean_name}"
                   fi
-
                   if [ "$filename" != "$clean_name" ]; then
-                    echo "Renommage : '$filename' -> '$clean_name'"
                     mv "$f" "$dir/$clean_name"
                   fi
                 fi
@@ -60,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.1.10
+      - name: Générer le projet Android v2.9.60
         env:
           FORCE: '1'
         run: |
@@ -96,13 +90,6 @@ jobs:
           include(":app")
           EOF
 
-          write build.gradle.kts <<'EOF'
-          plugins {
-              id("com.android.application") version "8.1.1" apply false
-              id("org.jetbrains.kotlin.android") version "1.9.0" apply false
-          }
-          EOF
-
           write gradle.properties <<'EOF'
           org.gradle.jvmargs=-Xmx3072m -Dfile.encoding=UTF-8
           org.gradle.parallel=false
@@ -125,8 +112,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2110
-                  versionName = "2.1.10"
+                  versionCode = 2960
+                  versionName = "2.1.0"
               }
 
               compileOptions {
@@ -255,6 +242,7 @@ jobs:
           import android.content.pm.PackageManager
           import android.content.res.ColorStateList
           import android.graphics.Bitmap
+          import android.graphics.BitmapFactory
           import android.graphics.Color
           import android.graphics.Typeface
           import android.graphics.drawable.GradientDrawable
@@ -264,10 +252,13 @@ jobs:
           import android.os.Bundle
           import android.os.Handler
           import android.os.Looper
+          import android.os.ParcelFileDescriptor
+          import android.os.PowerManager
           import android.os.VibrationEffect
           import android.os.Vibrator
           import android.provider.DocumentsContract
           import android.provider.OpenableColumns
+          import android.provider.Settings
           import android.view.Gravity
           import android.view.MotionEvent
           import android.view.View
@@ -284,11 +275,17 @@ jobs:
           import android.widget.TextView
           import android.widget.Toast
           import android.widget.VideoView
+          import androidx.core.content.FileProvider
           import java.io.BufferedOutputStream
+          import java.io.File
           import java.io.FileInputStream
           import java.io.FileOutputStream
           import java.io.OutputStream
+          import java.net.HttpURLConnection
+          import java.net.URL
+          import java.security.MessageDigest
           import java.util.Locale
+          import java.util.Random
 
           class AspectRatioVideoView(context: Context) : VideoView(context) {
               private var videoWidth = 0
@@ -303,6 +300,7 @@ jobs:
               override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
                   val width = getDefaultSize(videoWidth, widthMeasureSpec)
                   val height = getDefaultSize(videoHeight, heightMeasureSpec)
+                  
                   if (videoWidth > 0 && videoHeight > 0) {
                       if (videoWidth * height < width * videoHeight) {
                           setMeasuredDimension(width, width * videoHeight / videoWidth)
@@ -330,10 +328,22 @@ jobs:
 
               private var bgVideoView: AspectRatioVideoView? = null
               private var musicPlayer: MediaPlayer? = null
+              private var clickPlayer: MediaPlayer? = null
+              private var fnBusPlayer: MediaPlayer? = null
+
+              private var busImageView: ImageView? = null
+              private var rewardChestView: ImageView? = null
+
+              private val busHandler = Handler(Looper.getMainLooper())
+              private val random = Random()
+
+              private val NOTIF_ID_PROGRESS = 101
+              private val NOTIF_ID_RESULT = 102
 
               @Volatile private var processing = false
               @Volatile private var cancelled = false
               private val ui = Handler(Looper.getMainLooper())
+              private var lastNotifTime = 0.toLong()
 
               private lateinit var prefs: SharedPreferences
               private lateinit var rootFrameLayout: FrameLayout
@@ -373,79 +383,144 @@ jobs:
 
               private fun log(msg: String) {
                   ui.post {
-                      if (logBuffer.length > 3000) logBuffer.setLength(0)
+                      if (logBuffer.length > 3000) {
+                          logBuffer.setLength(0)
+                      }
                       logBuffer.append("• $msg\n")
                       if (::consoleLogView.isInitialized) {
                           consoleLogView.text = logBuffer.toString()
-                          if (::consoleScroll.isInitialized) consoleScroll.fullScroll(View.FOCUS_DOWN)
+                          if (::consoleScroll.isInitialized) {
+                              consoleScroll.fullScroll(View.FOCUS_DOWN)
+                          }
                       }
                   }
               }
 
               private data class ThemeConfig(
-                  val name: String, val bg: Int, val card: Int, val border: String,
-                  val primaryText: Int, val secondaryText: Int, val dim: Int, val pressColor: String,
-                  val btnPick: Pair<String, String>, val btnDir: Pair<String, String>,
-                  val btnRev: Pair<String, String>, val btnOut: Pair<String, String>,
-                  val btnGo: Pair<String, String>, val btnCancel: Pair<String, String>
+                  val name: String,
+                  val bg: Int,
+                  val card: Int,
+                  val border: String,
+                  val primaryText: Int,
+                  val secondaryText: Int,
+                  val dim: Int,
+                  val pressColor: String,
+                  val btnPick: Pair<String, String>,
+                  val btnDir: Pair<String, String>,
+                  val btnRev: Pair<String, String>,
+                  val btnOut: Pair<String, String>,
+                  val btnGo: Pair<String, String>,
+                  val btnCancel: Pair<String, String>
               )
 
               private fun getThemeConfig(key: String): ThemeConfig {
                   return when (key) {
                       "FORTNITE" -> ThemeConfig(
-                          name = "Fortnite Battle Royale", bg = Color.parseColor("#0C0826"), card = Color.parseColor("#85162447"),
-                          border = "#00D9FF", primaryText = Color.parseColor("#FFE600"), secondaryText = Color.parseColor("#00D9FF"),
-                          dim = Color.parseColor("#9DB2F5"), pressColor = "#FFE600", btnPick = Pair("#1E2D6E", "#00D9FF"),
-                          btnDir = Pair("#1E2D6E", "#00D9FF"), btnRev = Pair("#4B1E6E", "#B800FF"), btnOut = Pair("#0F5E6B", "#00FFF0"),
-                          btnGo = Pair("#198038", "#00FF66"), btnCancel = Pair("#801935", "#FF0055")
+                          name = "Fortnite Battle Royale",
+                          bg = Color.parseColor("#0C0826"),
+                          card = Color.parseColor("#85162447"),
+                          border = "#00D9FF",
+                          primaryText = Color.parseColor("#FFE600"),
+                          secondaryText = Color.parseColor("#00D9FF"),
+                          dim = Color.parseColor("#9DB2F5"),
+                          pressColor = "#FFE600",
+                          btnPick = Pair("#1E2D6E", "#00D9FF"),
+                          btnDir = Pair("#1E2D6E", "#00D9FF"),
+                          btnRev = Pair("#4B1E6E", "#B800FF"),
+                          btnOut = Pair("#0F5E6B", "#00FFF0"),
+                          btnGo = Pair("#198038", "#00FF66"),
+                          btnCancel = Pair("#801935", "#FF0055")
                       )
                       "GOW" -> ThemeConfig(
-                          name = "God of War Ragnarök", bg = Color.parseColor("#120A0A"), card = Color.parseColor("#80241212"),
-                          border = "#FF4500", primaryText = Color.parseColor("#FFD700"), secondaryText = Color.parseColor("#FF4500"),
-                          dim = Color.parseColor("#B8860B"), pressColor = "#FF0000", btnPick = Pair("#3D1414", "#FF4500"),
-                          btnDir = Pair("#3D1414", "#FF4500"), btnRev = Pair("#4A3B12", "#FFD700"), btnOut = Pair("#291321", "#FF1493"),
-                          btnGo = Pair("#1C3D14", "#32CD32"), btnCancel = Pair("#5E0F0F", "#FF0000")
+                          name = "God of War Ragnarök",
+                          bg = Color.parseColor("#120A0A"),
+                          card = Color.parseColor("#80241212"),
+                          border = "#FF4500",
+                          primaryText = Color.parseColor("#FFD700"),
+                          secondaryText = Color.parseColor("#FF4500"),
+                          dim = Color.parseColor("#B8860B"),
+                          pressColor = "#FF0000",
+                          btnPick = Pair("#3D1414", "#FF4500"),
+                          btnDir = Pair("#3D1414", "#FF4500"),
+                          btnRev = Pair("#4A3B12", "#FFD700"),
+                          btnOut = Pair("#291321", "#FF1493"),
+                          btnGo = Pair("#1C3D14", "#32CD32"),
+                          btnCancel = Pair("#5E0F0F", "#FF0000")
+                      )
+                      "CLASSIC" -> ThemeConfig(
+                          name = "Sombre Classique",
+                          bg = Color.parseColor("#0F172A"),
+                          card = Color.parseColor("#1E293B"),
+                          border = "#334155",
+                          primaryText = Color.WHITE,
+                          secondaryText = Color.parseColor("#38BDF8"),
+                          dim = Color.parseColor("#94A3B8"),
+                          pressColor = "#38BDF8",
+                          btnPick = Pair("#0284C7", "#38BDF8"),
+                          btnDir = Pair("#0369A1", "#38BDF8"),
+                          btnRev = Pair("#334155", "#64748B"),
+                          btnOut = Pair("#0D9488", "#14B8A6"),
+                          btnGo = Pair("#16A34A", "#22C55E"),
+                          btnCancel = Pair("#DC2626", "#EF4444")
                       )
                       else -> ThemeConfig(
-                          name = "Sombre Classique", bg = Color.parseColor("#0F172A"), card = Color.parseColor("#1E293B"),
-                          border = "#334155", primaryText = Color.WHITE, secondaryText = Color.parseColor("#38BDF8"),
-                          dim = Color.parseColor("#94A3B8"), pressColor = "#38BDF8", btnPick = Pair("#0284C7", "#38BDF8"),
-                          btnDir = Pair("#0369A1", "#38BDF8"), btnRev = Pair("#334155", "#64748B"), btnOut = Pair("#0D9488", "#14B8A6"),
-                          btnGo = Pair("#16A34A", "#22C55E"), btnCancel = Pair("#DC2626", "#EF4444")
+                          name = "Sombre Classique",
+                          bg = Color.parseColor("#0F172A"),
+                          card = Color.parseColor("#1E293B"),
+                          border = "#334155",
+                          primaryText = Color.WHITE,
+                          secondaryText = Color.parseColor("#38BDF8"),
+                          dim = Color.parseColor("#94A3B8"),
+                          pressColor = "#38BDF8",
+                          btnPick = Pair("#0284C7", "#38BDF8"),
+                          btnDir = Pair("#0369A1", "#38BDF8"),
+                          btnRev = Pair("#334155", "#64748B"),
+                          btnOut = Pair("#0D9488", "#14B8A6"),
+                          btnGo = Pair("#16A34A", "#22C55E"),
+                          btnCancel = Pair("#DC2626", "#EF4444")
                       )
                   }
               }
 
               private fun tr(key: String): String {
                   val map = mapOf(
-                      "app_title" to mapOf("fr" to "⚡ PS PKG FREEDOM HUB", "en" to "⚡ PS PKG FREEDOM HUB"),
-                      "universe" to mapOf("fr" to "UNIVERS", "en" to "UNIVERSE"),
-                      "menu_btn" to mapOf("fr" to "⚙️ MENU", "en" to "⚙️ MENU"),
-                      "sec1" to mapOf("fr" to "1. FICHIERS SOURCE (PKG / PARTIES)", "en" to "1. SOURCE FILES (PKG / PARTS)"),
-                      "sec1_split" to mapOf("fr" to "1. FICHIER SOURCE UNIQUE (.PKG)", "en" to "1. SINGLE SOURCE FILE (.PKG)"),
-                      "btn_pick" to mapOf("fr" to "CHOISIR LES FICHIERS", "en" to "CHOOSE FILES"),
-                      "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER"),
-                      "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER"),
-                      "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING"),
-                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION"),
-                      "out_lbl" to mapOf("fr" to "Sortie : —", "en" to "Output : —"),
-                      "btn_go_merge" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE"),
-                      "btn_go_split" to mapOf("fr" to "▶️ LANCER LE DÉCOUPAGE", "en" to "▶️ START SPLITTING"),
-                      "btn_cancel" to mapOf("fr" to "❌ ANNULER", "en" to "❌ CANCEL"),
-                      "status_ready" to mapOf("fr" to "Prêt.", "en" to "Ready."),
-                      "status_split_ready" to mapOf("fr" to "Prêt à découper.", "en" to "Ready to split."),
-                      "sec3" to mapOf("fr" to "3. SÉCURITÉ & VÉRIFICATION", "en" to "3. SECURITY & CHECKSUM"),
-                      "chk_verify" to mapOf("fr" to "Contrôle d'intégrité après écriture", "en" to "Integrity check after write"),
-                      "chk_delete" to mapOf("fr" to "Supprimer les sources après succès", "en" to "Delete sources after success"),
-                      "hash_hint" to mapOf("fr" to "Coller un hash SHA-256 de contrôle", "en" to "Paste control SHA-256 hash"),
-                      "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256"),
-                      "menu_options" to mapOf("fr" to "⚙️ OPTIONS & MENU", "en" to "⚙️ OPTIONS & MENU"),
-                      "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode"),
-                      "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode"),
-                      "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe"),
-                      "menu_lang" to mapOf("fr" to "🌐 Langue / Language", "en" to "🌐 Language / Langue"),
-                      "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for updates"),
-                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.10)", "en" to "ℹ️ About (v2.1.10)")
+                      "app_title" to mapOf("fr" to "⚡ PS PKG FREEDOM HUB", "en" to "⚡ PS PKG FREEDOM HUB", "es" to "⚡ PS PKG FREEDOM HUB", "pt" to "⚡ PS PKG FREEDOM HUB", "de" to "⚡ PS PKG FREEDOM HUB"),
+                      "universe" to mapOf("fr" to "UNIVERS", "en" to "UNIVERSE", "es" to "UNIVERSO", "pt" to "UNIVERSO", "de" to "UNIVERSUM"),
+                      "menu_btn" to mapOf("fr" to "⚙️ MENU", "en" to "⚙️ MENU", "es" to "⚙️ MENÚ", "pt" to "⚙️ MENU", "de" to "⚙️ MENÜ"),
+                      "sec1" to mapOf("fr" to "1. FICHIERS SOURCE (PKG / PARTIES)", "en" to "1. SOURCE FILES (PKG / PARTS)", "es" to "1. ARCHIVOS DE ORIGEN (PKG / PARTES)", "pt" to "1. ARQUIVOS DE ORIGEM (PKG / PARTES)", "de" to "1. QUELLESDATEIEN (PKG / TEILE)"),
+                      "sec1_split" to mapOf("fr" to "1. FICHIER SOURCE UNIQUE (.PKG)", "en" to "1. SINGLE SOURCE FILE (.PKG)", "es" to "1. ARCHIVO DE ORIGEN ÚNICO (.PKG)", "pt" to "1. ARQUIVO DE ORIGEM ÚNICO (.PKG)", "de" to "1. EINZELNE QUELLDATEI (.PKG)"),
+                      "btn_pick" to mapOf("fr" to "CHOISIR LES FICHIERS", "en" to "CHOOSE FILES", "es" to "ELEGIR ARCHIVOS", "pt" to "ESCOLHER ARQUIVOS", "de" to "DATEIEN AUSWÄHLEN"),
+                      "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER", "es" to "ELEGIR CARPETA", "pt" to "ESCOLHER PASTA", "de" to "ORDNER AUSWÄHLEN"),
+                      "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER", "es" to "INVERTIR ORDEN DE PARTES", "pt" to "INVERTER ORDEM DAS PARTES", "de" to "TEILERREIHENFOLGE UMKEHREN"),
+                      "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING", "es" to "2. SALIDA Y PROCESAMIENTO", "pt" to "2. SAÍDA E PROCESSAMENTO", "de" to "2. AUSGABE & VERARBEITUNG"),
+                      "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION", "es" to "DEFINIR UBICACIÓN DE SALIDA", "pt" to "DEFINIR LOCAL DE SAÍDA", "de" to "AUSGABEORT FESTLEGEN"),
+                      "out_lbl" to mapOf("fr" to "Sortie : —", "en" to "Output : —", "es" to "Salida : —", "pt" to "Saída : —", "de" to "Ausgabe : —"),
+                      "out_dir_lbl" to mapOf("fr" to "Dossier de sortie : Dossier sélectionné", "en" to "Output folder : Selected folder", "es" to "Carpeta de salida : Carpeta seleccionada", "pt" to "Pasta de saída : Pasta selecionada", "de" to "Ausgabeordner : Ausgewählter Ordner"),
+                      "btn_go_merge" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE", "es" to "▶️ INICIAR FUSIÓN", "pt" to "▶️ INICIAR FUSÃO", "de" to "▶️ ZUSAMMENFÜHRUNG STARTEN"),
+                      "btn_go_split" to mapOf("fr" to "▶️ LANCER LE DÉCOUPAGE", "en" to "▶️ START SPLITTING", "es" to "▶️ INICIAR DIVISIÓN", "pt" to "▶️ INICIAR DIVISÃO", "de" to "▶️ TEILUNG STARTEN"),
+                      "btn_cancel" to mapOf("fr" to "❌ ANNULER", "en" to "❌ CANCEL", "es" to "❌ CANCELAR", "pt" to "❌ CANCELAR", "de" to "❌ ABBRECHEN"),
+                      "status_ready" to mapOf("fr" to "Prêt.", "en" to "Ready.", "es" to "Listo.", "pt" to "Pronto.", "de" to "Bereit."),
+                      "status_split_ready" to mapOf("fr" to "Prêt à découper.", "en" to "Ready to split.", "es" to "Listo para dividir.", "pt" to "Pronto para dividir.", "de" to "Bereit zum Teilen."),
+                      "sec3" to mapOf("fr" to "3. SÉCURITÉ & VÉRIFICATION", "en" to "3. SECURITY & CHECKSUM", "es" to "3. SEGURIDAD Y VERIFICACIÓN", "pt" to "3. SEGURANÇA E VERIFICAÇÃO", "de" to "3. SICHERHEIT & PRÜFUNG"),
+                      "chk_verify" to mapOf("fr" to "Contrôle d'intégrité après écriture", "en" to "Integrity check after write", "es" to "Control de integridad tras escritura", "pt" to "Verificação de integridade após gravação", "de" to "Integritätsprüfung nach dem Schreiben"),
+                      "chk_delete" to mapOf("fr" to "Supprimer les sources après succès", "en" to "Delete sources after success", "es" to "Eliminar fuentes tras éxito", "pt" to "Excluir fontes após sucesso", "de" to "Quellen nach Erfolg löschen"),
+                      "hash_hint" to mapOf("fr" to "Coller un hash SHA-256 de contrôle", "en" to "Paste control SHA-256 hash", "es" to "Pegar hash SHA-256 de control", "pt" to "Colar hash SHA-256 de controle", "de" to "Kontroll-SHA-256-Hash einfügen"),
+                      "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256", "es" to "📋 Copiar SHA-256", "pt" to "📋 Copiar SHA-256", "de" to "📋 SHA-256 kopieren"),
+                      "menu_options" to mapOf("fr" to "⚙️ OPTIONS & MENU", "en" to "⚙️ OPTIONS & MENU", "es" to "⚙️ OPCIONES Y MENÚ", "pt" to "⚙️ OPÇÕES E MENU", "de" to "⚙️ OPTIONEN & MENÜ"),
+                      "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode", "es" to "📂 Cambiar a Modo Divisor", "pt" to "📂 Mudar para o Modo Divisor", "de" to "📂 In den Splitter-Modus wechseln"),
+                      "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode", "es" to "🔗 Cambiar a Modo Fusión", "pt" to "🔗 Mudar para o Modo Fusão", "de" to "🔗 In den Zusammenführungs-Modus wechseln"),
+                      "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe", "es" to "🎨 Cambiar de Universo", "pt" to "🎨 Mudar de Universo", "de" to "🎨 Universum wechseln"),
+                      "menu_lang" to mapOf("fr" to "🌐 Changer la Langue / Language", "en" to "🌐 Change Language", "es" to "🌐 Cambiar Idioma", "pt" to "🌐 Mudar Idioma", "de" to "🌐 Sprache ändern"),
+                      "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates", "es" to "🔄 Buscar actualizaciones", "pt" to "🔄 Verificar atualizações", "de" to "🔄 Nach Updates suchen"),
+                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.0)", "en" to "ℹ️ About (v2.1.0)", "es" to "ℹ️ Acerca de (v2.1.0)", "pt" to "ℹ️ Sobre (v2.1.0)", "de" to "ℹ️ Über (v2.1.0)"),
+                      "dialog_universe_title" to mapOf("fr" to "🌟 CHOISIS TON UNIVERS GAMING", "en" to "🌟 CHOOSE YOUR GAMING UNIVERSE", "es" to "🌟 ELIGE TU UNIVERSO GAMING", "pt" to "🌟 ESCOLHA SEU UNIVERSO GAMER", "de" to "🌟 WÄHLE DEIN GAMING-UNIVERSUM"),
+                      "dialog_lang_title" to mapOf("fr" to "🌐 CHOISIR LA LANGUE / LANGUAGE", "en" to "🌐 CHOOSE LANGUAGE", "es" to "🌐 SELECCIONAR IDIOMA", "pt" to "🌐 SELECIONAR IDIOMA", "de" to "🌐 SPRACHE AUSWÄHLEN"),
+                      "toast_checking_updates" to mapOf("fr" to "🔍 Recherche de mises à jour...", "en" to "🔍 Checking for updates...", "es" to "🔍 Buscando actualizaciones...", "pt" to "🔍 Procurando atualizações...", "de" to "🔍 Suche nach Updates..."),
+                      "toast_already_up_to_date" to mapOf("fr" to "✅ Ton application est déjà à jour (v2.1.0) !", "en" to "✅ Your application is already up to date (v2.1.0) !", "es" to "✅ ¡Tu aplicación ya está actualizada (v2.1.0)!", "pt" to "✅ Seu aplicativo já está atualizado (v2.1.0)!", "de" to "✅ Deine App ist bereits auf dem neuesten Stand (v2.1.0)!"),
+                      "toast_no_apk_found" to mapOf("fr" to "⚠️ Aucun fichier APK trouvé dans la dernière release.", "en" to "⚠️ No APK file found in the latest release.", "es" to "⚠️ No se encontró ningún archivo APK en la última versión.", "pt" to "⚠️ Nenhum arquivo APK encontrado na versão mais recente.", "de" to "⚠️ Keine APK-Datei im neuesten Release gefunden."),
+                      "toast_server_error" to mapOf("fr" to "❌ Erreur serveur GitHub", "en" to "❌ GitHub server error", "es" to "❌ Error del servidor de GitHub", "pt" to "❌ Erro no servidor do GitHub", "de" to "❌ GitHub-Serverfehler"),
+                      "toast_check_failed" to mapOf("fr" to "❌ Échec de la vérification", "en" to "❌ Check failed", "es" to "❌ Falló la verificación", "pt" to "❌ Falha na verificação", "de" to "❌ Überprüfung fehlgeschlagen"),
+                      "bus_pop" to mapOf("fr" to "Tout le monde descend !", "en" to "Everyone out!", "es" to "¡Todo el mundo abajo!", "pt" to "Todo mundo descendo!", "de" to "Alle aussteigen!")
                   )
                   return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
               }
@@ -455,14 +530,72 @@ jobs:
                   prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
                   currentTheme = prefs.getString("theme", "CLASSIC") ?: "CLASSIC"
                   currentLang = prefs.getString("lang", "fr") ?: "fr"
+                  
                   createNotificationChannel()
                   checkPermissions()
                   showMergerScreen()
                   applyTheme()
-                  log("Application démarrée. Version 2.1.10")
+
+                  log("Application démarrée. Version 2.1.0")
+                  checkFirstRunWelcome()
+              }
+
+              private fun checkFirstRunWelcome() {
+                  val isFirstRun = prefs.getBoolean("is_first_run", true)
+                  if (isFirstRun) {
+                      prefs.edit().putBoolean("is_first_run", false).apply()
+                      val cfg = getThemeConfig(currentTheme)
+                      val dialogView = LinearLayout(this).apply {
+                          orientation = LinearLayout.VERTICAL
+                          setPadding(dp(16), dp(16), dp(16), dp(16))
+                          background = GradientDrawable().apply {
+                              setColor(cfg.card)
+                              cornerRadius = dp(10).toFloat()
+                              setStroke(dp(2), Color.parseColor(cfg.border))
+                          }
+                      }
+                      val tvTitle = TextView(this).apply {
+                          text = "🎉 NOUVEAUX UNIVERS DISPONIBLES !"
+                          textSize = 14f
+                          setTextColor(cfg.primaryText)
+                          setTypeface(null, Typeface.BOLD)
+                          setPadding(0, 0, 0, dp(8))
+                      }
+                      dialogView.addView(tvTitle)
+
+                      val tvMsg = TextView(this).apply {
+                          text = "Bienvenue dans PS PKG Freedom Hub !\n\nDes thèmes immersifs (God of War, Fortnite...) sont désormais disponibles !"
+                          textSize = 12f
+                          setTextColor(Color.WHITE)
+                          setPadding(0, 0, 0, dp(12))
+                      }
+                      dialogView.addView(tvMsg)
+
+                      val btnOk = Button(this).apply {
+                          text = "COMPRIS !"
+                          setTextColor(Color.WHITE)
+                          textSize = 12f
+                          setBackgroundColor(Color.TRANSPARENT)
+                      }
+                      dialogView.addView(btnOk)
+
+                      val dialog = AlertDialog.Builder(this)
+                          .setView(dialogView)
+                          .setCancelable(false)
+                          .create()
+                      dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                      btnOk.setOnClickListener { dialog.dismiss() }
+                      dialog.show()
+                  }
               }
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+
+              private fun getResId(name: String): Int {
+                  var id = resources.getIdentifier(name, "drawable", packageName)
+                  if (id == 0) id = resources.getIdentifier("img_$name", "drawable", packageName)
+                  return id
+              }
 
               @SuppressLint("ClickableViewAccessibility")
               private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, treeSide: Int, onClickAction: () -> Unit): View {
@@ -472,22 +605,40 @@ jobs:
                       gravity = Gravity.CENTER_VERTICAL
                       setPadding(0, dp(4), 0, dp(4))
                   }
+
+                  if (currentTheme == "FORTNITE" && (treeSide == 1 || treeSide == 3)) {
+                      val treeRes = getResId("fn_tree1")
+                      if (treeRes != 0) {
+                          val treeIv = ImageView(this).apply {
+                              setImageResource(treeRes)
+                              scaleType = ImageView.ScaleType.FIT_CENTER
+                          }
+                          val lp = LinearLayout.LayoutParams(dp(54), dp(78)).apply {
+                              rightMargin = dp(8)
+                          }
+                          container.addView(treeIv, lp)
+                      }
+                  }
+
                   val buttonContent = LinearLayout(this).apply {
                       orientation = LinearLayout.HORIZONTAL
                       gravity = Gravity.CENTER
                       setPadding(dp(16), dp(14), dp(16), dp(14))
                   }
+
                   val normalBg = GradientDrawable().apply {
                       setColor(Color.parseColor(bgHex))
                       cornerRadius = dp(6).toFloat()
                       setStroke(dp(2), Color.parseColor(borderHexStr))
                   }
+                  
                   val pressedBg = GradientDrawable().apply {
                       setColor(Color.parseColor(cfg.pressColor))
                       cornerRadius = dp(6).toFloat()
                       setStroke(dp(3), Color.WHITE)
                   }
                   buttonContent.background = normalBg
+
                   val tv = TextView(this).apply {
                       text = labelText
                       setTextColor(Color.WHITE)
@@ -496,35 +647,78 @@ jobs:
                       gravity = Gravity.CENTER
                   }
                   buttonContent.addView(tv, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
-                  container.addView(buttonContent, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+
+                  val buttonLp = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+                  container.addView(buttonContent, buttonLp)
+
+                  if (currentTheme == "FORTNITE" && (treeSide == 2 || treeSide == 3)) {
+                      val treeRes = getResId("fn_tree2")
+                      if (treeRes != 0) {
+                          val treeIv = ImageView(this).apply {
+                              setImageResource(treeRes)
+                              scaleType = ImageView.ScaleType.FIT_CENTER
+                          }
+                          val lp = LinearLayout.LayoutParams(dp(54), dp(78)).apply {
+                              leftMargin = dp(8)
+                          }
+                          container.addView(treeIv, lp)
+                      }
+                  }
 
                   buttonContent.setOnClickListener {
                       val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                       vibrator?.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
+                      if (currentTheme == "GOW") {
+                          playClickSound("gow_click")
+                      } else if (currentTheme == "FORTNITE") {
+                          playClickSound("fn_click")
+                      }
                       onClickAction()
                   }
+
                   buttonContent.setOnTouchListener { view, event ->
                       when (event.action) {
-                          MotionEvent.ACTION_DOWN -> { view.animate().scaleX(0.96f).scaleY(0.96f).setDuration(60).start(); view.background = pressedBg }
-                          MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(80).start(); view.background = normalBg }
+                          MotionEvent.ACTION_DOWN -> {
+                              view.animate().scaleX(0.96f).scaleY(0.96f).setDuration(60).start()
+                              view.background = pressedBg
+                          }
+                          MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                              view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(80).start()
+                              view.background = normalBg
+                          }
                       }
                       false
                   }
+
                   return container
+              }
+
+              private fun playClickSound(soundName: String) {
+                  try {
+                      var resId = resources.getIdentifier(soundName, "raw", packageName)
+                      if (resId == 0) resId = resources.getIdentifier("img_$soundName", "raw", packageName)
+                      if (resId != 0) {
+                          clickPlayer?.release()
+                          clickPlayer = MediaPlayer.create(this, resId)
+                          clickPlayer?.start()
+                      }
+                  } catch (_: Exception) {}
               }
 
               private fun setupBackgroundMedia() {
                   try {
                       bgVideoView?.stopPlayback()
                       bgVideoView?.visibility = View.GONE
+                      
                       try { musicPlayer?.stop() } catch (_: Exception) {}
                       musicPlayer?.release()
                       musicPlayer = null
 
-                      if (currentTheme == "GOW" || currentTheme == "FORTNITE") {
+                      stopFortniteBusAnimation()
+
+                      if (currentTheme == "GOW") {
                           bgVideoView?.visibility = View.VISIBLE
-                          val videoName = if (currentTheme == "GOW") "gow_bg" else "fn_bg"
-                          val videoResId = resources.getIdentifier(videoName, "raw", packageName)
+                          val videoResId = resources.getIdentifier("gow_bg", "raw", packageName)
                           if (videoResId != 0 && bgVideoView != null) {
                               val uri = Uri.parse("android.resource://$packageName/$videoResId")
                               bgVideoView?.setVideoURI(uri)
@@ -535,36 +729,185 @@ jobs:
                                   bgVideoView?.start()
                               }
                           }
-                          val musicName = if (currentTheme == "GOW") "gow_music" else "fn_music"
-                          val musicResId = resources.getIdentifier(musicName, "raw", packageName)
+
+                          val musicResId = resources.getIdentifier("gow_music", "raw", packageName)
                           if (musicResId != 0) {
                               musicPlayer = MediaPlayer.create(this, musicResId)
                               musicPlayer?.isLooping = true
                               musicPlayer?.start()
                           }
+                      } else if (currentTheme == "FORTNITE") {
+                          bgVideoView?.visibility = View.VISIBLE
+                          val videoResId = resources.getIdentifier("fn_bg", "raw", packageName)
+                          if (videoResId != 0 && bgVideoView != null) {
+                              val uri = Uri.parse("android.resource://$packageName/$videoResId")
+                              bgVideoView?.setVideoURI(uri)
+                              bgVideoView?.setOnPreparedListener { mp ->
+                                  mp.isLooping = true
+                                  mp.setVolume(0f, 0f)
+                                  bgVideoView?.setVideoSize(mp.videoWidth, mp.videoHeight)
+                                  bgVideoView?.start()
+                              }
+                          }
+
+                          val fnMusicRes = resources.getIdentifier("fn_music", "raw", packageName)
+                          if (fnMusicRes != 0) {
+                              musicPlayer = MediaPlayer.create(this, fnMusicRes)
+                              musicPlayer?.isLooping = true
+                              musicPlayer?.start()
+                          }
+                          startFortniteBusAnimation()
                       }
                   } catch (_: Exception) {}
               }
 
-              override fun onResume() { super.onResume(); setupBackgroundMedia() }
-              override fun onPause() { super.onPause(); bgVideoView?.pause(); try { musicPlayer?.pause() } catch (_: Exception) {} }
-              override fun onDestroy() { super.onDestroy(); try { musicPlayer?.release() } catch (_: Exception) {} }
+              private fun startFortniteBusAnimation() {
+                  stopFortniteBusAnimation()
+                  busHandler.postDelayed({
+                      runFortniteBus()
+                  }, 800)
+              }
+
+              private fun stopFortniteBusAnimation() {
+                  busHandler.removeCallbacksAndMessages(null)
+                  busImageView?.visibility = View.GONE
+              }
+
+              private fun scheduleNextBusRun() {
+                  if (currentTheme != "FORTNITE") return
+                  val delay = (5000 + random.nextInt(3500)).toLong()
+                  busHandler.postDelayed({
+                      runFortniteBus()
+                  }, delay)
+              }
+
+              @SuppressLint("ClickableViewAccessibility")
+              private fun runFortniteBus() {
+                  if (currentTheme != "FORTNITE") return
+                  val bus = busImageView ?: return
+                  val parentWidth = rootFrameLayout.width
+                  val screenWidth = if (parentWidth > 0) parentWidth.toFloat() else resources.displayMetrics.widthPixels.toFloat()
+                  val rawHeight = rootFrameLayout.height.toFloat()
+                  val screenHeight = if (rawHeight > 0f) rawHeight else resources.displayMetrics.heightPixels.toFloat()
+
+                  val goRight = random.nextBoolean()
+                  val startX = if (goRight) -dp(240).toFloat() else screenWidth + dp(240).toFloat()
+                  val endX = if (goRight) screenWidth + dp(240).toFloat() else -dp(240).toFloat()
+                  val randomY = dp(30) + random.nextFloat() * (screenHeight * 0.45f)
+
+                  bus.translationY = randomY
+                  bus.translationX = startX
+                  bus.scaleX = if (goRight) 1.25f else -1.25f
+                  bus.scaleY = 1.25f
+                  bus.visibility = View.VISIBLE
+                  bus.bringToFront()
+
+                  bus.setOnClickListener {
+                      val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                      vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
+                      bus.animate().scaleX((if (goRight) 1.4f else -1.4f)).scaleY(1.4f).setDuration(80).withEndAction {
+                          bus.animate().scaleX((if (goRight) 1.25f else -1.25f)).scaleY(1.25f).setDuration(80).start()
+                      }.start()
+                      showInteractivePopup(tr("bus_pop"))
+                  }
+
+                  try {
+                      var busSoundRes = resources.getIdentifier("fn_bus", "raw", packageName)
+                      if (busSoundRes == 0) busSoundRes = resources.getIdentifier("img_fn_bus", "raw", packageName)
+                      if (busSoundRes != 0) {
+                          fnBusPlayer?.release()
+                          fnBusPlayer = MediaPlayer.create(this, busSoundRes)
+                          fnBusPlayer?.start()
+                      }
+                  } catch (_: Exception) {}
+
+                  bus.animate()
+                      .translationX(endX)
+                      .setDuration(5500)
+                      .withEndAction {
+                          bus.visibility = View.GONE
+                          scheduleNextBusRun()
+                      }
+                      .start()
+              }
+
+              private fun showInteractivePopup(message: String) {
+                  val cfg = getThemeConfig(currentTheme)
+                  val dialogView = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply {
+                          setColor(cfg.card)
+                          cornerRadius = dp(10).toFloat()
+                          setStroke(dp(2), Color.parseColor(cfg.border))
+                      }
+                  }
+
+                  val tvMsg = TextView(this).apply {
+                      text = "💬 $message"
+                      textSize = 13f
+                      setTextColor(cfg.primaryText)
+                      setTypeface(null, Typeface.BOLD)
+                      setPadding(0, 0, 0, dp(10))
+                  }
+                  dialogView.addView(tvMsg)
+
+                  val btnOk = Button(this).apply {
+                      text = "OK"
+                      setTextColor(Color.WHITE)
+                      textSize = 12f
+                      setBackgroundColor(Color.TRANSPARENT)
+                  }
+                  dialogView.addView(btnOk)
+
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .create()
+                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                  btnOk.setOnClickListener { dialog.dismiss() }
+                  dialog.show()
+              }
+
+              override fun onResume() {
+                  super.onResume()
+                  setupBackgroundMedia()
+              }
+
+              override fun onPause() {
+                  super.onPause()
+                  bgVideoView?.pause()
+                  try { musicPlayer?.pause() } catch (_: Exception) {}
+                  stopFortniteBusAnimation()
+              }
+
+              override fun onDestroy() {
+                  super.onDestroy()
+                  try { musicPlayer?.release() } catch (_: Exception) {}
+                  clickPlayer?.release()
+                  fnBusPlayer?.release()
+                  stopFortniteBusAnimation()
+              }
 
               private fun applyTheme() {
                   val cfg = getThemeConfig(currentTheme)
+
                   rootFrameLayout.setBackgroundColor(cfg.bg)
                   rootLayout.setBackgroundColor(Color.TRANSPARENT)
                   mainCol.setBackgroundColor(Color.TRANSPARENT)
+
                   titleView.setTextColor(cfg.primaryText)
                   subtitleView.setTextColor(cfg.secondaryText)
                   subtitleView.text = "${tr("universe")} : ${cfg.name.uppercase()}"
+
                   section1Title.setTextColor(cfg.secondaryText)
                   section2Title.setTextColor(cfg.secondaryText)
                   section3Title.setTextColor(cfg.secondaryText)
+
                   checkView.setTextColor(cfg.secondaryText)
                   statusView.setTextColor(cfg.primaryText)
                   consoleLogView.setTextColor(cfg.dim)
                   hashView.setTextColor(cfg.secondaryText)
+
                   verifyBox.setTextColor(cfg.dim)
                   deleteBox.setTextColor(cfg.dim)
                   outView.setTextColor(cfg.dim)
@@ -582,21 +925,26 @@ jobs:
                           setStroke(dp(2), Color.parseColor(cfg.border))
                       }
                   }
+
                   rebuildButtons()
-                  menuBtn.background = GradientDrawable().apply {
+
+                  val modeBtnStyleBg = GradientDrawable().apply {
                       setColor(Color.parseColor(cfg.btnRev.first))
                       cornerRadius = dp(6).toFloat()
                       setStroke(dp(2), Color.parseColor(cfg.btnRev.second))
                   }
+                  menuBtn.background = modeBtnStyleBg
                   menuBtn.setTextColor(cfg.secondaryText)
                   menuBtn.text = tr("menu_btn")
                   menuBtn.setOnClickListener { showCustomMenu(menuBtn) }
+
                   setupBackgroundMedia()
                   refresh()
               }
 
               private fun rebuildButtons() {
                   val cfg = getThemeConfig(currentTheme)
+
                   val parentCard1 = pickBtnLayout.parent as? LinearLayout
                   val parentCard2 = outBtnLayout.parent as? LinearLayout
                   val parentCard3 = copyBtnLayout.parent as? LinearLayout
@@ -608,6 +956,7 @@ jobs:
                   val idxGo = (goBtnLayout.parent as? LinearLayout)?.indexOfChild(goBtnLayout) ?: -1
                   val idxCancel = (cancelBtnLayout.parent as? LinearLayout)?.indexOfChild(cancelBtnLayout) ?: -1
                   val idxCopy = parentCard3?.indexOfChild(copyBtnLayout) ?: -1
+
                   val actionContainer = goBtnLayout.parent as? LinearLayout
 
                   pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1) { pick() }
@@ -626,15 +975,18 @@ jobs:
                       parentCard1.removeViewAt(idxDir); parentCard1.addView(dirBtnLayout, idxDir, lp())
                       parentCard1.removeViewAt(idxRev); parentCard1.addView(revBtnLayout, idxRev, lp())
                   }
+
                   if (parentCard2 != null && idxOut != -1) {
                       parentCard2.removeViewAt(idxOut); parentCard2.addView(outBtnLayout, idxOut, lp())
                   }
+
                   if (actionContainer != null && idxGo != -1) {
                       actionContainer.removeViewAt(idxGo)
                       actionContainer.addView(goBtnLayout, idxGo, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
                       actionContainer.removeViewAt(idxCancel)
                       actionContainer.addView(cancelBtnLayout, idxCancel, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
                   }
+
                   if (parentCard3 != null && idxCopy != -1) {
                       parentCard3.removeViewAt(idxCopy); parentCard3.addView(copyBtnLayout, idxCopy, lp())
                   }
@@ -642,7 +994,11 @@ jobs:
 
               private fun createNotificationChannel() {
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                      val channel = NotificationChannel("pkg_channel", "PS PKG Notifications", NotificationManager.IMPORTANCE_LOW)
+                      val channel = NotificationChannel(
+                          "pkg_channel",
+                          "PS PKG Notifications",
+                          NotificationManager.IMPORTANCE_LOW
+                      ).apply { description = "Progression des traitements PKG" }
                       getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
                   }
               }
@@ -653,16 +1009,103 @@ jobs:
                           requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 100)
                       }
                   }
+
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                      val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                      if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                          try {
+                              val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                  data = Uri.parse("package:$packageName")
+                              }
+                              startActivity(intent)
+                          } catch (_: Exception) {}
+                      }
+                  }
+              }
+
+              private fun updateProgressNotif(msg: String, pct: Int) {
+                  try {
+                      val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                          android.app.Notification.Builder(this, "pkg_channel")
+                      } else {
+                          @Suppress("DEPRECATION")
+                          android.app.Notification.Builder(this)
+                      }
+                      val notification = builder
+                          .setContentTitle("⚡ PS PKG Hub")
+                          .setContentText(msg)
+                          .setSmallIcon(R.drawable.ic_app_logo)
+                          .setProgress(100, pct, false)
+                          .setOngoing(true)
+                          .build()
+
+                      getSystemService(NotificationManager::class.java).notify(NOTIF_ID_PROGRESS, notification)
+                  } catch (_: Exception) {}
+              }
+
+              private fun showResultNotif(title: String, message: String) {
+                  try {
+                      val nm = getSystemService(NotificationManager::class.java)
+                      nm.cancel(NOTIF_ID_PROGRESS)
+
+                      val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                          android.app.Notification.Builder(this, "pkg_channel")
+                      } else {
+                          @Suppress("DEPRECATION")
+                          android.app.Notification.Builder(this)
+                      }
+                      val notification = builder
+                          .setContentTitle(title)
+                          .setContentText(message)
+                          .setSmallIcon(R.drawable.ic_app_logo)
+                          .setAutoCancel(true)
+                          .build()
+
+                      nm.notify(NOTIF_ID_RESULT, notification)
+                  } catch (_: Exception) {}
+              }
+
+              @SuppressLint("ClickableViewAccessibility")
+              private fun triggerSuccessReward() {
+                  if (currentTheme == "FORTNITE") {
+                      playClickSound("fn_chest_open")
+                      var closedRes = resources.getIdentifier("fn_chest_closed", "drawable", packageName)
+                      if (closedRes == 0) closedRes = resources.getIdentifier("img_fn_chest_closed", "drawable", packageName)
+                      if (closedRes != 0 && rewardChestView != null) {
+                          rewardChestView?.setImageResource(closedRes)
+                          rewardChestView?.visibility = View.VISIBLE
+                          rewardChestView?.bringToFront()
+                          
+                          rewardChestView?.setOnClickListener {
+                              val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                              vibrator?.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
+                              rewardChestView?.animate()?.scaleX(1.35f)?.scaleY(1.35f)?.setDuration(90)?.withEndAction {
+                                  rewardChestView?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(90)?.start()
+                              }?.start()
+                              
+                              val actionWord = if (appMode == "SPLIT") "découpage" else "fusion"
+                              showInteractivePopup("$actionWord réussie grâce à moi ! Le coffre")
+                          }
+
+                          rewardChestView?.animate()?.scaleX(1.3f)?.scaleY(1.3f)?.setDuration(220)?.withEndAction {
+                              rewardChestView?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(220)?.start()
+                          }?.start()
+                      }
+                  }
               }
 
               private fun showMergerScreen() {
                   rootFrameLayout = FrameLayout(this)
+
                   bgVideoView = AspectRatioVideoView(this).apply {
                       layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT, Gravity.CENTER)
                   }
                   rootFrameLayout.addView(bgVideoView)
 
-                  rootLayout = ScrollView(this).apply { setBackgroundColor(Color.TRANSPARENT) }
+                  rootLayout = ScrollView(this).apply {
+                      setBackgroundColor(Color.TRANSPARENT)
+                  }
+
                   val pad = dp(16)
                   mainCol = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
@@ -670,15 +1113,33 @@ jobs:
                       setBackgroundColor(Color.TRANSPARENT)
                   }
 
-                  val headerLayout = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, dp(4), 0, dp(8)) }
-                  val titlesLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-                  titleView = TextView(this).apply { text = tr("app_title"); textSize = 20f; setTypeface(null, Typeface.BOLD) }
+                  val headerLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      setPadding(0, dp(4), 0, dp(8))
+                  }
+                  
+                  val titlesLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                  }
+                  titleView = TextView(this).apply {
+                      text = tr("app_title")
+                      textSize = 20f
+                      setTypeface(null, Typeface.BOLD)
+                  }
                   titlesLayout.addView(titleView)
-                  subtitleView = TextView(this).apply { text = tr("universe"); textSize = 10f; typeface = Typeface.MONOSPACE }
+                  
+                  subtitleView = TextView(this).apply {
+                      text = tr("universe")
+                      textSize = 10f
+                      typeface = Typeface.MONOSPACE
+                      setPadding(0, dp(2), 0, 0)
+                  }
                   titlesLayout.addView(subtitleView)
                   headerLayout.addView(titlesLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
-                  menuBtn = Button(this).apply { text = tr("menu_btn") }
+                  menuBtn = Button(this).apply {
+                      text = tr("menu_btn")
+                  }
                   headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
                   mainCol.addView(headerLayout)
 
@@ -687,46 +1148,89 @@ jobs:
                   val card1 = createCard()
                   section1Title = text(tr("sec1"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(section1Title)
+                  
                   pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1) { pick() }
                   card1.addView(pickBtnLayout, lp())
+
                   dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2) { pickFolder() }
                   card1.addView(dirBtnLayout, lp())
+
                   revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1) { reversed = !reversed; refresh() }
                   card1.addView(revBtnLayout, lp())
 
-                  listContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, dp(4)) }
+                  listContainer = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(0, dp(8), 0, dp(4))
+                  }
                   card1.addView(listContainer, lp())
 
-                  infoLayout = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(8), 0, dp(4)) }
-                  pkgIconView = ImageView(this).apply { visibility = View.GONE; scaleType = ImageView.ScaleType.FIT_CENTER; adjustViewBounds = true }
+                  infoLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.CENTER_VERTICAL
+                      setPadding(0, dp(8), 0, dp(4))
+                  }
+
+                  pkgIconView = ImageView(this).apply {
+                      visibility = View.GONE
+                      scaleType = ImageView.ScaleType.FIT_CENTER
+                      adjustViewBounds = true
+                  }
                   infoLayout.addView(pkgIconView, LinearLayout.LayoutParams(dp(80), WRAP_CONTENT).apply { rightMargin = dp(12) })
+
                   checkView = text("", 11f, Color.CYAN).apply { typeface = Typeface.MONOSPACE }
                   infoLayout.addView(checkView, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+                  
                   card1.addView(infoLayout, lp())
                   mainCol.addView(card1, lpCard())
 
                   val card2 = createCard()
                   section2Title = text(tr("sec2"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card2.addView(section2Title)
+
                   outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2) { pickOutput() }
                   card2.addView(outBtnLayout, lp())
-                  outView = text(tr("out_lbl"), 11f, Color.GRAY).apply { typeface = Typeface.MONOSPACE; setPadding(0, dp(6), 0, dp(8)) }
+
+                  outView = text(tr("out_lbl"), 11f, Color.GRAY).apply { 
+                      typeface = Typeface.MONOSPACE
+                      setPadding(0, dp(6), 0, dp(8))
+                  }
                   card2.addView(outView, lp())
 
-                  val actionLayout = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+                  val actionLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.CENTER_VERTICAL
+                  }
                   val goInitialText = if (appMode == "SPLIT") tr("btn_go_split") else tr("btn_go_merge")
                   goBtnLayout = createCustomButton(goInitialText, cfg.btnGo.first, cfg.btnGo.second, 0) { executeAction() }
                   actionLayout.addView(goBtnLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+
                   cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0) {
                       if (processing) { cancelled = true; statusView.text = "Annulation..." }
                   }
                   actionLayout.addView(cancelBtnLayout, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
-                  card2.addView(actionLayout, lp())
+                  
+                  val actionRowLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.CENTER_VERTICAL
+                  }
+                  actionRowLayout.addView(actionLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+
+                  rewardChestView = ImageView(this).apply {
+                      visibility = View.GONE
+                      scaleType = ImageView.ScaleType.FIT_CENTER
+                  }
+                  actionRowLayout.addView(rewardChestView, LinearLayout.LayoutParams(dp(44), dp(44)).apply { leftMargin = dp(8) })
+
+                  card2.addView(actionRowLayout, lp())
 
                   bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-                      max = 1000; progress = 0; setPadding(0, dp(12), 0, dp(4))
+                      max = 1000
+                      progress = 0
+                      setPadding(0, dp(12), 0, dp(4))
                       val resId = resources.getIdentifier("rounded_progress", "drawable", packageName)
-                      if (resId != 0) progressDrawable = resources.getDrawable(resId, null)
+                      if (resId != 0) {
+                          progressDrawable = resources.getDrawable(resId, null)
+                      }
                   }
                   card2.addView(bar, lp())
 
@@ -735,49 +1239,117 @@ jobs:
 
                   consoleScroll = ScrollView(this).apply {
                       layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, dp(120)).apply { topMargin = dp(8) }
-                      background = GradientDrawable().apply { setColor(Color.parseColor("#0A0D14")); cornerRadius = dp(6).toFloat(); setStroke(dp(1), Color.parseColor("#1E293B")) }
+                      background = GradientDrawable().apply {
+                          setColor(Color.parseColor("#0A0D14"))
+                          cornerRadius = dp(6).toFloat()
+                          setStroke(dp(1), Color.parseColor("#1E293B"))
+                      }
                       setPadding(dp(8), dp(8), dp(8), dp(8))
                   }
-                  consoleLogView = TextView(this).apply { text = "• Console de logs initialisée...\n"; textSize = 10f; setTextColor(Color.parseColor("#94A3B8")); typeface = Typeface.MONOSPACE }
+                  consoleLogView = TextView(this).apply {
+                      text = "• Console de logs initialisée...\n"
+                      textSize = 10f
+                      setTextColor(Color.parseColor("#94A3B8"))
+                      typeface = Typeface.MONOSPACE
+                  }
                   consoleScroll.addView(consoleLogView)
                   card2.addView(consoleScroll)
+
                   mainCol.addView(card2, lpCard())
 
                   val card3 = createCard()
                   section3Title = text(tr("sec3"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(section3Title)
-                  verifyBox = CheckBox(this).apply { text = tr("chk_verify"); isChecked = true; textSize = 12f }
+
+                  verifyBox = CheckBox(this).apply {
+                      text = tr("chk_verify")
+                      isChecked = true
+                      textSize = 12f
+                  }
                   card3.addView(verifyBox, lp())
-                  deleteBox = CheckBox(this).apply { text = tr("chk_delete"); isChecked = false; textSize = 12f }
+
+                  deleteBox = CheckBox(this).apply {
+                      text = tr("chk_delete")
+                      isChecked = false
+                      textSize = 12f
+                  }
                   card3.addView(deleteBox, lp())
-                  hashField = EditText(this).apply { hint = tr("hash_hint"); setTextColor(Color.WHITE); setHintTextColor(Color.GRAY); textSize = 11f; typeface = Typeface.MONOSPACE }
+
+                  hashField = EditText(this).apply {
+                      hint = tr("hash_hint")
+                      setTextColor(Color.WHITE)
+                      setHintTextColor(Color.GRAY)
+                      textSize = 11f
+                      typeface = Typeface.MONOSPACE
+                  }
                   card3.addView(hashField, lp())
+
                   hashView = text("", 11f, Color.CYAN).apply { typeface = Typeface.MONOSPACE }
                   card3.addView(hashView, lp())
+
                   copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 0) { copyHash() }
                   card3.addView(copyBtnLayout, lp())
                   mainCol.addView(card3, lpCard())
 
                   rootLayout.addView(mainCol)
                   rootFrameLayout.addView(rootLayout, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+
+                  var busRes = resources.getIdentifier("fn_bus", "drawable", packageName)
+                  if (busRes == 0) busRes = resources.getIdentifier("img_fn_bus", "drawable", packageName)
+                  if (busRes == 0) busRes = resources.getIdentifier("bus", "drawable", packageName)
+
+                  if (busRes != 0) {
+                      busImageView = ImageView(this).apply {
+                          setImageResource(busRes)
+                          visibility = View.GONE
+                      }
+                      val busLp = FrameLayout.LayoutParams(dp(180), dp(110)).apply {
+                          gravity = Gravity.TOP or Gravity.START
+                      }
+                      rootFrameLayout.addView(busImageView, busLp)
+                      busImageView?.bringToFront()
+                  }
+
                   setContentView(rootFrameLayout)
               }
 
               private fun showCustomMenu(anchor: View) {
-                  if (processing) { toast("⚠️ Traitement en cours !"); return }
-                  val cfg = getThemeConfig(currentTheme)
-                  val dialogView = LinearLayout(this).apply {
-                      orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16))
-                      background = GradientDrawable().apply { setColor(cfg.card); cornerRadius = dp(10).toFloat(); setStroke(dp(2), Color.parseColor(cfg.border)) }
+                  if (processing) {
+                      toast("⚠️ Traitement en cours !")
+                      return
                   }
-                  val titleMenu = TextView(this).apply { text = tr("menu_options"); textSize = 14f; setTextColor(cfg.primaryText); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(12)) }
+                  val cfg = getThemeConfig(currentTheme)
+                  
+                  val dialogView = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply {
+                          setColor(cfg.card)
+                          cornerRadius = dp(10).toFloat()
+                          setStroke(dp(2), Color.parseColor(cfg.border))
+                      }
+                  }
+
+                  val titleMenu = TextView(this).apply {
+                      text = tr("menu_options")
+                      textSize = 14f
+                      setTextColor(cfg.primaryText)
+                      setTypeface(null, Typeface.BOLD)
+                      setPadding(0, 0, 0, dp(12))
+                  }
                   dialogView.addView(titleMenu)
-                  val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .create()
+
                   dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
                   fun addMenuOption(text: String, action: () -> Unit) {
                       val btn = Button(this).apply {
-                          this.text = text; setTextColor(Color.WHITE); textSize = 12f
+                          this.text = text
+                          setTextColor(Color.WHITE)
+                          textSize = 12f
                           gravity = Gravity.START or Gravity.CENTER_VERTICAL
                           setBackgroundColor(Color.TRANSPARENT)
                           setOnClickListener { action() }
@@ -785,146 +1357,532 @@ jobs:
                       dialogView.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)))
                   }
 
-                  addMenuOption(if (appMode == "MERGE") tr("mode_split") else tr("mode_merge")) {
+                  val toggleModeText = if (appMode == "MERGE") tr("mode_split") else tr("mode_merge")
+                  addMenuOption(toggleModeText) {
                       dialog.dismiss()
                       appMode = if (appMode == "MERGE") "SPLIT" else "MERGE"
-                      if (appMode == "SPLIT") { titleView.text = "⚡ PKG SPLITTER"; section1Title.text = tr("sec1_split"); statusView.text = tr("status_split_ready") }
-                      else { titleView.text = tr("app_title"); section1Title.text = tr("sec1"); statusView.text = tr("status_ready") }
-                      output = null; outView.text = tr("out_lbl"); rebuildButtons()
+                      if (appMode == "SPLIT") {
+                          titleView.text = "⚡ PKG SPLITTER"
+                          section1Title.text = tr("sec1_split")
+                          statusView.text = tr("status_split_ready")
+                          log("Mode basculé : SPLIT")
+                      } else {
+                          titleView.text = tr("app_title")
+                          section1Title.text = tr("sec1")
+                          statusView.text = tr("status_ready")
+                          log("Mode basculé : MERGE")
+                      }
+                      output = null
+                      outView.text = tr("out_lbl")
+                      rebuildButtons()
                   }
-                  addMenuOption(tr("menu_universe")) { dialog.dismiss(); showThemeDialog() }
-                  addMenuOption(tr("menu_lang")) { dialog.dismiss(); showLangDialog() }
-                  addMenuOption(tr("menu_update")) { dialog.dismiss(); toast("Vérification des mises à jour...") }
-                  addMenuOption(tr("menu_about")) { dialog.dismiss(); toast("PS PKG Freedom Hub v2.1.10") }
+
+                  addMenuOption(tr("menu_universe")) {
+                      dialog.dismiss()
+                      showThemeDialog()
+                  }
+
+                  addMenuOption(tr("menu_lang")) {
+                      dialog.dismiss()
+                      showLanguageDialog()
+                  }
+
+                  addMenuOption(tr("menu_update")) {
+                      dialog.dismiss()
+                      checkForUpdates()
+                  }
+
+                  addMenuOption(tr("menu_about")) {
+                      dialog.dismiss()
+                      toast("PS PKG Freedom Hub v2.1.0")
+                  }
+
                   dialog.show()
+              }
+
+              private fun checkForUpdates() {
+                  toast(tr("toast_checking_updates"))
+                  Thread {
+                      try {
+                          val repoUrl = "https://api.github.com/repos/Ridagames/Pkg-merge/releases/latest"
+                          val url = URL(repoUrl)
+                          val conn = url.openConnection() as HttpURLConnection
+                          conn.requestMethod = "GET"
+                          conn.setRequestProperty("User-Agent", "PkgMerger-App")
+                          conn.connectTimeout = 5000
+
+                          if (conn.responseCode == 200) {
+                              val response = conn.inputStream.bufferedReader().use { it.readText() }
+                              val tagMatch = Regex("\"tag_name\"\\s*:\\s*\"([^\"]+)\"").find(response)
+                              val apkUrlMatch = Regex("\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.apk)\"").find(response)
+
+                              if (tagMatch != null && apkUrlMatch != null) {
+                                  val latestTag = tagMatch.groupValues[1].replace("v", "")
+                                  val apkUrl = apkUrlMatch.groupValues[1]
+                                  val currentVersion = "2.1.0"
+
+                                  ui.post {
+                                      if (isVersionNewer(latestTag, currentVersion)) {
+                                          showUpdateDialog(latestTag, apkUrl)
+                                      } else {
+                                          toast(tr("toast_already_up_to_date"))
+                                      }
+                                  }
+                              } else {
+                                  ui.post { toast(tr("toast_no_apk_found")) }
+                              }
+                          } else {
+                              ui.post { toast("${tr("toast_server_error")} (${conn.responseCode}).") }
+                          }
+                      } catch (e: Exception) {
+                          ui.post { toast("${tr("toast_check_failed")} : ${e.message}") }
+                      }
+                  }.start()
+              }
+
+              private fun isVersionNewer(remote: String, local: String): Boolean {
+                  try {
+                      val rParts = remote.split(".").map { it.toIntOrNull() ?: 0 }
+                      val lParts = local.split(".").map { it.toIntOrNull() ?: 0 }
+                      for (i in 0 until maxOf(rParts.size, lParts.size)) {
+                          val r = rParts.getOrNull(i) ?: 0
+                          val l = lParts.getOrNull(i) ?: 0
+                          if (r > l) return true
+                          if (r < l) return false
+                      }
+                  } catch (_: Exception) {}
+                  return false
+              }
+
+              private fun showUpdateDialog(newVersion: String, apkUrl: String) {
+                  val cfg = getThemeConfig(currentTheme)
+                  val dialogView = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply {
+                          setColor(cfg.card)
+                          cornerRadius = dp(10).toFloat()
+                          setStroke(dp(2), Color.parseColor(cfg.border))
+                      }
+                  }
+                  val titleTv = TextView(this).apply {
+                      text = "🎉 Nouvelle mise à jour dispo (v$newVersion) !"
+                      textSize = 14f
+                      setTextColor(cfg.primaryText)
+                      setTypeface(null, Typeface.BOLD)
+                      setPadding(0, 0, 0, dp(8))
+                  }
+                  dialogView.addView(titleTv)
+
+                  val msgTv = TextView(this).apply {
+                      text = "Une nouvelle version de PS PKG Freedom Hub est disponible.\n\nVeux-tu la télécharger ?"
+                      textSize = 12f
+                      setTextColor(Color.WHITE)
+                      setPadding(0, 0, 0, dp(12))
+                  }
+                  dialogView.addView(msgTv)
+
+                  val btnLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.END
+                  }
+                  val btnLater = Button(this).apply {
+                      text = "Plus tard"
+                      setTextColor(Color.WHITE)
+                      textSize = 12f
+                      setBackgroundColor(Color.TRANSPARENT)
+                  }
+                  val btnUpdate = Button(this).apply {
+                      text = "Mettre à jour"
+                      setTextColor(cfg.primaryText)
+                      textSize = 12f
+                      setTypeface(null, Typeface.BOLD)
+                      setBackgroundColor(Color.TRANSPARENT)
+                  }
+                  btnLayout.addView(btnLater)
+                  btnLayout.addView(btnUpdate)
+                  dialogView.addView(btnLayout)
+
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .create()
+                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                  btnLater.setOnClickListener { dialog.dismiss() }
+                  btnUpdate.setOnClickListener {
+                      dialog.dismiss()
+                      downloadAndInstallApk(apkUrl)
+                  }
+                  dialog.show()
+              }
+
+              private fun downloadAndInstallApk(apkUrl: String) {
+                  toast("📥 Téléchargement...")
+                  Thread {
+                      try {
+                          val url = URL(apkUrl)
+                          val conn = url.openConnection() as HttpURLConnection
+                          conn.connect()
+                          
+                          val apkFile = File(getExternalFilesDir(null), "update.apk")
+                          if (apkFile.exists()) apkFile.delete()
+
+                          conn.inputStream.use { input ->
+                              FileOutputStream(apkFile).use { output ->
+                                  input.copyTo(output)
+                              }
+                          }
+
+                          ui.post {
+                              toast("✅ Téléchargement terminé.")
+                              installApk(apkFile)
+                          }
+                      } catch (e: Exception) {
+                          ui.post { toast("❌ Erreur : ${e.message}") }
+                      }
+                  }.start()
+              }
+
+              private fun installApk(file: File) {
+                  try {
+                      val intent = Intent(Intent.ACTION_VIEW).apply {
+                          val uri: Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                              FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", file)
+                          } else {
+                              Uri.fromFile(file)
+                          }
+                          setDataAndType(uri, "application/vnd.android.package-archive")
+                          addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                      }
+                      startActivity(intent)
+                  } catch (e: Exception) {
+                      toast("Erreur d'installation : ${e.message}")
+                  }
               }
 
               private fun showThemeDialog() {
                   val cfg = getThemeConfig(currentTheme)
                   val themes = arrayOf(
-                      "🔵 Sombre Classique", 
+                      "🔵 Sombre Classique",
                       "⚡ Fortnite Battle Royale", 
-                      "🪓 God of War Ragnarök",
-                      "🌟 Cyberpunk 2077 (En dev)",
-                      "🌌 PlayStation Nebula (En dev)"
+                      "🪓 God of War Ragnarök", 
+                      "🌿 The Last of Us Part II (En cours)", 
+                      "🌌 Genshin Impact Teyvat (En cours)", 
+                      "🚗 GTA V Los Santos (En cours)",
+                      "🌐 Cyberpunk Neo Hub (En cours)"
                   )
-                  val keys = arrayOf("CLASSIC", "FORTNITE", "GOW", "CYBERPUNK", "NEBULA")
+                  val keys = arrayOf("CLASSIC", "FORTNITE", "GOW", "TLOU", "GENSHIN", "GTA", "CYBERPUNK")
+                  val enabledStatus = arrayOf(true, true, true, false, false, false, false)
                   val checkedItem = keys.indexOf(currentTheme).coerceAtLeast(0)
 
                   val dialogView = LinearLayout(this).apply {
-                      orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16))
-                      background = GradientDrawable().apply { setColor(cfg.card); cornerRadius = dp(10).toFloat(); setStroke(dp(2), Color.parseColor(cfg.border)) }
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply {
+                          setColor(cfg.card)
+                          cornerRadius = dp(10).toFloat()
+                          setStroke(dp(2), Color.parseColor(cfg.border))
+                      }
                   }
-                  val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+
+                  val titleViewDialog = TextView(this).apply {
+                      text = tr("dialog_universe_title")
+                      textSize = 14f
+                      setTextColor(cfg.primaryText)
+                      setTypeface(null, Typeface.BOLD)
+                      setPadding(0, 0, 0, dp(8))
+                  }
+                  dialogView.addView(titleViewDialog)
+
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .create()
                   dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
+                  val listLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                  }
+
                   themes.forEachIndexed { index, themeName ->
+                      val isEnabled = enabledStatus[index]
                       val btn = Button(this).apply {
                           text = if (index == checkedItem) "▶ $themeName" else "   $themeName"
-                          setTextColor(Color.WHITE); textSize = 12f; gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                          setTextColor(if (isEnabled) Color.WHITE else Color.parseColor("#64748B"))
+                          textSize = 12f
+                          gravity = Gravity.START or Gravity.CENTER_VERTICAL
                           setBackgroundColor(Color.TRANSPARENT)
                           setOnClickListener {
-                              dialog.dismiss()
-                              val chosenKey = keys[index]
-                              if (chosenKey == "CYBERPUNK" || chosenKey == "NEBULA") {
-                                  toast("⚠️ Univers ${themes[index]} en cours de développement !")
-                              } else {
-                                  currentTheme = chosenKey
+                              if (isEnabled) {
+                                  dialog.dismiss()
+                                  currentTheme = keys[index]
                                   prefs.edit().putString("theme", currentTheme).apply()
+                                  rewardChestView?.visibility = View.GONE
                                   applyTheme()
+                              } else {
+                                  toast("⚠️ Bientôt disponible (En cours de développement)")
                               }
                           }
                       }
-                      dialogView.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(38)))
+                      listLayout.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(38)))
                   }
+                  dialogView.addView(listLayout)
+
                   dialog.show()
               }
 
-              private fun showLangDialog() {
+              private fun showLanguageDialog() {
                   val cfg = getThemeConfig(currentTheme)
-                  val langs = arrayOf("🇫🇷 Français", "🇬🇧 English")
-                  val codes = arrayOf("fr", "en")
+                  val langs = arrayOf("Français 🇫🇷", "English 🇺🇸", "Español 🇪🇸", "Português 🇧🇷", "Deutsch 🇩🇪")
+                  val codes = arrayOf("fr", "en", "es", "pt", "de")
                   val checkedItem = codes.indexOf(currentLang).coerceAtLeast(0)
 
                   val dialogView = LinearLayout(this).apply {
-                      orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16))
-                      background = GradientDrawable().apply { setColor(cfg.card); cornerRadius = dp(10).toFloat(); setStroke(dp(2), Color.parseColor(cfg.border)) }
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply {
+                          setColor(cfg.card)
+                          cornerRadius = dp(10).toFloat()
+                          setStroke(dp(2), Color.parseColor(cfg.border))
+                      }
                   }
-                  val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+
+                  val titleViewDialog = TextView(this).apply {
+                      text = tr("dialog_lang_title")
+                      textSize = 14f
+                      setTextColor(cfg.primaryText)
+                      setTypeface(null, Typeface.BOLD)
+                      setPadding(0, 0, 0, dp(8))
+                  }
+                  dialogView.addView(titleViewDialog)
+
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .create()
                   dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+                  val listLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                  }
 
                   langs.forEachIndexed { index, langName ->
                       val btn = Button(this).apply {
                           text = if (index == checkedItem) "▶ $langName" else "   $langName"
-                          setTextColor(Color.WHITE); textSize = 12f; gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                          setTextColor(Color.WHITE)
+                          textSize = 12f
+                          gravity = Gravity.START or Gravity.CENTER_VERTICAL
                           setBackgroundColor(Color.TRANSPARENT)
                           setOnClickListener {
                               dialog.dismiss()
-                              currentLang = codes[index]
-                              prefs.edit().putString("lang", currentLang).apply()
-                              applyTheme()
+                              val selectedLang = codes[index]
+                              prefs.edit().putString("lang", selectedLang).apply()
+                              currentLang = selectedLang
+                              showRestartPrompt()
                           }
                       }
-                      dialogView.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(38)))
+                      listLayout.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(38)))
+                  }
+                  dialogView.addView(listLayout)
+
+                  dialog.show()
+              }
+
+              private fun showRestartPrompt() {
+                  val cfg = getThemeConfig(currentTheme)
+                  val restartMsg = when (currentLang) {
+                      "en" -> "Please restart the application to apply changes."
+                      "es" -> "Reinicia la aplicación para aplicar los cambios."
+                      "pt" -> "Reinicie o aplicativo para aplicar as alterações."
+                      "de" -> "Bitte starte die App neu, um die Änderungen zu übernehmen."
+                      else -> "Veuillez redémarrer l'application pour appliquer les changements."
+                  }
+                  val restartBtn = when (currentLang) {
+                      "en" -> "Restart"
+                      "es" -> "Reiniciar"
+                      "pt" -> "Reiniciar"
+                      "de" -> "Neustart"
+                      else -> "Redémarrer"
+                  }
+                  val cancelBtn = when (currentLang) {
+                      "en" -> "Later"
+                      "es" -> "Más tarde"
+                      "pt" -> "Mais tarde"
+                      "de" -> "Später"
+                      else -> "Plus tard"
+                  }
+
+                  val dialogView = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                      background = GradientDrawable().apply {
+                          setColor(cfg.card)
+                          cornerRadius = dp(10).toFloat()
+                          setStroke(dp(2), Color.parseColor(cfg.border))
+                      }
+                  }
+
+                  val titleTv = TextView(this).apply {
+                      text = "🌐 ${tr("menu_btn")}"
+                      textSize = 14f
+                      setTextColor(cfg.primaryText)
+                      setTypeface(null, Typeface.BOLD)
+                      setPadding(0, 0, 0, dp(8))
+                  }
+                  dialogView.addView(titleTv)
+
+                  val msgTv = TextView(this).apply {
+                      text = restartMsg
+                      textSize = 12f
+                      setTextColor(Color.WHITE)
+                      setPadding(0, 0, 0, dp(12))
+                  }
+                  dialogView.addView(msgTv)
+
+                  val btnLayout = LinearLayout(this).apply {
+                      orientation = LinearLayout.HORIZONTAL
+                      gravity = Gravity.END
+                  }
+                  val btnCancel = Button(this).apply {
+                      text = cancelBtn
+                      setTextColor(Color.WHITE)
+                      textSize = 12f
+                      setBackgroundColor(Color.TRANSPARENT)
+                  }
+                  val btnRestart = Button(this).apply {
+                      text = restartBtn
+                      setTextColor(cfg.primaryText)
+                      textSize = 12f
+                      setTypeface(null, Typeface.BOLD)
+                      setBackgroundColor(Color.TRANSPARENT)
+                  }
+                  btnLayout.addView(btnCancel)
+                  btnLayout.addView(btnRestart)
+                  dialogView.addView(btnLayout)
+
+                  val dialog = AlertDialog.Builder(this)
+                      .setView(dialogView)
+                      .setCancelable(false)
+                      .create()
+                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+                  btnCancel.setOnClickListener {
+                      dialog.dismiss()
+                      applyTheme()
+                  }
+                  btnRestart.setOnClickListener {
+                      val intent = baseContext.packageManager.getLaunchIntentForPackage(baseContext.packageName)
+                      intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                      startActivity(intent)
+                      finish()
                   }
                   dialog.show()
               }
 
               private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) }
               private fun lpCard() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12); bottomMargin = dp(4) }
+
               private fun createCard(): LinearLayout {
-                  val card = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16)) }
+                  val card = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(dp(16), dp(16), dp(16), dp(16))
+                  }
                   cardViews.add(card)
                   return card
               }
+
               private fun text(t: String, size: Float, color: Int, bold: Boolean = false) =
-                  TextView(this).apply { text = t; textSize = size; setTextColor(color); if (bold) setTypeface(typeface, Typeface.BOLD); setPadding(0, dp(2), 0, dp(2)) }
+                  TextView(this).apply {
+                      text = t
+                      textSize = size
+                      setTextColor(color)
+                      if (bold) setTypeface(typeface, Typeface.BOLD)
+                      setPadding(0, dp(2), 0, dp(2))
+                  }
+
               private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
 
               private fun pick() {
-                  startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE); type = "*/*"; putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) }, 1)
+                  log("Ouverture du sélecteur de fichiers...")
+                  startActivityForResult(
+                      Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                          addCategory(Intent.CATEGORY_OPENABLE)
+                          type = "*/*"
+                          putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                      }, 1
+                  )
               }
+
               private fun pickFolder() {
-                  startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply { addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }, 3)
+                  log("Ouverture du sélecteur de dossier...")
+                  startActivityForResult(
+                      Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                          addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                      }, 3
+                  )
               }
+
               private fun pickOutput() {
-                  if (uris.isEmpty()) { toast("Choisis d'abord les sources !"); return }
-                  if (appMode == "SPLIT") {
-                      startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply { addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }, 5)
-                  } else {
-                      startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE); type = "application/octet-stream"; putExtra(Intent.EXTRA_TITLE, "${suggestName()}.pkg") }, 4)
+                  if (uris.isEmpty()) {
+                      toast("Choisis d'abord les sources !")
+                      log("Erreur: Tentative de définir la sortie sans source.")
+                      return
                   }
+                  val defaultTitle = suggestName()
+                  log("Ouverture de la création de document pour : $defaultTitle")
+                  startActivityForResult(
+                      Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                          addCategory(Intent.CATEGORY_OPENABLE)
+                          type = "application/octet-stream"
+                          putExtra(Intent.EXTRA_TITLE, "$defaultTitle.00")
+                      }, 4
+                  )
               }
 
               @Deprecated("Deprecated in Java")
               override fun onActivityResult(req: Int, res: Int, data: Intent?) {
                   super.onActivityResult(req, res, data)
-                  if (res != RESULT_OK) return
+                  if (res != RESULT_OK) {
+                      log("Action annulée par l'utilisateur (req=$req).")
+                      return
+                  }
+
                   if (req == 1) {
                       uris.clear(); names.clear(); sizes.clear()
                       val clip = data?.clipData
                       if (clip != null) {
-                          for (i in 0 until clip.itemCount) { val u = clip.getItemAt(i).uri; if (isPkgFile(getFileName(u))) add(u) }
-                      } else { data?.data?.let { u -> if (isPkgFile(getFileName(u))) add(u) } }
-                      reversed = false; refresh()
+                          for (i in 0 until clip.itemCount) {
+                              val u = clip.getItemAt(i).uri
+                              if (isPkgFile(getFileName(u))) add(u)
+                          }
+                      } else {
+                          data?.data?.let { u -> if (isPkgFile(getFileName(u))) add(u) }
+                      }
+                      reversed = false
+                      rewardChestView?.visibility = View.GONE
+                      log("Fichiers chargés : ${uris.size} fichier(s)")
+                      refresh()
                   } else if (req == 2 || req == 4) {
                       val u = data?.data ?: return
-                      persist(u, true); output = u
-                      if (::outView.isInitialized) outView.text = "Sortie : ${u.lastPathSegment}"
-                  } else if (req == 3 || req == 5) {
-                      val tree = data?.data ?: return
-                      try { contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) } catch (_: Exception) {}
-                      if (req == 5) {
-                          output = tree
-                          if (::outView.isInitialized) outView.text = "Dossier de sortie défini"
-                          log("Dossier de destination du Splitter défini.")
-                      } else {
-                          loadTree(tree)
+                      persist(u, true)
+                      output = u
+                      log("Emplacement de sortie défini : ${u.lastPathSegment}")
+                      if (::outView.isInitialized) {
+                          outView.text = "Sortie : ${u.lastPathSegment}"
                       }
+                  } else if (req == 3) {
+                      val tree = data?.data ?: return
+                      try {
+                          contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                      } catch (_: Exception) {}
+                      log("Dossier sélectionné via Tree API")
+                      loadTree(tree)
                   }
               }
 
-              private fun isPkgFile(name: String): Boolean { val lower = name.lowercase(); return lower.endsWith(".pkg") || lower.contains(".pkg.") }
+              private fun isPkgFile(name: String): Boolean {
+                  val lower = name.lowercase()
+                  return lower.endsWith(".pkg") || lower.contains(".pkg.")
+              }
+
               private fun getFileName(u: Uri): String {
                   var n = "game.pkg"
                   try {
@@ -941,20 +1899,34 @@ jobs:
                   try {
                       val docId = DocumentsContract.getTreeDocumentId(tree)
                       val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, docId)
-                      val cols = arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_SIZE, DocumentsContract.Document.COLUMN_MIME_TYPE)
+                      val cols = arrayOf(
+                          DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                          DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                          DocumentsContract.Document.COLUMN_SIZE,
+                          DocumentsContract.Document.COLUMN_MIME_TYPE
+                      )
                       contentResolver.query(children, cols, null, null, null)?.use { c ->
                           while (c.moveToNext()) {
-                              val id = c.getString(0); val name = c.getString(1); val mime = c.getString(3)
+                              val id = c.getString(0)
+                              val name = c.getString(1)
+                              val mime = c.getString(3)
                               if (id != null && name != null && mime != DocumentsContract.Document.MIME_TYPE_DIR) {
                                   if (isPkgFile(name)) {
-                                      val size = if (c.isNull(2)) 0L else c.getLong(2)
-                                      uris.add(DocumentsContract.buildDocumentUriUsingTree(tree, id)); names.add(name); sizes.add(size)
+                                      val size = if (c.isNull(2)) 0.toLong() else c.getLong(2)
+                                      uris.add(DocumentsContract.buildDocumentUriUsingTree(tree, id))
+                                      names.add(name)
+                                      sizes.add(size)
                                   }
                               }
                           }
                       }
-                  } catch (_: Exception) {}
-                  reversed = false; refresh()
+                  } catch (e: Exception) {
+                      log("Erreur lecture dossier : ${e.message}")
+                  }
+                  reversed = false
+                  rewardChestView?.visibility = View.GONE
+                  refresh()
+                  log("Dossier chargé : ${uris.size} fichier(s) PKG trouvé(s)")
               }
 
               private fun persist(u: Uri, write: Boolean = false) {
@@ -964,9 +1936,27 @@ jobs:
                       contentResolver.takePersistableUriPermission(u, f)
                   } catch (_: Exception) {}
               }
-              private fun add(u: Uri) { persist(u); uris.add(u); names.add(getFileName(u)); sizes.add(size(u)) }
 
-              private data class PkgInfo(val console: String, val valid: Boolean, val contentId: String, val region: String)
+              private fun add(u: Uri) {
+                  persist(u)
+                  var n = getFileName(u)
+                  var s = size(u)
+                  uris.add(u); names.add(n); sizes.add(s)
+                  log("Ajouté : $n (${fmt(s)})")
+              }
+
+              private fun removeAt(index: Int) {
+                  if (index in uris.indices) {
+                      log("Suppression de : ${names[index]}")
+                      uris.removeAt(index)
+                      names.removeAt(index)
+                      sizes.removeAt(index)
+                      rewardChestView?.visibility = View.GONE
+                      refresh()
+                  }
+              }
+
+              private data class PkgInfo(val console: String, val valid: Boolean, val contentId: String, val region: String, val icon: Bitmap? = null)
 
               private fun analyzePkg(u: Uri): PkgInfo {
                   try {
@@ -974,21 +1964,56 @@ jobs:
                           val header = ByteArray(512)
                           val read = input.read(header)
                           if (read < 128) return PkgInfo("Inconnu", false, "", "Inconnue")
-                          val isCnt = (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && header[2] == 'N'.toByte() && header[3] == 'T'.toByte())
-                          val isFih = (header[0] == 0x7F.toByte() && header[1] == 'F'.toByte() && header[2] == 'I'.toByte() && header[3] == 'H'.toByte())
+
+                          val isCnt = (header[0] == 0x7F.toByte() && header[1] == 'C'.toByte() && 
+                                       header[2] == 'N'.toByte() && header[3] == 'T'.toByte())
+                          val isFih = (header[0] == 0x7F.toByte() && header[1] == 'F'.toByte() && 
+                                       header[2] == 'I'.toByte() && header[3] == 'H'.toByte())
+
                           if (!isCnt && !isFih) return PkgInfo("Invalide", false, "", "Inconnue")
+
                           var contentId = ""
                           for (i in 48 until 200) {
                               val b = header[i]
-                              if (b in 32..126) contentId += b.toChar() else { if (contentId.length >= 20 && contentId.contains("-")) break; contentId = "" }
+                              if (b in 32..126) {
+                                  contentId += b.toChar()
+                              } else {
+                                  if (contentId.length >= 20 && contentId.contains("-")) break
+                                  contentId = ""
+                              }
                           }
+
                           val region = when {
-                              contentId.startsWith("EP", true) || contentId.startsWith("BP", true) -> "🇪🇺 Europe"
-                              contentId.startsWith("UP", true) || contentId.startsWith("HP", true) -> "🇺🇸 US"
+                              contentId.startsWith("EP", true) || contentId.startsWith("BP", true) -> "🇪🇺 Europe (EP/BP)"
+                              contentId.startsWith("UP", true) || contentId.startsWith("HP", true) -> "🇺🇸 US (UP/HP)"
+                              contentId.startsWith("JP", true) || contentId.startsWith("AP", true) -> "🇯🇵 / Asie (JP/AP)"
                               else -> "Inconnue"
                           }
-                          val console = if (isFih || getFileName(u).lowercase().contains("ps5")) "PS5" else "PS4"
-                          return PkgInfo(console, true, contentId.trim(), region)
+
+                          val name = getFileName(u).lowercase()
+                          val console = when {
+                              name.contains("ps3") || name.contains("nplb") -> "PS3"
+                              name.contains("ps4") || name.contains("cusa") -> "PS4"
+                              name.contains("ps5") || name.contains("ppsa") || isFih -> "PS5"
+                              else -> "PS5/PS4"
+                          }
+
+                          var iconBitmap: Bitmap? = null
+                          try {
+                              val iconBuf = ByteArray(256 * 1024)
+                              val iconRead = input.read(iconBuf)
+                              if (iconRead > 0) {
+                                  for (i in 0 until iconRead - 8) {
+                                      if (iconBuf[i] == 0x89.toByte() && iconBuf[i+1] == 'P'.toByte() &&
+                                          iconBuf[i+2] == 'N'.toByte() && iconBuf[i+3] == 'G'.toByte()) {
+                                          iconBitmap = BitmapFactory.decodeByteArray(iconBuf, i, iconRead - i)
+                                          break
+                                      }
+                                  }
+                              }
+                          } catch (_: Exception) {}
+
+                          return PkgInfo(console, true, contentId.trim(), region, iconBitmap)
                       }
                   } catch (_: Exception) {}
                   return PkgInfo("Invalide", false, "", "Inconnue")
@@ -997,161 +2022,512 @@ jobs:
               private fun refresh() {
                   if (!::listContainer.isInitialized) return
                   listContainer.removeAllViews()
+
                   val cfg = getThemeConfig(currentTheme)
+
                   if (uris.isEmpty()) {
-                      listContainer.addView(text("AUCUN FICHIER SÉLECTIONNÉ", 11f, cfg.dim).apply { typeface = Typeface.MONOSPACE })
-                      checkView.text = ""; pkgIconView.visibility = View.GONE; return
+                      val emptyMsg = when (currentLang) {
+                          "en" -> "NO FILES SELECTED"
+                          "es" -> "NINGÚN ARCHIVO SELECCIONADO"
+                          "pt" -> "NENHUM ARQUIVO SELECIONADO"
+                          "de" -> "KEINE DATEIEN AUSGEWÄHLT"
+                          else -> "AUCUN FICHIER SÉLECTIONNÉ"
+                      }
+                      listContainer.addView(text(emptyMsg, 11f, cfg.dim).apply { typeface = Typeface.MONOSPACE })
+                      checkView.text = ""
+                      pkgIconView.visibility = View.GONE
+                      return
                   }
+
                   val order = order()
                   val total = order.sumOf { sizes[it] }
                   val info = analyzePkg(uris[order[0]])
-                  listContainer.addView(text("${order.size} partie(s) • ${fmt(total)}", 12f, cfg.primaryText, true).apply { typeface = Typeface.MONOSPACE })
-                  checkView.text = if (info.valid) "► PKG ${info.console} DETECTED\n• CID: ${info.contentId}\n• REGION: ${info.region}" else "⚠️ INVALID PKG HEADER"
+
+                  val orderWord = if (reversed) "inversé" else "croissant"
+                  val partsWord = "partie(s)"
+
+                  val summaryView = text("${order.size} $partsWord • ${fmt(total)} • Order $orderWord", 12f, cfg.primaryText, true).apply { typeface = Typeface.MONOSPACE }
+                  listContainer.addView(summaryView)
+
+                  order.forEachIndexed { i, idx ->
+                      val row = LinearLayout(this).apply {
+                          orientation = LinearLayout.HORIZONTAL
+                          setPadding(dp(12), dp(8), dp(12), dp(8))
+                          gravity = Gravity.CENTER_VERTICAL
+                          background = GradientDrawable().apply {
+                              setColor(cfg.bg)
+                              cornerRadius = dp(6).toFloat()
+                              setStroke(dp(1), Color.parseColor(cfg.border))
+                          }
+                      }
+
+                      val itemText = TextView(this).apply {
+                          text = "[${i + 1}] ${names[idx]}\n↳ ${fmt(sizes[idx])}"
+                          textSize = 11f
+                          setTextColor(Color.WHITE)
+                          typeface = Typeface.MONOSPACE
+                      }
+                      row.addView(itemText, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+
+                      val deleteBtn = Button(this).apply {
+                          text = "🚫"
+                          textSize = 12f
+                          setBackgroundColor(Color.TRANSPARENT)
+                          setOnClickListener {
+                              if (processing) { toast("⚠️ Traitement en cours !"); return@setOnClickListener }
+                              removeAt(idx)
+                          }
+                      }
+                      row.addView(deleteBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
+
+                      val marginLp = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
+                          topMargin = dp(4)
+                          bottomMargin = dp(4)
+                      }
+                      listContainer.addView(row, marginLp)
+                  }
+
+                  if (info.icon != null) {
+                      pkgIconView.setImageBitmap(info.icon)
+                      pkgIconView.visibility = View.VISIBLE
+                  } else {
+                      pkgIconView.visibility = View.GONE
+                  }
+
+                  checkView.text = if (info.valid) {
+                      buildString {
+                          append("► PKG ").append(info.console).append(" DETECTED\n")
+                          if (info.contentId.isNotEmpty()) append("• CID: ").append(info.contentId).append("\n")
+                          append("• REGION: ").append(info.region)
+                      }
+                  } else {
+                      "⚠️ INVALID PKG HEADER"
+                  }
               }
 
               private fun order(): List<Int> {
-                  val o = uris.indices.sortedWith { a, b -> names[a].compareTo(names[b]) }
+                  val o = uris.indices.sortedWith { a, b -> naturalCompare(names[a], names[b]) }
                   return if (reversed) o.reversed() else o
               }
 
               private fun executeAction() {
-                  if (uris.isEmpty()) { toast("Sélectionne d'abord des fichiers."); return }
-                  if (output == null) { toast("Définis d'abord l'emplacement de sortie !"); return }
-                  if (appMode == "SPLIT") splitPkg() else mergePkg()
+                  if (uris.isEmpty()) {
+                      toast("Sélectionne d'abord des fichiers.")
+                      log("Erreur : Aucune source sélectionnée.")
+                      return
+                  }
+                  val info = analyzePkg(uris[0])
+                  if (!info.valid) {
+                      toast("Erreur : En-tête PKG invalide !")
+                      statusView.text = "Erreur : En-tête PKG invalide !"
+                      log("Erreur : En-tête PKG invalide pour ${names[0]}")
+                      return
+                  }
+
+                  if (appMode == "SPLIT") {
+                      splitPkg()
+                  } else {
+                      mergePkg()
+                  }
               }
 
               private fun splitPkg() {
-                  val treeUri = output ?: return
+                  val baseOutputUri = output
+                  if (baseOutputUri == null) {
+                      toast("Choisis d'abord l'emplacement de sortie.")
+                      log("Erreur : Emplacement de sortie non défini.")
+                      return
+                  }
+
                   val sourceUri = uris[0]
-                  processing = true; cancelled = false; goBtnLayout.isEnabled = false; cancelBtnLayout.isEnabled = true
-                  bar.progress = 0; statusView.text = "Découpage en cours…"
-                  log("=== DÉBUT DU DÉCOUPAGE ===")
+                  val info = analyzePkg(sourceUri)
+                  if (!info.valid) {
+                      toast("Erreur : En-tête PKG invalide !")
+                      log("Erreur Split : PKG source invalide.")
+                      return
+                  }
+
+                  processing = true
+                  cancelled = false
+                  goBtnLayout.isEnabled = false
+                  cancelBtnLayout.isEnabled = true
+                  rewardChestView?.visibility = View.GONE
+                  bar.progress = 0
+                  statusView.text = "Découpage ${info.console} en cours…"
+                  log("=== DÉBUT DU DÉCOUPAGE (${info.console}) ===")
 
                   Thread {
                       val total = size(sourceUri)
-                      var done = 0L
+                      var done = 0.toLong()
+                      var lastPush = 0.toLong()
                       var success = false
-                      try {
-                          val maxPartSize = 4L * 1024 * 1024 * 1024
-                          var partIndex = 0
-                          val baseName = getFileName(sourceUri).let { if (it.contains(".")) it.substringBeforeLast(".") else it }
-                          var currentOutputStream: OutputStream? = null
+                      val t0 = System.currentTimeMillis()
+                      val sha256 = if (verifyBox.isChecked) MessageDigest.getInstance("SHA-256") else null
 
-                          val docId = DocumentsContract.getTreeDocumentId(treeUri)
-                          val parentUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId)
+                      try {
+                          val maxPartSize = 4.toLong() * 1024.toLong() * 1024.toLong() * 1024.toLong()
+                          var partIndex = 0
+
+                          val baseName = getFileName(baseOutputUri).let { 
+                              if (it.contains(".")) it.substringBeforeLast(".") else it 
+                          }
+                          
+                          var currentOutputStream: OutputStream? = null
+                          var currentPartUri: Uri = baseOutputUri
 
                           fun openNextPart() {
-                              try { currentOutputStream?.flush(); currentOutputStream?.close() } catch (_: Exception) {}
-                              val partName = "$baseName.${String.format(Locale.US, "%02d", partIndex)}"
-                              log("Création de la partie : $partName")
-                              
-                              val createdUri = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)
-                                  ?: throw IllegalStateException("Impossible de créer $partName dans le dossier")
+                              try { 
+                                  currentOutputStream?.flush()
+                                  currentOutputStream?.close() 
+                              } catch (_: Exception) {}
 
-                              val pfdOut = contentResolver.openFileDescriptor(createdUri, "w") ?: throw IllegalStateException("Sortie impossible pour $partName")
-                              currentOutputStream = BufferedOutputStream(FileOutputStream(pfdOut.fileDescriptor), 1 shl 20)
+                              val partName = "$baseName.${String.format(Locale.US, "%02d", partIndex)}"
+                              log("Préparation de la partie : $partName (Index: $partIndex)")
+                              
+                              if (partIndex > 0) {
+                                  try {
+                                      val parentUri = DocumentsContract.getDocumentId(baseOutputUri)?.let { docId ->
+                                          val parentId = docId.substringBeforeLast('/', "")
+                                          if (parentId.isNotEmpty()) {
+                                              DocumentsContract.buildDocumentUriUsingTree(baseOutputUri, parentId)
+                                          } else null
+                                      }
+                                      if (parentUri != null) {
+                                          val created = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)
+                                          if (created != null) {
+                                              currentPartUri = created
+                                              log("Fichier partie créé avec succès via DocumentsContract : $partName")
+                                          }
+                                      }
+                                  } catch (e: Exception) {
+                                      log("⚠️ Avertissement création document tree : ${e.message}")
+                                      val baseUriStr = baseOutputUri.toString()
+                                      val parsed = Uri.parse("${baseUriStr.substringBeforeLast("/")}/$partName")
+                                      if (parsed != null) {
+                                          currentPartUri = parsed
+                                          log("Fallback URI parsée : $currentPartUri")
+                                      }
+                                  }
+                              }
+
+                              try {
+                                  val pfdOut = contentResolver.openFileDescriptor(currentPartUri, "w")
+                                      ?: throw IllegalStateException("Descripteur de sortie impossible pour $partName")
+                                  currentOutputStream = BufferedOutputStream(
+                                      FileOutputStream(pfdOut.fileDescriptor), 
+                                      1 shl 20
+                                  )
+                                  log("Flux ouvert avec succès pour : $partName")
+                              } catch (e: Exception) {
+                                  log("❌ ERREUR flux de sortie pour $partName : ${e.message}")
+                                  throw e
+                              }
                               partIndex++
                           }
 
                           openNextPart()
-                          val pfdSource = contentResolver.openFileDescriptor(sourceUri, "r") ?: throw IllegalStateException("Source impossible")
+                          log("Ouverture du descripteur de fichier natif source...")
+
+                          val pfdSource = contentResolver.openFileDescriptor(sourceUri, "r")
+                              ?: throw IllegalStateException("Ouverture du descripteur source impossible")
+                          
                           pfdSource.use { pfd ->
                               FileInputStream(pfd.fileDescriptor).use { input ->
-                                  log("Flux source ouvert. Taille totale : ${fmt(total)}")
+                                  log("Flux source ouvert avec succès. Taille totale : ${fmt(total)}")
                                   val buf = ByteArray(1 shl 20)
-                                  var currentPartBytes = 0L
-                                  var lastYieldTime = System.currentTimeMillis()
-                                  while (!cancelled) {
+                                  var currentPartBytes = 0.toLong()
+                                  
+                                  while (true) {
+                                      if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
                                       val bytesRead = input.read(buf)
-                                      if (bytesRead <= 0) break
+                                      if (bytesRead <= 0) {
+                                          log("Fin du flux source atteinte (bytesRead = $bytesRead).")
+                                          break
+                                      }
+
                                       var offset = 0
-                                      while (offset < bytesRead && !cancelled) {
-                                          if (currentPartBytes >= maxPartSize) { openNextPart(); currentPartBytes = 0L }
+                                      while (offset < bytesRead) {
+                                          if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
+                                          if (currentPartBytes >= maxPartSize) {
+                                              log("Partie pleine (${fmt(currentPartBytes)}). Passage à la suivante...")
+                                              openNextPart()
+                                              currentPartBytes = 0.toLong()
+                                          }
                                           val chunkToWrite = minOf(bytesRead - offset, (maxPartSize - currentPartBytes).toInt())
                                           currentOutputStream!!.write(buf, offset, chunkToWrite)
-                                          offset += chunkToWrite; currentPartBytes += chunkToWrite; done += chunkToWrite
-                                          val pct = if (total > 0) (done * 100 / total).toInt() else 0
-                                          
+                                          sha256?.update(buf, offset, chunkToWrite)
+                                          offset += chunkToWrite
+                                          currentPartBytes += chunkToWrite.toLong()
+                                          done += chunkToWrite.toLong()
+
                                           val now = System.currentTimeMillis()
-                                          if (now - lastYieldTime > 50) {
-                                              lastYieldTime = now
-                                              ui.post { bar.progress = pct * 10; statusView.text = "${fmt(done)} / ${fmt(total)}" }
-                                              Thread.sleep(5)
+                                          if (now - lastPush > 250) {
+                                              lastPush = now
+                                              currentOutputStream!!.flush()
+
+                                              val elapsedSecs = (now - t0) / 1000.0
+                                              val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
+                                              val speedStr = fmt(speedBps.toLong()) + "/s"
+                                              val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0.toLong()
+                                              val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
+                                              
+                                              val pct = if (total > 0.toLong()) (done * 100 / total).toInt() else 0
+                                              val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
+                                              
+                                              ui.post {
+                                                  bar.progress = pct * 10
+                                                  statusView.text = msg
+                                              }
                                           }
                                       }
                                   }
                               }
                           }
-                          currentOutputStream?.flush(); currentOutputStream?.close()
-                          if (!cancelled) { success = true; log("Découpage terminé avec succès.") } else { log("Découpage annulé par l'utilisateur.") }
+
+                          try { 
+                              currentOutputStream?.flush()
+                              currentOutputStream?.close() 
+                          } catch (_: Exception) {}
+                          success = true
+                          log("Découpage terminé avec succès sur tous les blocs.")
                       } catch (e: Throwable) {
-                          log("❌ ERREUR : ${e.message}")
+                          log("❌ EXCEPTION FATALE pendant le découpage : ${e.message}")
+                          ui.post {
+                              statusView.text = "Erreur : ${e.message}"
+                              showResultNotif("PS PKG Manager", "Échec : ${e.message}")
+                              processing = false
+                              doneUi()
+                          }
+                          return@Thread
                       }
-                      ui.post { processing = false; doneUi(); if (success) statusView.text = "Découpage réussi !" else if (cancelled) statusView.text = "Annulé." }
+
+                      if (!success) {
+                          processing = false
+                          return@Thread
+                      }
+
+                      val h256 = sha256?.let { hex(it.digest()) }
+                      val secs = (System.currentTimeMillis() - t0) / 1000
+
+                      ui.post {
+                          bar.progress = 1000
+                          lastHash = h256
+                          copyBtnLayout.isEnabled = h256 != null
+                          if (h256 != null) {
+                              hashView.text = "SHA-256 : $h256"
+                              log("SHA-256 calculé : $h256")
+                          }
+                          statusView.text = "Découpage réussi en ${secs}s !"
+                          showResultNotif("PS PKG Manager", "Découpage terminé en ${secs}s !")
+                          processing = false
+                          doneUi()
+                          triggerSuccessReward()
+                      }
                   }.start()
               }
 
               private fun mergePkg() {
-                  val out = output ?: return
+                  if (uris.size < 2) {
+                      toast("Sélectionne au moins 2 parties.")
+                      log("Erreur Fusion : Pas assez de parties.")
+                      return
+                  }
+                  val out = output
+                  if (out == null) {
+                      toast("Choisis d'abord le fichier de sortie.")
+                      log("Erreur Fusion : Sortie non définie.")
+                      return
+                  }
+
                   val list = order().map { uris[it] }
-                  processing = true; cancelled = false; goBtnLayout.isEnabled = false; cancelBtnLayout.isEnabled = true
-                  bar.progress = 0; statusView.text = "Fusion en cours…"
-                  log("=== DÉBUT DE LA FUSION ===")
+                  val info = analyzePkg(list[0])
+                  if (!info.valid) {
+                      toast("Erreur : En-tête PKG invalide !")
+                      log("Erreur Fusion : En-tête invalide.")
+                      return
+                  }
+
+                  processing = true
+                  cancelled = false
+                  goBtnLayout.isEnabled = false
+                  cancelBtnLayout.isEnabled = true
+                  rewardChestView?.visibility = View.GONE
+                  bar.progress = 0
+                  statusView.text = "Fusion ${info.console} en cours…"
+                  log("=== DÉBUT DE LA FUSION (${info.console}) ===")
 
                   Thread {
                       val total = list.sumOf { size(it) }
-                      var done = 0L
+                      val sha256 = MessageDigest.getInstance("SHA-256")
+                      var done = 0.toLong()
+                      var lastPush = 0.toLong()
                       var success = false
+                      val t0 = System.currentTimeMillis()
+
                       try {
-                          val pfd = contentResolver.openFileDescriptor(out, "w") ?: throw IllegalStateException("Sortie impossible")
-                          BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20).use { os ->
+                          val pfd = contentResolver.openFileDescriptor(out, "w")
+                              ?: throw IllegalStateException("Ouverture sortie impossible")
+                          try {
+                              val os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
                               val buf = ByteArray(1 shl 20)
-                              var lastYieldTime = System.currentTimeMillis()
+                              var bytesRead = 0
                               for (u in list) {
-                                  if (cancelled) break
+                                  if (cancelled) throw InterruptedException("Annulé.")
+                                  log("Fusion de la partie : ${getFileName(u)}")
+                                  
                                   contentResolver.openFileDescriptor(u, "r")?.use { pfdIn ->
                                       FileInputStream(pfdIn.fileDescriptor).use { input ->
-                                          while (!cancelled) {
-                                              val bytesRead = input.read(buf)
+                                          while (true) {
+                                              if (cancelled) throw InterruptedException("Annulé.")
+                                              bytesRead = input.read(buf)
                                               if (bytesRead <= 0) break
                                               os.write(buf, 0, bytesRead)
-                                              done += bytesRead
-                                              val pct = if (total > 0) (done * 100 / total).toInt() else 0
+                                              sha256.update(buf, 0, bytesRead)
+                                              done += bytesRead.toLong()
                                               
                                               val now = System.currentTimeMillis()
-                                              if (now - lastYieldTime > 50) {
-                                                  lastYieldTime = now
-                                                  ui.post { bar.progress = pct * 10; statusView.text = "${fmt(done)} / ${fmt(total)}" }
-                                                  Thread.sleep(5)
+                                              if (now - lastPush > 250) {
+                                                  lastPush = now
+                                                  val elapsedSecs = (now - t0) / 1000.0
+                                                  val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
+                                                  val speedStr = fmt(speedBps.toLong()) + "/s"
+                                                  val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0.toLong()
+                                                  val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
+                                                  
+                                                  val pct = if (total > 0.toLong()) (done * 100 / total).toInt() else 0
+                                                  val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
+                                                  
+                                                  ui.post {
+                                                      bar.progress = pct * 10
+                                                      statusView.text = msg
+                                                  }
+                                                  if (now - lastNotifTime > 2000 || pct == 100) {
+                                                      lastNotifTime = now
+                                                      updateProgressNotif("Fusion : $pct%", pct)
+                                                  }
                                               }
                                           }
                                       }
                                   }
                               }
                               os.flush()
+                          } finally {
+                              pfd.close()
                           }
-                          if (!cancelled) { success = true; log("Fusion terminée avec succès.") } else { log("Fusion annulée par l'utilisateur.") }
+
+                          if (verifyBox.isChecked && !cancelled) {
+                              ui.post { statusView.text = "Vérification intégrité…" }
+                              log("Vérification SHA-256 du fichier fusionné...")
+                              val verifyDigest = MessageDigest.getInstance("SHA-256")
+                              contentResolver.openFileDescriptor(out, "r")?.use { pfdVerify ->
+                                  FileInputStream(pfdVerify.fileDescriptor).use { verifyInput ->
+                                      val verifyBuf = ByteArray(1 shl 20)
+                                      while (true) {
+                                          if (cancelled) throw InterruptedException("Annulé.")
+                                          val r = verifyInput.read(verifyBuf)
+                                          if (r <= 0) break
+                                          verifyDigest.update(verifyBuf, 0, r)
+                                      }
+                                  }
+                              }
+                          }
+                          success = true
+                          log("Fusion et vérification terminées avec succès.")
                       } catch (e: Throwable) {
-                          log("❌ ERREUR : ${e.message}")
+                          log("❌ ERREUR Fusion : ${e.message}")
+                          ui.post {
+                              statusView.text = "Erreur : ${e.message}"
+                              showResultNotif("PS PKG Manager", "Échec : ${e.message}")
+                              processing = false
+                              doneUi()
+                          }
+                          return@Thread
                       }
-                      ui.post { processing = false; doneUi(); if (success) statusView.text = "Fusion réussie !" else if (cancelled) statusView.text = "Annulé." }
+
+                      if (!success) {
+                          processing = false
+                          return@Thread
+                      }
+
+                      val h256 = hex(sha256.digest())
+                      val secs = (System.currentTimeMillis() - t0) / 1000
+
+                      ui.post {
+                          bar.progress = 1000
+                          lastHash = h256
+                          copyBtnLayout.isEnabled = true
+                          hashView.text = "SHA-256 : $h256"
+                          statusView.text = "Terminé avec succès en ${secs}s"
+                          showResultNotif("PS PKG Manager", "Fusion réussie en ${secs}s !")
+                          processing = false
+                          doneUi()
+                          triggerSuccessReward()
+                      }
                   }.start()
               }
 
-              private fun doneUi() { goBtnLayout.isEnabled = true; cancelBtnLayout.isEnabled = false }
-              private fun copyHash() { lastHash?.let { getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("sha256", it)); toast("Copié !") } }
-              private fun size(u: Uri): Long = try { contentResolver.query(u, null, null, null, null)?.use { c -> val i = c.getColumnIndex(OpenableColumns.SIZE); if (c.moveToFirst() && i >= 0 && !c.isNull(i)) c.getLong(i) else 0L } ?: 0L } catch (_: Exception) { 0L }
+              private fun doneUi() {
+                  goBtnLayout.isEnabled = true
+                  cancelBtnLayout.isEnabled = false
+              }
+
+              private fun copyHash() {
+                  val h = lastHash ?: return
+                  getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("sha256", h))
+                  toast("SHA-256 copié")
+                  log("SHA-256 copié dans le presse-papier.")
+              }
+
+              private fun size(u: Uri): Long {
+                  return try {
+                      contentResolver.query(u, null, null, null, null)?.use { c ->
+                          val i = c.getColumnIndex(OpenableColumns.SIZE)
+                          if (c.moveToFirst() && i >= 0 && !c.isNull(i)) c.getLong(i) else 0.toLong()
+                      } ?: 0.toLong()
+                  } catch (_: Exception) { 0.toLong() }
+              }
+
+              private fun hex(b: ByteArray): String = b.joinToString("") { "%02x".format(it) }
+
               private fun fmt(b: Long): String {
-                  if (b <= 0) return "0 o"
+                  if (b <= 0.toLong()) return "0 o"
                   val u = arrayOf("o", "Ko", "Mo", "Go", "To")
-                  var v = b.toDouble(); var i = 0
+                  var v = b.toDouble()
+                  var i = 0
                   while (v >= 1024 && i < u.size - 1) { v /= 1024; i++ }
                   return if (i == 0) "$b o" else String.format(Locale.US, "%.2f %s", v, u[i])
               }
+
+              private val chunk = Regex("(\\d+|\\D+)")
+              private fun naturalCompare(a: String, b: String): Int {
+                  val ca = chunk.findAll(a).map { it.value }.toList()
+                  val cb = chunk.findAll(b).map { it.value }.toList()
+                  for (i in 0 until minOf(ca.size, cb.size)) {
+                      val x = ca[i]
+                      val y = cb[i]
+                      val dx = x[0].isDigit()
+                      val dy = y[0].isDigit()
+                      val c = when {
+                          dx && dy -> {
+                              val xs = x.trimStart('0').ifEmpty { "0" }
+                              val ys = y.trimStart('0').ifEmpty { "0" }
+                              if (xs.length != ys.length) xs.length - ys.length else xs.compareTo(ys)
+                          }
+                          dx != dy -> if (dx) 1 else -1
+                          else -> x.compareTo(y, ignoreCase = true)
+                      }
+                      if (c != 0) return c
+                  }
+                  return ca.size - cb.size
+              }
+
               private fun suggestName(): String {
                   if (names.isEmpty()) return "merged.pkg"
-                  val first = names.minOrNull() ?: "merged.pkg"
-                  return if (first.lowercase().endsWith(".pkg")) first.substringBeforeLast(".") else first
+                  val first = names.minWithOrNull { a, b -> naturalCompare(a, b) } ?: return "merged.pkg"
+                  val m = Regex("^(.*?)[._\\- ]?(?:part)?[._\\- ]?(\\d+)$", RegexOption.IGNORE_CASE).find(first)
+                  var base = m?.groupValues?.get(1)?.trimEnd('.', '_', '-', ' ') ?: first
+                  if (base.lowercase().endsWith(".pkg")) return base
+                  return "$base.pkg"
               }
           }
           EOF
@@ -1180,12 +2556,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.1.10
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.1.10.apk
+      - name: Renommer l'APK v2.9.60
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.60.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.1.10-apk
-          path: PkgMerger-v2.1.10.apk
+          name: pkg-merger-v2.9.60-apk
+          path: PkgMerger-v2.9.60.apk
           if-no-files-found: error
