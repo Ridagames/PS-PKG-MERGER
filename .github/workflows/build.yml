@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.65 (Fix définitif du Splitter)
+      - name: Générer le projet Android v2.9.66 (Fix flux de lecture Splitter & openInputStream)
         env:
           FORCE: '1'
         run: |
@@ -119,7 +119,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2965
+                  versionCode = 2966
                   versionName = "2.1.0"
               }
 
@@ -293,6 +293,7 @@ jobs:
           import android.widget.VideoView
           import androidx.core.content.FileProvider
           import androidx.documentfile.provider.DocumentFile
+          import java.io.BufferedInputStream
           import java.io.BufferedOutputStream
           import java.io.File
           import java.io.FileInputStream
@@ -1729,7 +1730,7 @@ jobs:
                       "es" -> "Reiniciar"
                       "pt" -> "Reiniciar"
                       "de" -> "Neustart"
-                      else -> "Redémarrer"
+                      else -> "Plus tard"
                   }
                   val cancelBtn = when (currentLang) {
                       "en" -> "Later"
@@ -2198,6 +2199,9 @@ jobs:
                       var currentPfd: ParcelFileDescriptor? = null
 
                       try {
+                          persist(sourceUri, false)
+                          persist(treeUri, true)
+
                           val targetDir = DocumentFile.fromTreeUri(this, treeUri)
                               ?: throw IllegalStateException("Impossible d'accéder au dossier sélectionné")
 
@@ -2226,39 +2230,40 @@ jobs:
 
                           var currentStream = createAndOpenPart()
 
-                          contentResolver.openFileDescriptor(sourceUri, "r")?.use { pfdIn ->
-                              FileInputStream(pfdIn.fileDescriptor).use { input ->
-                                  log("Lecture source démarrée...")
-                                  val buf = ByteArray(1 shl 20)
-                                  var bytesInCurrentPart = 0L
-                                  var lastYieldTime = System.currentTimeMillis()
+                          val inputStream = contentResolver.openInputStream(sourceUri)
+                              ?: throw IllegalStateException("Impossible d'ouvrir le fichier source en lecture")
 
-                                  while (!cancelled) {
-                                      val read = input.read(buf)
-                                      if (read <= 0) break
+                          BufferedInputStream(inputStream, 1 shl 20).use { input ->
+                              log("Flux source ouvert. Écriture en cours...")
+                              val buf = ByteArray(1 shl 20)
+                              var bytesInCurrentPart = 0L
+                              var lastYieldTime = System.currentTimeMillis()
 
-                                      var offset = 0
-                                      while (offset < read && !cancelled) {
-                                          if (bytesInCurrentPart >= maxPartSize) {
-                                              currentStream = createAndOpenPart()
-                                              bytesInCurrentPart = 0L
-                                          }
+                              while (!cancelled) {
+                                  val read = input.read(buf)
+                                  if (read <= 0) break
 
-                                          val toWrite = minOf(read - offset, (maxPartSize - bytesInCurrentPart).toInt())
-                                          currentStream.write(buf, offset, toWrite)
-                                          
-                                          offset += toWrite
-                                          bytesInCurrentPart += toWrite
-                                          done += toWrite
+                                  var offset = 0
+                                  while (offset < read && !cancelled) {
+                                      if (bytesInCurrentPart >= maxPartSize) {
+                                          currentStream = createAndOpenPart()
+                                          bytesInCurrentPart = 0L
+                                      }
 
-                                          val now = System.currentTimeMillis()
-                                          if (now - lastYieldTime > 200) {
-                                              lastYieldTime = now
-                                              val pct = if (total > 0) (done * 100 / total).toInt() else 0
-                                              ui.post {
-                                                  bar.progress = pct * 10
-                                                  statusView.text = "${fmt(done)} / ${fmt(total)} ($pct%)"
-                                              }
+                                      val toWrite = minOf(read - offset, (maxPartSize - bytesInCurrentPart).toInt())
+                                      currentStream.write(buf, offset, toWrite)
+                                      
+                                      offset += toWrite
+                                      bytesInCurrentPart += toWrite
+                                      done += toWrite
+
+                                      val now = System.currentTimeMillis()
+                                      if (now - lastYieldTime > 150) {
+                                          lastYieldTime = now
+                                          val pct = if (total > 0) (done * 100 / total).toInt() else 0
+                                          ui.post {
+                                              bar.progress = pct * 10
+                                              statusView.text = "${fmt(done)} / ${fmt(total)} ($pct%)"
                                           }
                                       }
                                   }
@@ -2509,12 +2514,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.9.65
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.65.apk
+      - name: Renommer l'APK v2.9.66
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.66.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.65-apk
-          path: PkgMerger-v2.9.65.apk
+          name: pkg-merger-v2.9.66-apk
+          path: PkgMerger-v2.9.66.apk
           if-no-files-found: error
