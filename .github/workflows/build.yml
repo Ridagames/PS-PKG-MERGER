@@ -2140,12 +2140,11 @@ jobs:
                                           } else null
                                       }
                                       if (parentUri != null) {
-                                          currentPartUri = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)
-                                              ?: baseOutputUri
+                                          currentPartUri = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)!!
                                       }
                                   } catch (_: Exception) {
                                       val baseUriStr = baseOutputUri.toString()
-                                      currentPartUri = Uri.parse("${baseUriStr.substringBeforeLast("/")}/$partName")
+                                      currentPartUri = Uri.parse("${baseUriStr.substringBeforeLast("/")}/$partName")!!
                                   }
                               }
 
