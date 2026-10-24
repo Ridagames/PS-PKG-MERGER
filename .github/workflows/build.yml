@@ -2145,7 +2145,8 @@ jobs:
                                               currentPartUri = created
                                           }
                                       }
-                                  } catch (_: Exception) {
+                                  } catch (e: Exception) {
+                                      ui.post { statusView.text = "Log Uri Erreur: ${e.message}" }
                                       val baseUriStr = baseOutputUri.toString()
                                       val parsed = Uri.parse("${baseUriStr.substringBeforeLast("/")}/$partName")
                                       if (parsed != null) {
@@ -2154,12 +2155,17 @@ jobs:
                                   }
                               }
 
-                              currentOutputStream = BufferedOutputStream(
-                                  contentResolver.openOutputStream(currentPartUri, "wt") 
-                                      ?: contentResolver.openOutputStream(currentPartUri, "w")
-                                      ?: throw IllegalStateException("Ouverture de la partie $partName impossible"), 
-                                  1 shl 20
-                              )
+                              try {
+                                  currentOutputStream = BufferedOutputStream(
+                                      contentResolver.openOutputStream(currentPartUri, "wt") 
+                                          ?: contentResolver.openOutputStream(currentPartUri, "w")
+                                          ?: throw IllegalStateException("Ouverture impossible pour $partName"), 
+                                      1 shl 20
+                                  )
+                              } catch (e: Exception) {
+                                  ui.post { statusView.text = "Log Stream Erreur: ${e.message}" }
+                                  throw e
+                              }
                               partIndex++
                           }
 
