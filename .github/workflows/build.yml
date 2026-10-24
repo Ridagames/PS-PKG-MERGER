@@ -43,7 +43,7 @@ jobs:
                 if [ -f "$f" ]; then
                   filename=$(basename "$f")
                   clean_name=$(echo "$filename" | sed 's/\.png\.png$/\.png/g' | sed 's/\.mp3\.mp3$/\.mp3/g' | sed 's/\.ogg\.ogg$/\.ogg/g')
-                  clean_name=$(echo "$clean_name" | tr '[:upper:]' '[:lower:]' | tr '-' '_' | tr -cd 'a-z0-9_.-')
+                  clean_name=$(echo "$clean_name" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_.-')
                   if ! echo "$clean_name" | grep -q '^[a-z]'; then
                     clean_name="img_${clean_name}"
                   fi
@@ -139,6 +139,29 @@ jobs:
           dependencies {
               implementation("androidx.core:core-ktx:1.12.0")
           }
+          EOF
+
+          write app/src/main/res/drawable/rounded_progress.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:id="@android:id/background">
+                  <shape android:shape="rectangle">
+                      <corners android:radius="12dp" />
+                      <solid android:color="#1A1D24" />
+                  </shape>
+              </item>
+              <item android:id="@android:id/progress">
+                  <clip>
+                      <shape android:shape="rectangle">
+                          <corners android:radius="12dp" />
+                          <gradient
+                              android:angle="0"
+                              android:startColor="#00D9FF"
+                              android:endColor="#FF007F" />
+                      </shape>
+                  </clip>
+              </item>
+          </layer-list>
           EOF
 
           write app/src/main/res/drawable/ic_app_logo.xml <<'EOF'
@@ -528,7 +551,7 @@ jobs:
                       "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256", "es" to "📋 Copiar SHA-256", "it" to "📋 Copia SHA-256", "pt" to "📋 Copiar SHA-256", "de" to "📋 SHA-256 kopieren"),
                       "menu_options" to mapOf("fr" to "⚙️ OPTIONS & MENU", "en" to "⚙️ OPTIONS & MENU", "es" to "⚙️ OPCIONES Y MENÚ", "it" to "⚙️ OPZIONI & MENU", "pt" to "⚙️ OPÇÕES & MENU", "de" to "⚙️ OPTIONEN & MENÜ"),
                       "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode", "es" to "📂 Cambiar a Modo Divisor", "it" to "📂 Passa a Modalità Divisione", "pt" to "📂 Alternar para Modo Divisor", "de" to "📂 Zu Splitter-Modus wechseln"),
-                      "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode", "es" to "🔗 Cambiar a Modo Fusión", "it" to "🔗 Passa a Modalità Unione", "pt" to "🔗 Alternar para Modo Fusão", "de" to "🔗 Zu Zusammenführungs-Modus wechseln"),
+                      "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode", "es" to "🔗 Cambiar a Modo Fusión", "it" to "🔗 Passa a Modalità Unione", "pt" to "🔗 Alternar para Modo Fusão", "de" to "📂 Zu Zusammenführungs-Modus wechseln"),
                       "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe", "es" to "🎨 Cambiar Universo", "it" to "🎨 Cambia Universo", "pt" to "🎨 Mudar Universo", "de" to "🎨 Universum wechseln"),
                       "menu_lang" to mapOf("fr" to "🌐 Changer la Langue / Language", "en" to "🌐 Change Language", "es" to "🌐 Cambiar Idioma", "it" to "🌐 Cambia Lingua", "pt" to "🌐 Mudar Idioma", "de" to "🌐 Sprache ändern"),
                       "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates", "es" to "🔄 Buscar actualizaciones", "it" to "🔄 Controlla aggiornamenti", "pt" to "🔄 Verificar atualizações", "de" to "🔄 Nach Updates suchen"),
@@ -541,7 +564,7 @@ jobs:
                       "toast_server_error" to mapOf("fr" to "❌ Erreur serveur GitHub", "en" to "❌ GitHub server error", "es" to "❌ Error del servidor GitHub", "it" to "❌ Errore del server GitHub", "pt" to "❌ Erro no servidor GitHub", "de" to "❌ GitHub-Serverfehler"),
                       "toast_check_failed" to mapOf("fr" to "❌ Échec de la vérification", "en" to "❌ Check failed", "es" to "❌ Error en la verificación", "it" to "❌ Verifica fallita", "pt" to "❌ Falha na verificação", "de" to "❌ Überprüfung fehlgeschlagen"),
                       "bus_pop" to mapOf("fr" to "Tout le monde descend !", "en" to "Everyone out!", "es" to "¡Todo el mundo fuera!", "it" to "Tutti giù!", "pt" to "Todo mundo para fora!", "de" to "Alle raus!"),
-                      "chest_pop" to mapOf("fr" to "Conversion réussie grâce à moi ! Le coffre", "en" to "Conversion successful thanks to me! The chest", "es" to "¡Conversión exitosa gracias a mí! El cofre", "it" to "Conversione riuscita grazie a me! Il forziere", "pt" to "Conversão bem-sucedida graças a mim! O baú", "de" to "Konvertierung dank mir erfolgreich! Die Truhe"),
+                      "chest_pop" to mapOf("fr" to "Conversion réussie grâce à moi ! Le coffre", "en" to "Conversion successful thanks to me! The chest", "es" to "¡Conversión exitosa gracias a mí! El cofre", "it" to "Conversione réussita grazie a me! Il forziere", "pt" to "Conversão bem-sucedida graças a mim! O baú", "de" to "Konvertierung dank mir erfolgreich! Die Truhe"),
                       "url_dialog_title" to mapOf("fr" to "🌐 FLUX DIRECT VIA URL", "en" to "🌐 DIRECT STREAM VIA URL", "es" to "🌐 FLUJO DIRECTO VÍA URL", "it" to "🌐 STREAM DIRECT TRAMITE URL", "pt" to "🌐 FLUXO DIRETO VIA URL", "de" to "🌐 DIREKT-STREAM ÜBER URL"),
                       "url_hint" to mapOf("fr" to "Lien direct HTTP/HTTPS du PKG", "en" to "Direct HTTP/HTTPS PKG Link", "es" to "Enlace directo HTTP/HTTPS del PKG", "it" to "Link diretto HTTP/HTTPS del PKG", "pt" to "Link direto HTTP/HTTPS do PKG", "de" to "Direkter HTTP/HTTPS-PKG-Link"),
                       "name_hint" to mapOf("fr" to "Nom personnalisé du fichier (ex: jeu.pkg)", "en" to "Custom filename (e.g. game.pkg)", "es" to "Nombre personalizado del archivo (ej: juego.pkg)", "it" to "Nome file personalizzato (es: gioco.pkg)", "pt" to "Nome personalizado do arquivo (ex: jogo.pkg)", "de" to "Benutzerdefinierter Dateiname (z.B. spiel.pkg)"),
@@ -1325,6 +1348,10 @@ jobs:
                       max = 1000
                       progress = 0
                       setPadding(0, dp(12), 0, dp(4))
+                      val resId = resources.getIdentifier("rounded_progress", "drawable", packageName)
+                      if (resId != 0) {
+                          progressDrawable = resources.getDrawable(resId, null)
+                      }
                   }
                   card2.addView(bar, lp())
 
@@ -2680,11 +2707,44 @@ jobs:
           }
           EOF
 
-      - name: Build APK v2.9.59
-        run: gradle clean assembleDebug --no-daemon --stacktrace
+      - name: Préparer la clé de signature
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          ALIAS: ${{ secrets.ALIAS }}
+        run: |
+          if [ -n "$SIGNING_KEY" ]; then
+            echo "Décodage de la clé de signature stockée..."
+            echo "$SIGNING_KEY" | base64 --decode > app/release.jks
+          else
+            echo "Génération d'une clé de signature permanente..."
+            keytool -genkeypair -v \
+              -keystore app/release.jks \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -alias "hub-alias" \
+              -storepass "PkgFreedom2026Secure!" \
+              -keypass "PkgFreedom2026Secure!" \
+              -dname "CN=Venice, OU=Hub, O=Pkg, L=Paris, C=FR"
+          fi
+
+      - name: Build APK Release v2.9.59
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          ALIAS: ${{ secrets.ALIAS }}
+        run: |
+          STORE_PASS="${KEYSTORE_PASSWORD:-PkgFreedom2026Secure!}"
+          KEY_ALIAS="${ALIAS:-hub-alias}"
+          
+          gradle clean assembleRelease --no-daemon --stacktrace \
+            -Pandroid.injected.signing.store.file=release.jks \
+            -Pandroid.injected.signing.store.password="$STORE_PASS" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$STORE_PASS"
 
       - name: Renommer l'APK v2.9.59
-        run: cp app/build/outputs/apk/debug/app-debug.apk PkgMerger-v2.9.59.apk
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.59.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
