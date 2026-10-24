@@ -2707,42 +2707,54 @@ jobs:
           }
           EOF
 
-      - name: Préparer la clé de signature
+            - name: Préparer la clé de signature
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           ALIAS: ${{ secrets.ALIAS }}
         run: |
+          # On s'assure que le dossier app/ existe
+          mkdir -p app
+          
           if [ -n "$SIGNING_KEY" ]; then
             echo "Décodage de la clé de signature stockée..."
             echo "$SIGNING_KEY" | base64 --decode > app/release.jks
+            STORE_PASS="${KEYSTORE_PASSWORD}"
+            KEY_ALIAS="${ALIAS}"
           else
-            echo "Génération d'une clé de signature permanente..."
+            echo "Génération d'une clé de signature sécurisée..."
+            RANDOM_PASS=$(openssl rand -base64 32)
+            
+            # On génère la clé directement dans le dossier app/
             keytool -genkeypair -v \
               -keystore app/release.jks \
               -keyalg RSA \
               -keysize 2048 \
               -validity 10000 \
-              -alias "hub-alias" \
-              -storepass "PkgFreedom2026Secure!" \
-              -keypass "PkgFreedom2026Secure!" \
+              -alias "hub-secure-alias" \
+              -storepass "$RANDOM_PASS" \
+              -keypass "$RANDOM_PASS" \
               -dname "CN=Venice, OU=Hub, O=Pkg, L=Paris, C=FR"
+            
+            STORE_PASS="$RANDOM_PASS"
+            KEY_ALIAS="hub-secure-alias"
           fi
+          
+          echo "STORE_PASS=$STORE_PASS" >> $GITHUB_ENV
+          echo "KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
 
       - name: Build APK Release v2.9.59
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          ALIAS: ${{ secrets.ALIAS }}
         run: |
-          STORE_PASS="${KEYSTORE_PASSWORD:-PkgFreedom2026Secure!}"
-          KEY_ALIAS="${ALIAS:-hub-alias}"
+          # On indique le chemin absolu vers release.jks dans le dossier app/
+          KEYSTORE_PATH="${{ github.workspace }}/app/release.jks"
           
           gradle clean assembleRelease --no-daemon --stacktrace \
-            -Pandroid.injected.signing.store.file=release.jks \
-            -Pandroid.injected.signing.store.password="$STORE_PASS" \
-            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$STORE_PASS"
+            -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
+            -Pandroid.injected.signing.store.password="${{ env.STORE_PASS }}" \
+            -Pandroid.injected.signing.key.alias="${{ env.KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ env.STORE_PASS }}"
 
+     
       - name: Renommer l'APK v2.9.59
         run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.59.apk
 
