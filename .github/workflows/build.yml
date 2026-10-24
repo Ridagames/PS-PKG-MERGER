@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.60
+      - name: Générer le projet Android v2.9.60 (Intégral + Correction Signature)
         env:
           FORCE: '1'
         run: |
@@ -90,6 +90,13 @@ jobs:
           include(":app")
           EOF
 
+          write build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application") version "8.1.1" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.0" apply false
+          }
+          EOF
+
           write gradle.properties <<'EOF'
           org.gradle.jvmargs=-Xmx3072m -Dfile.encoding=UTF-8
           org.gradle.parallel=false
@@ -123,8 +130,16 @@ jobs:
 
               kotlinOptions { jvmTarget = "17" }
 
+              signingConfigs {
+                  create("release") {
+                  }
+              }
+
               buildTypes {
-                  release { isMinifyEnabled = false }
+                  release {
+                      isMinifyEnabled = false
+                      signingConfig = signingConfigs.getByName("release")
+                  }
               }
           }
 
