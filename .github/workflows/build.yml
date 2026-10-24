@@ -331,10 +331,6 @@ jobs:
               private var currentTheme = "CLASSIC"
               private var currentLang = "fr"
 
-              private var isUrlMode = false
-              private var customUrlString = ""
-              private var customUrlFileName = "downloaded_game.pkg"
-
               private var bgVideoView: AspectRatioVideoView? = null
               private var musicPlayer: MediaPlayer? = null
               private var clickPlayer: MediaPlayer? = null
@@ -370,7 +366,6 @@ jobs:
 
               private lateinit var pickBtnLayout: View
               private lateinit var dirBtnLayout: View
-              private lateinit var urlBtnLayout: View
               private lateinit var outBtnLayout: View
               private lateinit var goBtnLayout: View
               private lateinit var cancelBtnLayout: View
@@ -531,7 +526,6 @@ jobs:
                       "sec1_split" to mapOf("fr" to "1. FICHIER SOURCE UNIQUE (.PKG)", "en" to "1. SINGLE SOURCE FILE (.PKG)"),
                       "btn_pick" to mapOf("fr" to "CHOISIR LES FICHIERS", "en" to "CHOOSE FILES"),
                       "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER"),
-                      "btn_url" to mapOf("fr" to "🔗 VIA UN LIEN URL", "en" to "🔗 VIA URL LINK"),
                       "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER"),
                       "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING"),
                       "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION"),
@@ -562,11 +556,7 @@ jobs:
                       "toast_server_error" to mapOf("fr" to "❌ Erreur serveur GitHub", "en" to "❌ GitHub server error"),
                       "toast_check_failed" to mapOf("fr" to "❌ Échec de la vérification", "en" to "❌ Check failed"),
                       "bus_pop" to mapOf("fr" to "Tout le monde descend !", "en" to "Everyone out!"),
-                      "chest_pop" to mapOf("fr" to "Conversion réussie grâce à moi ! Le coffre", "en" to "Conversion successful thanks to me! The chest"),
-                      "url_dialog_title" to mapOf("fr" to "🌐 FLUX DIRECT VIA URL", "en" to "🌐 DIRECT STREAM VIA URL"),
-                      "url_hint" to mapOf("fr" to "Lien direct HTTP/HTTPS du PKG", "en" to "Direct HTTP/HTTPS PKG Link"),
-                      "name_hint" to mapOf("fr" to "Nom personnalisé du fichier (ex: jeu.pkg)", "en" to "Custom filename (e.g. game.pkg)"),
-                      "btn_validate" to mapOf("fr" to "VALIDER LE LIEN", "en" to "VALIDATE LINK")
+                      "chest_pop" to mapOf("fr" to "Conversion réussie grâce à moi ! Le coffre", "en" to "Conversion successful thanks to me! The chest")
                   )
                   return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
               }
@@ -903,87 +893,6 @@ jobs:
                   dialog.show()
               }
 
-              private fun showUrlInputDialog() {
-                  val cfg = getThemeConfig(currentTheme)
-                  val dialogView = LinearLayout(this).apply {
-                      orientation = LinearLayout.VERTICAL
-                      setPadding(dp(16), dp(16), dp(16), dp(16))
-                      background = GradientDrawable().apply {
-                          setColor(cfg.card)
-                          cornerRadius = dp(10).toFloat()
-                          setStroke(dp(2), Color.parseColor(cfg.border))
-                      }
-                  }
-
-                  val titleTv = TextView(this).apply {
-                      text = tr("url_dialog_title")
-                      textSize = 14f
-                      setTextColor(cfg.primaryText)
-                      setTypeface(null, Typeface.BOLD)
-                      setPadding(0, 0, 0, dp(10))
-                  }
-                  dialogView.addView(titleTv)
-
-                  val urlEt = EditText(this).apply {
-                      hint = tr("url_hint")
-                      setTextColor(Color.WHITE)
-                      setHintTextColor(Color.GRAY)
-                      textSize = 12f
-                  }
-                  dialogView.addView(urlEt)
-
-                  val nameEt = EditText(this).apply {
-                      hint = tr("name_hint")
-                      setTextColor(Color.WHITE)
-                      setHintTextColor(Color.GRAY)
-                      textSize = 12f
-                  }
-                  dialogView.addView(nameEt)
-
-                  val btnValidate = Button(this).apply {
-                      text = tr("btn_validate")
-                      setTextColor(cfg.primaryText)
-                      textSize = 12f
-                      setTypeface(null, Typeface.BOLD)
-                      setBackgroundColor(Color.TRANSPARENT)
-                  }
-                  dialogView.addView(btnValidate, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(10) })
-
-                  val dialog = AlertDialog.Builder(this)
-                      .setView(dialogView)
-                      .create()
-                  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-                  btnValidate.setOnClickListener {
-                      val urlInput = urlEt.text.toString().trim()
-                      var nameInput = nameEt.text.toString().trim()
-
-                      if (urlInput.isBlank() || (!urlInput.startsWith("http://", true) && !urlInput.startsWith("https://", true))) {
-                          toast("Veuillez entrer une URL valide")
-                          return@setOnClickListener
-                      }
-
-                      if (nameInput.isBlank()) {
-                          nameInput = "stream_game.pkg"
-                      } else if (!nameInput.lowercase().endsWith(".pkg")) {
-                          nameInput = "$nameInput.pkg"
-                      }
-
-                      isUrlMode = true
-                      customUrlString = urlInput
-                      customUrlFileName = nameInput
-
-                      uris.clear(); names.clear(); sizes.clear()
-                      names.add(customUrlFileName)
-                      sizes.add(0L)
-                      
-                      dialog.dismiss()
-                      refresh()
-                  }
-
-                  dialog.show()
-              }
-
               override fun onResume() {
                   super.onResume()
                   setupBackgroundMedia()
@@ -1066,7 +975,6 @@ jobs:
 
                   val idxPick = parentCard1?.indexOfChild(pickBtnLayout) ?: -1
                   val idxDir = parentCard1?.indexOfChild(dirBtnLayout) ?: -1
-                  val idxUrl = parentCard1?.indexOfChild(urlBtnLayout) ?: -1
                   val idxRev = parentCard1?.indexOfChild(revBtnLayout) ?: -1
                   val idxOut = parentCard2?.indexOfChild(outBtnLayout) ?: -1
                   val idxGo = (goBtnLayout.parent as? LinearLayout)?.indexOfChild(goBtnLayout) ?: -1
@@ -1075,9 +983,8 @@ jobs:
 
                   val actionContainer = goBtnLayout.parent as? LinearLayout
 
-                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1) { isUrlMode = false; pick() }
-                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2) { isUrlMode = false; pickFolder() }
-                  urlBtnLayout = createCustomButton(tr("btn_url"), cfg.btnRev.first, cfg.btnRev.second, 0) { showUrlInputDialog() }
+                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1) { pick() }
+                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2) { pickFolder() }
                   revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1) { reversed = !reversed; refresh() }
                   outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2) { pickOutput() }
                   val goTextKey = if (appMode == "SPLIT") "btn_go_split" else "btn_go_merge"
@@ -1090,7 +997,6 @@ jobs:
                   if (parentCard1 != null && idxPick != -1) {
                       parentCard1.removeViewAt(idxPick); parentCard1.addView(pickBtnLayout, idxPick, lp())
                       parentCard1.removeViewAt(idxDir); parentCard1.addView(dirBtnLayout, idxDir, lp())
-                      parentCard1.removeViewAt(idxUrl); parentCard1.addView(urlBtnLayout, idxUrl, lp())
                       parentCard1.removeViewAt(idxRev); parentCard1.addView(revBtnLayout, idxRev, lp())
                   }
 
@@ -1265,14 +1171,11 @@ jobs:
                   section1Title = text(tr("sec1"), 13f, Color.CYAN, true).apply { typeface = Typeface.MONOSPACE }
                   card1.addView(section1Title)
                   
-                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1) { isUrlMode = false; pick() }
+                  pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1) { pick() }
                   card1.addView(pickBtnLayout, lp())
 
-                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2) { isUrlMode = false; pickFolder() }
+                  dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2) { pickFolder() }
                   card1.addView(dirBtnLayout, lp())
-
-                  urlBtnLayout = createCustomButton(tr("btn_url"), cfg.btnRev.first, cfg.btnRev.second, 0) { showUrlInputDialog() }
-                  card1.addView(urlBtnLayout, lp())
 
                   revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1) { reversed = !reversed; refresh() }
                   card1.addView(revBtnLayout, lp())
@@ -1893,11 +1796,11 @@ jobs:
               }
 
               private fun pickOutput() {
-                  if (uris.isEmpty() && !isUrlMode) {
-                      toast("Choisis d'abord le fichier de sortie ou les sources !")
+                  if (uris.isEmpty()) {
+                      toast("Choisis d'abord les sources !")
                       return
                   }
-                  val defaultTitle = if (isUrlMode) customUrlFileName else suggestName()
+                  val defaultTitle = suggestName()
                   if (appMode == "SPLIT") {
                       startActivityForResult(
                           Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
@@ -2104,39 +2007,6 @@ jobs:
 
                   val cfg = getThemeConfig(currentTheme)
 
-                  if (isUrlMode) {
-                      val urlCardView = LinearLayout(this).apply {
-                          orientation = LinearLayout.VERTICAL
-                          setPadding(dp(12), dp(10), dp(12), dp(10))
-                          background = GradientDrawable().apply {
-                              setColor(cfg.bg)
-                              cornerRadius = dp(6).toFloat()
-                              setStroke(dp(1), Color.parseColor(cfg.border))
-                          }
-                      }
-                      val titleTv = TextView(this).apply {
-                          text = "🔗 FLUX DIRECT PAR URL"
-                          textSize = 12f
-                          setTextColor(cfg.primaryText)
-                          setTypeface(null, Typeface.BOLD)
-                      }
-                      urlCardView.addView(titleTv)
-
-                      val urlTv = TextView(this).apply {
-                          text = "URL: $customUrlString\nNom: $customUrlFileName"
-                          textSize = 11f
-                          setTextColor(Color.WHITE)
-                          typeface = Typeface.MONOSPACE
-                          setPadding(0, dp(4), 0, 0)
-                      }
-                      urlCardView.addView(urlTv)
-                      listContainer.addView(urlCardView, lp())
-
-                      checkView.text = "► STREAMING NETWORK EN DIRECT"
-                      pkgIconView.visibility = View.GONE
-                      return
-                  }
-
                   if (uris.isEmpty()) {
                       val emptyMsg = if (currentLang == "en") "NO FILES SELECTED" else "AUCUN FICHIER SÉLECTIONNÉ"
                       listContainer.addView(text(emptyMsg, 11f, cfg.dim).apply { typeface = Typeface.MONOSPACE })
@@ -2217,11 +2087,6 @@ jobs:
               }
 
               private fun executeAction() {
-                  if (isUrlMode) {
-                      processUrlStream()
-                      return
-                  }
-
                   if (uris.isEmpty()) { toast("Sélectionne d'abord des fichiers."); return }
                   val info = analyzePkg(uris[0])
                   if (!info.valid) {
@@ -2235,112 +2100,6 @@ jobs:
                   } else {
                       mergePkg()
                   }
-              }
-
-              private fun processUrlStream() {
-                  val out = output
-                  if (out == null) { toast("Choisis d'abord l'emplacement de sortie."); return }
-
-                  processing = true
-                  cancelled = false
-                  goBtnLayout.isEnabled = false
-                  cancelBtnLayout.isEnabled = true
-                  rewardChestView?.visibility = View.GONE
-                  bar.progress = 0
-                  statusView.text = "Téléchargement & Traitement en cours via URL..."
-
-                  Thread {
-                      var success = false
-                      val t0 = System.currentTimeMillis()
-                      val sha256 = MessageDigest.getInstance("SHA-256")
-                      var done = 0L
-                      var total = 0L
-                      var lastPush = 0L
-
-                      try {
-                          val url = URL(customUrlString)
-                          val conn = url.openConnection() as HttpURLConnection
-                          conn.connectTimeout = 10000
-                          conn.readTimeout = 15000
-                          conn.connect()
-
-                          if (conn.responseCode != HttpURLConnection.HTTP_OK) {
-                              throw IllegalStateException("Code serveur invalide : ${conn.responseCode}")
-                          }
-
-                          total = conn.contentLength.toLong().coerceAtLeast(0L)
-
-                          val pfd = contentResolver.openFileDescriptor(out, "w")
-                              ?: throw IllegalStateException("Ouverture du fichier de sortie impossible")
-
-                          try {
-                              val input = conn.inputStream
-                              val os = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
-                              val buf = ByteArray(1 shl 20)
-                              var bytesRead = 0
-
-                              while (true) {
-                                  if (cancelled) throw InterruptedException("Annulé.")
-                                  bytesRead = input.read(buf)
-                                  if (bytesRead <= 0) break
-                                  os.write(buf, 0, bytesRead)
-                                  sha256.update(buf, 0, bytesRead)
-                                  done += bytesRead.toLong()
-
-                                  val now = System.currentTimeMillis()
-                                  if (now - lastPush > 250) {
-                                      lastPush = now
-                                      val elapsedSecs = (now - t0) / 1000.0
-                                      val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
-                                      val speedStr = fmt(speedBps.toLong()) + "/s"
-                                      val pct = if (total > 0L) (done * 100 / total).toInt() else 0
-                                      val msg = "${fmt(done)} / ${if (total > 0) fmt(total) else "Inconnu"} ($speedStr)"
-
-                                      ui.post {
-                                          bar.progress = if (total > 0) pct * 10 else 500
-                                          statusView.text = msg
-                                      }
-                                      if (now - lastNotifTime > 2000) {
-                                          lastNotifTime = now
-                                          updateProgressNotif("Flux URL : $pct%", pct)
-                                      }
-                                  }
-                              }
-                              os.flush()
-                          } finally {
-                              pfd.close()
-                          }
-                          success = true
-                      } catch (e: Throwable) {
-                          ui.post {
-                              statusView.text = "Erreur Flux URL : ${e.message}"
-                              showResultNotif("PS PKG Manager", "Échec du flux : ${e.message}")
-                              processing = false
-                              doneUi()
-                          }
-                          return@Thread
-                      }
-
-                      if (!success) {
-                          processing = false
-                          return@Thread
-                      }
-
-                      val h256 = hex(sha256.digest())
-                      val secs = (System.currentTimeMillis() - t0) / 1000
-
-                      ui.post {
-                          bar.progress = 1000
-                          lastHash = h256
-                          copyBtnLayout.isEnabled = true
-                          hashView.text = "SHA-256 : $h256"
-                          statusView.text = "Flux réseau terminé avec succès en ${secs}s !"
-                          showResultNotif("PS PKG Manager", "Traitement URL terminé en ${secs}s !")
-                          processing = false
-                          doneUi()
-                          triggerSuccessReward()
-                      }
-                  }.start()
               }
 
               private fun splitPkg() {
@@ -2663,31 +2422,29 @@ jobs:
           }
           EOF
 
-      - name: Préparer la clé de signature
+      - name: Préparer la clé de signature permanente
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         run: |
           mkdir -p app
-          if [ -f "app/release.jks" ]; then
-            echo "Clé de signature déjà présente."
+          if [ -n "$SIGNING_KEY" ]; then
+            echo "Décodage de la clé permanente..."
+            echo "$SIGNING_KEY" | base64 --decode > app/release.jks
           else
-            echo "Création de la clé de signature..."
-            keytool -genkeypair -v \
-              -keystore app/release.jks \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -alias "hub-secure-alias" \
-              -storepass "PkgFreedom2026Secure!" \
-              -keypass "PkgFreedom2026Secure!" \
-              -dname "CN=Venice, OU=Hub, O=Pkg, L=Paris, C=FR"
+            echo "Erreur : Le secret SIGNING_KEY est introuvable !"
+            exit 1
           fi
 
       - name: Build APK Release
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          ALIAS: ${{ secrets.ALIAS }}
         run: |
           gradle clean assembleRelease --no-daemon --stacktrace \
             -Pandroid.injected.signing.store.file="${{ github.workspace }}/app/release.jks" \
-            -Pandroid.injected.signing.store.password="PkgFreedom2026Secure!" \
-            -Pandroid.injected.signing.key.alias="hub-secure-alias" \
-            -Pandroid.injected.signing.key.password="PkgFreedom2026Secure!"
+            -Pandroid.injected.signing.store.password="${KEYSTORE_PASSWORD}" \
+            -Pandroid.injected.signing.key.alias="${ALIAS}" \
+            -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
       - name: Renommer l'APK v2.9.59
         run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.59.apk
