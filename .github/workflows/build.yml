@@ -2121,7 +2121,7 @@ jobs:
                           }
                           
                           var currentOutputStream: OutputStream? = null
-                          var currentPartUri = baseOutputUri
+                          var currentPartUri: Uri = baseOutputUri
 
                           fun openNextPart() {
                               try { 
@@ -2140,7 +2140,10 @@ jobs:
                                           } else null
                                       }
                                       if (parentUri != null) {
-                                          currentPartUri = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName) ?: currentPartUri
+                                          val created = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)
+                                          if (created != null) {
+                                              currentPartUri = created
+                                          }
                                       }
                                   } catch (_: Exception) {
                                       val baseUriStr = baseOutputUri.toString()
