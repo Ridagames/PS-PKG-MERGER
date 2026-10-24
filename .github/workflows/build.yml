@@ -2143,9 +2143,9 @@ jobs:
                               val docUri = DocumentsContract.createDocument(contentResolver, baseDirUri, "application/octet-stream", partName)
                                   ?: throw IllegalStateException("Création de $partName impossible")
                               
-                              val pfdOut = contentResolver.openFileDescriptor(docUri, "w")
-                                  ?: throw IllegalStateException("Ouverture du descripteur de sortie impossible")
-                              currentOutputStream = BufferedOutputStream(FileOutputStream(pfdOut.fileDescriptor), 1 shl 20)
+                              // Utilisation du flux de sortie standard sécurisé avec tampon de 1 Mo pour éviter tout blocage SAF
+                              currentOutputStream = BufferedOutputStream(contentResolver.openOutputStream(docUri, "w")
+                                  ?: throw IllegalStateException("Ouverture du flux de sortie impossible"), 1 shl 20)
                               partIndex++
                           }
 
