@@ -13,13 +13,13 @@ jobs:
         include:
           - os: windows-latest
             name: Windows
-            artifact_name: PkgHub-Windows.exe
+            artifact_name: PS5PkgMerger-Windows.zip
           - os: ubuntu-latest
             name: Linux
-            artifact_name: PkgHub-Linux.tar.gz
+            artifact_name: PS5PkgMerger-Linux.tar.gz
           - os: macos-latest
             name: macOS
-            artifact_name: PkgHub-Mac.dmg
+            artifact_name: PS5PkgMerger-Mac.dmg
 
     steps:
       - name: Checkout du code
@@ -35,43 +35,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller
 
-      - name: Compiler l'application (Windows & Linux)
-        if: matrix.os != 'macos-latest'
+      - name: Compiler l'application complète
         run: |
-          pyinstaller --noconsole --onefile --name "PS-PKG-Freedom-Hub" main.py
-
-      - name: Compiler l'application (macOS)
-        if: matrix.os == 'macos-latest'
-        run: |
-          pyinstaller --noconsole --onefile --windowed --name "PS-PKG-Freedom-Hub" main.py
-
-      - name: Empaqueter pour Linux (.tar.gz)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          tar -czvf PkgHub-Linux.tar.gz -C dist PS-PKG-Freedom-Hub
-
-      - name: Empaqueter pour macOS (.dmg)
-        if: matrix.os == 'macos-latest'
-        run: |
-          hdiutil create -volname "PS PKG Freedom Hub" -srcfolder "dist/PS-PKG-Freedom-Hub.app" -ov PkgHub-Mac.dmg
+          pyinstaller --noconsole --onefile --name "PS5PkgMerger" main.py
 
       - name: Sauvegarder l'artefact Windows
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-hub-windows
-          path: dist/PS-PKG-Freedom-Hub.exe
+          name: ps5pkg-merger-windows
+          path: dist/PS5PkgMerger.exe
 
       - name: Sauvegarder l'artefact Linux
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-hub-linux
-          path: PkgHub-Linux.tar.gz
+          name: ps5pkg-merger-linux
+          path: dist/PS5PkgMerger
 
       - name: Sauvegarder l'artefact macOS
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-hub-mac
-          path: PkgHub-Mac.dmg
+          name: ps5pkg-merger-mac
+          path: dist/PS5PkgMerger
