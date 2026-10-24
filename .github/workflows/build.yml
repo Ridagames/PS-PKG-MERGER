@@ -2115,11 +2115,13 @@ jobs:
                       try {
                           val maxPartSize = 4.toLong() * 1024.toLong() * 1024.toLong() * 1024.toLong()
                           var partIndex = 0
-                          
-                          val pathStr = baseOutputUri.toString()
-                          val cleanPath = if (pathStr.contains(Regex("\\.\\d+$"))) pathStr.replace(Regex("\\.\\d+$"), "") else pathStr
 
+                          val baseName = getFileName(baseOutputUri).let { 
+                              if (it.contains(".")) it.substringBeforeLast(".") else it 
+                          }
+                          
                           var currentOutputStream: OutputStream? = null
+                          var currentPartUri = baseOutputUri
 
                           fun openNextPart() {
                               try { 
@@ -2127,13 +2129,32 @@ jobs:
                                   currentOutputStream?.close() 
                               } catch (_: Exception) {}
 
-                              val partUri = if (partIndex == 0) baseOutputUri else {
-                                  val newUriStr = "$cleanPath.${String.format(Locale.US, "%02d", partIndex)}"
-                                  Uri.parse(newUriStr)
-                              }
+                              val partName = "$baseName.${String.format(Locale.US, "%02d", partIndex)}"
                               
-                              currentOutputStream = BufferedOutputStream(contentResolver.openOutputStream(partUri, "w")
-                                  ?: throw IllegalStateException("Ouverture de la partie $partIndex impossible"), 1 shl 20)
+                              if (partIndex > 0) {
+                                  try {
+                                      val parentUri = DocumentsContract.getDocumentId(baseOutputUri)?.let { docId ->
+                                          val parentId = docId.substringBeforeLast('/', "")
+                                          if (parentId.isNotEmpty()) {
+                                              DocumentsContract.buildDocumentUriUsingTree(baseOutputUri, parentId)
+                                          } else null
+                                      }
+                                      if (parentUri != null) {
+                                          currentPartUri = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)
+                                              ?: baseOutputUri
+                                      }
+                                  } catch (_: Exception) {
+                                      val baseUriStr = baseOutputUri.toString()
+                                      currentPartUri = Uri.parse("${baseUriStr.substringBeforeLast("/")}/$partName")
+                                  }
+                              }
+
+                              currentOutputStream = BufferedOutputStream(
+                                  contentResolver.openOutputStream(currentPartUri, "wt") 
+                                      ?: contentResolver.openOutputStream(currentPartUri, "w")
+                                      ?: throw IllegalStateException("Ouverture de la partie $partName impossible"), 
+                                  1 shl 20
+                              )
                               partIndex++
                           }
 
