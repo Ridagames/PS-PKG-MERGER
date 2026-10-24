@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.1.2
+      - name: Générer le projet Android v2.1.3
         env:
           FORCE: '1'
         run: |
@@ -68,12 +68,6 @@ jobs:
             f="$1"
             echo "  écrit   $f"
             cat > "$f"
-          }
-
-          append() {
-            f="$1"
-            echo "  ajoute  $f"
-            cat >> "$f"
           }
 
           write .gitignore <<'EOF'
@@ -125,8 +119,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2120
-                  versionName = "2.1.2"
+                  versionCode = 2130
+                  versionName = "2.1.3"
               }
 
               compileOptions {
@@ -238,7 +232,6 @@ jobs:
           </paths>
           EOF
 
-          # PARTIE 1 DU CODE KOTLIN
           write app/src/main/java/com/venice/pkgmerger/MainActivity.kt <<'EOF'
           package com.venice.pkgmerger
 
@@ -506,7 +499,7 @@ jobs:
                       "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode"),
                       "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode"),
                       "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe"),
-                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.2)", "en" to "ℹ️ About (v2.1.2)")
+                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.3)", "en" to "ℹ️ About (v2.1.3)")
                   )
                   return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
               }
@@ -520,7 +513,7 @@ jobs:
                   checkPermissions()
                   showMergerScreen()
                   applyTheme()
-                  log("Application démarrée. Version 2.1.2")
+                  log("Application démarrée. Version 2.1.3")
               }
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
@@ -854,7 +847,7 @@ jobs:
                       output = null; outView.text = tr("out_lbl"); rebuildButtons()
                   }
                   addMenuOption(tr("menu_universe")) { dialog.dismiss(); showThemeDialog() }
-                  addMenuOption(tr("menu_about")) { dialog.dismiss(); toast("PS PKG Freedom Hub v2.1.2") }
+                  addMenuOption(tr("menu_about")) { dialog.dismiss(); toast("PS PKG Freedom Hub v2.1.3") }
                   dialog.show()
               }
 
@@ -1036,10 +1029,6 @@ jobs:
                   if (uris.isEmpty()) { toast("Sélectionne d'abord des fichiers."); return }
                   if (appMode == "SPLIT") splitPkg() else mergePkg()
               }
-          EOF
-
-          # PARTIE 2 DU CODE KOTLIN (AJOUT SANS TROP CHARGER LE SHELL LINUX)
-          append app/src/main/java/com/venice/pkgmerger/MainActivity.kt <<'EOF'
 
               private fun splitPkg() {
                   val treeUri = output ?: return
@@ -1189,12 +1178,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.1.2
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.1.2.apk
+      - name: Renommer l'APK v2.1.3
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.1.3.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.1.2-apk
-          path: PkgMerger-v2.1.2.apk
+          name: pkg-merger-v2.1.3-apk
+          path: PkgMerger-v2.1.3.apk
           if-no-files-found: error
