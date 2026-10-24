@@ -358,6 +358,7 @@ jobs:
               private lateinit var checkView: TextView
               private lateinit var outView: TextView
               private lateinit var statusView: TextView
+              private lateinit var consoleLogView: TextView
               private lateinit var hashView: TextView
               private lateinit var hashField: EditText
               private lateinit var verifyBox: CheckBox
@@ -382,6 +383,19 @@ jobs:
               private lateinit var infoLayout: LinearLayout
 
               private val cardViews = ArrayList<LinearLayout>()
+              private val logBuffer = StringBuilder()
+
+              private fun log(msg: String) {
+                  ui.post {
+                      if (logBuffer.length > 3000) {
+                          logBuffer.setLength(0)
+                      }
+                      logBuffer.append("• $msg\n")
+                      if (::consoleLogView.isInitialized) {
+                          consoleLogView.text = logBuffer.toString()
+                      }
+                  }
+              }
 
               private data class ThemeConfig(
                   val name: String,
@@ -523,6 +537,7 @@ jobs:
                   showMergerScreen()
                   applyTheme()
 
+                  log("Application démarrée. Version 2.1.0")
                   checkFirstRunWelcome()
               }
 
@@ -891,6 +906,7 @@ jobs:
 
                   checkView.setTextColor(cfg.secondaryText)
                   statusView.setTextColor(cfg.primaryText)
+                  consoleLogView.setTextColor(cfg.dim)
                   hashView.setTextColor(cfg.secondaryText)
 
                   verifyBox.setTextColor(cfg.dim)
@@ -1221,6 +1237,26 @@ jobs:
 
                   statusView = text(tr("status_ready"), 13f, Color.MAGENTA).apply { setTypeface(Typeface.MONOSPACE, Typeface.BOLD) }
                   card2.addView(statusView, lp())
+
+                  // Cadre console de logs en direct
+                  val consoleScroll = ScrollView(this).apply {
+                      layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, dp(120)).apply { topMargin = dp(8) }
+                      background = GradientDrawable().apply {
+                          setColor(Color.parseColor("#0A0D14"))
+                          cornerRadius = dp(6).toFloat()
+                          setStroke(dp(1), Color.parseColor("#1E293B"))
+                      }
+                      setPadding(dp(8), dp(8), dp(8), dp(8))
+                  }
+                  consoleLogView = TextView(this).apply {
+                      text = "• Console de logs initialisée...\n"
+                      textSize = 10f
+                      setTextColor(Color.parseColor("#94A3B8"))
+                      typeface = Typeface.MONOSPACE
+                  }
+                  consoleScroll.addView(consoleLogView)
+                  card2.addView(consoleScroll)
+
                   mainCol.addView(card2, lpCard())
 
                   val card3 = createCard()
@@ -1331,10 +1367,12 @@ jobs:
                           titleView.text = "⚡ PKG SPLITTER"
                           section1Title.text = tr("sec1_split")
                           statusView.text = tr("status_split_ready")
+                          log("Mode basculé : SPLIT")
                       } else {
                           titleView.text = tr("app_title")
                           section1Title.text = tr("sec1")
                           statusView.text = tr("status_ready")
+                          log("Mode basculé : MERGE")
                       }
                       output = null
                       outView.text = tr("out_lbl")
@@ -1765,6 +1803,7 @@ jobs:
               private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
 
               private fun pick() {
+                  log("Ouverture du sélecteur de fichiers...")
                   startActivityForResult(
                       Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                           addCategory(Intent.CATEGORY_OPENABLE)
@@ -1775,6 +1814,7 @@ jobs:
               }
 
               private fun pickFolder() {
+                  log("Ouverture du sélecteur de dossier...")
                   startActivityForResult(
                       Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
                           addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -1785,9 +1825,11 @@ jobs:
               private fun pickOutput() {
                   if (uris.isEmpty()) {
                       toast("Choisis d'abord les sources !")
+                      log("Erreur: Tentative de définir la sortie sans source.")
                       return
                   }
                   val defaultTitle = suggestName()
+                  log("Ouverture de la création de document pour : $defaultTitle")
                   startActivityForResult(
                       Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                           addCategory(Intent.CATEGORY_OPENABLE)
@@ -1800,7 +1842,10 @@ jobs:
               @Deprecated("Deprecated in Java")
               override fun onActivityResult(req: Int, res: Int, data: Intent?) {
                   super.onActivityResult(req, res, data)
-                  if (res != RESULT_OK) return
+                  if (res != RESULT_OK) {
+                      log("Action annulée par l'utilisateur (req=$req).")
+                      return
+                  }
 
                   if (req == 1) {
                       uris.clear(); names.clear(); sizes.clear()
@@ -1815,11 +1860,13 @@ jobs:
                       }
                       reversed = false
                       rewardChestView?.visibility = View.GONE
+                      log("Fichiers chargés : ${uris.size} fichier(s)")
                       refresh()
-                  } else if (req == 2) {
+                  } else if (req == 2 || req == 4) {
                       val u = data?.data ?: return
                       persist(u, true)
                       output = u
+                      log("Emplacement de sortie défini : ${u.lastPathSegment}")
                       if (::outView.isInitialized) {
                           outView.text = "Sortie : ${u.lastPathSegment}"
                       }
@@ -1828,14 +1875,8 @@ jobs:
                       try {
                           contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                       } catch (_: Exception) {}
+                      log("Dossier sélectionné via Tree API")
                       loadTree(tree)
-                  } else if (req == 4) {
-                      val u = data?.data ?: return
-                      persist(u, true)
-                      output = u
-                      if (::outView.isInitialized) {
-                          outView.text = "Sortie : ${u.lastPathSegment}"
-                      }
                   }
               }
 
@@ -1882,12 +1923,12 @@ jobs:
                           }
                       }
                   } catch (e: Exception) {
-                      toast("Erreur lecture dossier : ${e.message}")
+                      log("Erreur lecture dossier : ${e.message}")
                   }
                   reversed = false
                   rewardChestView?.visibility = View.GONE
                   refresh()
-                  if (uris.isEmpty()) toast("Aucun fichier .pkg valide trouvé.")
+                  log("Dossier chargé : ${uris.size} fichier(s) PKG trouvé(s)")
               }
 
               private fun persist(u: Uri, write: Boolean = false) {
@@ -1903,10 +1944,12 @@ jobs:
                   var n = getFileName(u)
                   var s = size(u)
                   uris.add(u); names.add(n); sizes.add(s)
+                  log("Ajouté : $n (${fmt(s)})")
               }
 
               private fun removeAt(index: Int) {
                   if (index in uris.indices) {
+                      log("Suppression de : ${names[index]}")
                       uris.removeAt(index)
                       names.removeAt(index)
                       sizes.removeAt(index)
@@ -2070,11 +2113,16 @@ jobs:
               }
 
               private fun executeAction() {
-                  if (uris.isEmpty()) { toast("Sélectionne d'abord des fichiers."); return }
+                  if (uris.isEmpty()) {
+                      toast("Sélectionne d'abord des fichiers.")
+                      log("Erreur : Aucune source sélectionnée.")
+                      return
+                  }
                   val info = analyzePkg(uris[0])
                   if (!info.valid) {
                       toast("Erreur : En-tête PKG invalide !")
                       statusView.text = "Erreur : En-tête PKG invalide !"
+                      log("Erreur : En-tête PKG invalide pour ${names[0]}")
                       return
                   }
 
@@ -2087,12 +2135,17 @@ jobs:
 
               private fun splitPkg() {
                   val baseOutputUri = output
-                  if (baseOutputUri == null) { toast("Choisis d'abord l'emplacement de sortie."); return }
+                  if (baseOutputUri == null) {
+                      toast("Choisis d'abord l'emplacement de sortie.")
+                      log("Erreur : Emplacement de sortie non défini.")
+                      return
+                  }
 
                   val sourceUri = uris[0]
                   val info = analyzePkg(sourceUri)
                   if (!info.valid) {
                       toast("Erreur : En-tête PKG invalide !")
+                      log("Erreur Split : PKG source invalide.")
                       return
                   }
 
@@ -2103,6 +2156,7 @@ jobs:
                   rewardChestView?.visibility = View.GONE
                   bar.progress = 0
                   statusView.text = "Découpage ${info.console} en cours…"
+                  log("=== DÉBUT DU DÉCOUPAGE (${info.console}) ===")
 
                   Thread {
                       val total = size(sourceUri)
@@ -2130,6 +2184,7 @@ jobs:
                               } catch (_: Exception) {}
 
                               val partName = "$baseName.${String.format(Locale.US, "%02d", partIndex)}"
+                              log("Préparation de la partie : $partName (Index: $partIndex)")
                               
                               if (partIndex > 0) {
                                   try {
@@ -2143,14 +2198,16 @@ jobs:
                                           val created = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)
                                           if (created != null) {
                                               currentPartUri = created
+                                              log("Fichier partie créé avec succès via DocumentsContract : $partName")
                                           }
                                       }
                                   } catch (e: Exception) {
-                                      ui.post { statusView.text = "Log Uri Erreur: ${e.message}" }
+                                      log("⚠️ Avertissement création document tree : ${e.message}")
                                       val baseUriStr = baseOutputUri.toString()
                                       val parsed = Uri.parse("${baseUriStr.substringBeforeLast("/")}/$partName")
                                       if (parsed != null) {
                                           currentPartUri = parsed
+                                          log("Fallback URI parsée : $currentPartUri")
                                       }
                                   }
                               }
@@ -2162,28 +2219,35 @@ jobs:
                                           ?: throw IllegalStateException("Ouverture impossible pour $partName"), 
                                       1 shl 20
                                   )
+                                  log("Flux ouvert avec succès pour : $partName")
                               } catch (e: Exception) {
-                                  ui.post { statusView.text = "Log Stream Erreur: ${e.message}" }
+                                  log("❌ ERREUR flux de sortie pour $partName : ${e.message}")
                                   throw e
                               }
                               partIndex++
                           }
 
                           openNextPart()
+                          log("Ouverture du flux d'entrée source...")
 
                           contentResolver.openInputStream(sourceUri)?.use { input ->
+                              log("Flux d'entrée ouvert. Taille totale : ${fmt(total)}")
                               val buf = ByteArray(1 shl 20)
                               var currentPartBytes = 0.toLong()
                               
                               while (true) {
                                   if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
                                   val bytesRead = input.read(buf)
-                                  if (bytesRead <= 0) break
+                                  if (bytesRead <= 0) {
+                                      log("Fin du flux source atteinte (bytesRead = $bytesRead).")
+                                      break
+                                  }
 
                                   var offset = 0
                                   while (offset < bytesRead) {
                                       if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
                                       if (currentPartBytes >= maxPartSize) {
+                                          log("Partie pleine (${fmt(currentPartBytes)}). Passage à la suivante...")
                                           openNextPart()
                                           currentPartBytes = 0.toLong()
                                       }
@@ -2215,14 +2279,16 @@ jobs:
                                       }
                                   }
                               }
-                          } ?: throw IllegalStateException("Ouverture du flux source impossible")
+                          } ?: throw IllegalStateException("Ouverture du flux source impossible (inputStream == null)")
 
                           try { 
                               currentOutputStream?.flush()
                               currentOutputStream?.close() 
                           } catch (_: Exception) {}
                           success = true
+                          log("Découpage terminé avec succès sur tous les blocs.")
                       } catch (e: Throwable) {
+                          log("❌ EXCEPTION FATALE pendant le découpage : ${e.message}")
                           ui.post {
                               statusView.text = "Erreur : ${e.message}"
                               showResultNotif("PS PKG Manager", "Échec : ${e.message}")
@@ -2246,6 +2312,7 @@ jobs:
                           copyBtnLayout.isEnabled = h256 != null
                           if (h256 != null) {
                               hashView.text = "SHA-256 : $h256"
+                              log("SHA-256 calculé : $h256")
                           }
                           statusView.text = "Découpage réussi en ${secs}s !"
                           showResultNotif("PS PKG Manager", "Découpage terminé en ${secs}s !")
@@ -2257,14 +2324,23 @@ jobs:
               }
 
               private fun mergePkg() {
-                  if (uris.size < 2) { toast("Sélectionne au moins 2 parties."); return }
+                  if (uris.size < 2) {
+                      toast("Sélectionne au moins 2 parties.")
+                      log("Erreur Fusion : Pas assez de parties.")
+                      return
+                  }
                   val out = output
-                  if (out == null) { toast("Choisis d'abord le fichier de sortie."); return }
+                  if (out == null) {
+                      toast("Choisis d'abord le fichier de sortie.")
+                      log("Erreur Fusion : Sortie non définie.")
+                      return
+                  }
 
                   val list = order().map { uris[it] }
                   val info = analyzePkg(list[0])
                   if (!info.valid) {
                       toast("Erreur : En-tête PKG invalide !")
+                      log("Erreur Fusion : En-tête invalide.")
                       return
                   }
 
@@ -2275,6 +2351,7 @@ jobs:
                   rewardChestView?.visibility = View.GONE
                   bar.progress = 0
                   statusView.text = "Fusion ${info.console} en cours…"
+                  log("=== DÉBUT DE LA FUSION (${info.console}) ===")
 
                   Thread {
                       val total = list.sumOf { size(it) }
@@ -2293,6 +2370,7 @@ jobs:
                               var bytesRead = 0
                               for (u in list) {
                                   if (cancelled) throw InterruptedException("Annulé.")
+                                  log("Fusion de la partie : ${getFileName(u)}")
                                   contentResolver.openInputStream(u)?.use { input ->
                                       while (true) {
                                           if (cancelled) throw InterruptedException("Annulé.")
@@ -2333,6 +2411,7 @@ jobs:
 
                           if (verifyBox.isChecked && !cancelled) {
                               ui.post { statusView.text = "Vérification intégrité…" }
+                              log("Vérification SHA-256 du fichier fusionné...")
                               val verifyDigest = MessageDigest.getInstance("SHA-256")
                               contentResolver.openInputStream(out)?.use { verifyInput ->
                                   val verifyBuf = ByteArray(1 shl 20)
@@ -2345,7 +2424,9 @@ jobs:
                               }
                           }
                           success = true
+                          log("Fusion et vérification terminées avec succès.")
                       } catch (e: Throwable) {
+                          log("❌ ERREUR Fusion : ${e.message}")
                           ui.post {
                               statusView.text = "Erreur : ${e.message}"
                               showResultNotif("PS PKG Manager", "Échec : ${e.message}")
@@ -2386,6 +2467,7 @@ jobs:
                   val h = lastHash ?: return
                   getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("sha256", h))
                   toast("SHA-256 copié")
+                  log("SHA-256 copié dans le presse-papier.")
               }
 
               private fun size(u: Uri): Long {
