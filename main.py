@@ -3,159 +3,194 @@ import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-class PkgHubApp:
+class PkgHubPCApp:
     def __init__(self, root):
         self.root = root
         self.root.title("⚡ PS PKG Freedom Hub - PC Edition")
-        self.root.geometry("650x550")
+        self.root.geometry("700x600")
         self.root.config(bg="#0F172A")
         
-        self.source_path = ""
+        self.sources = []
         self.output_path = ""
-        
-        # Titre
-        title_label = tk.Label(root, text="⚡ PS PKG FREEDOM HUB (PC)", font=("Arial", 16, "bold"), fg="#38BDF8", bg="#0F172A")
-        title_label.pack(pady=15)
-        
-        # Section Source
-        frame_src = tk.LabelFrame(root, text=" 1. Fichier Source (.PKG ou Dossier) ", fg="white", bg="#1E293B", font=("Arial", 10, "bold"))
-        frame_src.pack(fill="x", padx=20, pady=10)
-        
-        self.lbl_src = tk.Label(frame_src, text="Aucun fichier sélectionné", fg="#94A3B8", bg="#1E293B", wraplength=550, justify="left")
-        self.lbl_src.pack(padx=10, pady=5, anchor="w")
-        
-        btn_pick_file = tk.Button(frame_src, text="📁 Choisir un .PKG (Découpage)", bg="#0284C7", fg="white", font=("Arial", 9, "bold"), command=self.pick_source_file)
-        btn_pick_file.pack(padx=10, pady=5, anchor="w")
+        self.app_mode = "MERGE"  # MERGE ou SPLIT
+        self.reversed_order = False
 
-        btn_pick_dir = tk.Button(frame_src, text="📂 Choisir un dossier (Fusion)", bg="#0369A1", fg="white", font=("Arial", 9, "bold"), command=self.pick_source_dir)
-        btn_pick_dir.pack(padx=10, pady=5, anchor="w")
+        # --- En-tête ---
+        header_frame = tk.Frame(root, bg="#0F172A")
+        header_frame.pack(fill="x", padx=20, pady=15)
 
-        # Section Sortie
-        frame_out = tk.LabelFrame(root, text=" 2. Emplacement de Sortie ", fg="white", bg="#1E293B", font=("Arial", 10, "bold"))
-        frame_out.pack(fill="x", padx=20, pady=10)
-        
-        self.lbl_out = tk.Label(frame_out, text="Aucun emplacement défini", fg="#94A3B8", bg="#1E293B", wraplength=550, justify="left")
-        self.lbl_out.pack(padx=10, pady=5, anchor="w")
-        
-        btn_pick_out = tk.Button(frame_out, text="🎯 Définir le dossier de sortie", bg="#0D9488", fg="white", font=("Arial", 9, "bold"), command=self.pick_output_dir)
-        btn_pick_out.pack(padx=10, pady=5, anchor="w")
+        title_lbl = tk.Label(header_frame, text="⚡ PS PKG FREEDOM HUB", font=("Consolas", 16, "bold"), fg="white", bg="#0F172A")
+        title_lbl.pack(side="left")
 
-        # Section Action / Progression
-        frame_action = tk.Frame(root, bg="#0F172A")
-        frame_action.pack(fill="x", padx=20, pady=15)
+        self.btn_mode = tk.Button(header_frame, text="📂 Mode : FUSION", bg="#334155", fg="#38BDF8", font=("Consolas", 9, "bold"), command=self.toggle_mode)
+        self.btn_mode.pack(side="right")
 
-        self.btn_go = tk.Button(frame_action, text="▶️ LANCER LE TRAITEMENT", bg="#16A34A", fg="white", font=("Arial", 11, "bold"), command=self.execute_action)
+        # --- Section 1 : Sources ---
+        card1 = tk.LabelFrame(root, text=" 1. FICHIERS SOURCE ", fg="#38BDF8", bg="#1E293B", font=("Consolas", 10, "bold"))
+        card1.pack(fill="x", padx=20, pady=5)
+
+        btn_frame = tk.Frame(card1, bg="#1E293B")
+        btn_frame.pack(fill="x", padx=10, pady=8)
+
+        self.btn_pick_files = tk.Button(btn_frame, text="CHOISIR LES FICHIERS (.pkg / parties)", bg="#0284C7", fg="white", font=("Consolas", 9, "bold"), command=self.pick_files)
+        self.btn_pick_files.pack(side="left", padx=5)
+
+        self.btn_reverse = tk.Button(btn_frame, text="INVERSER L'ORDRE", bg="#334155", fg="white", font=("Consolas", 9, "bold"), command=self.toggle_reverse)
+        self.btn_reverse.pack(side="left", padx=5)
+
+        # Liste des fichiers sélectionnés
+        self.listbox = tk.Listbox(card1, height=5, bg="#0F172A", fg="white", font=("Consolas", 9), selectbackground="#0284C7")
+        self.listbox.pack(fill="x", padx=10, pady=5)
+
+        # --- Section 2 : Sortie & Traitement ---
+        card2 = tk.LabelFrame(root, text=" 2. SORTIE & TRAITEMENT ", fg="#38BDF8", bg="#1E293B", font=("Consolas", 10, "bold"))
+        card2.pack(fill="x", padx=20, pady=10)
+
+        out_frame = tk.Frame(card2, bg="#1E293B")
+        out_frame.pack(fill="x", padx=10, pady=8)
+
+        self.btn_out = tk.Button(out_frame, text="DÉFINIR EMPLACEMENT DE SORTIE", bg="#0D9488", fg="white", font=("Consolas", 9, "bold"), command=self.pick_output)
+        self.btn_out.pack(side="left", padx=5)
+
+        self.lbl_out = tk.Label(out_frame, text="Sortie : —", fg="#94A3B8", bg="#1E293B", font=("Consolas", 9))
+        self.lbl_out.pack(side="left", padx=10)
+
+        action_frame = tk.Frame(card2, bg="#1E293B")
+        action_frame.pack(fill="x", padx=10, pady=8)
+
+        self.btn_go = tk.Button(action_frame, text="▶️ LANCER LA FUSION", bg="#16A34A", fg="white", font=("Consolas", 11, "bold"), command=self.execute)
         self.btn_go.pack(fill="x", pady=5)
 
-        self.progress = ttk.Progressbar(frame_action, orient="horizontal", length=500, mode="determinate")
-        self.progress.pack(fill="x", pady=10)
+        self.bar = ttk.Progressbar(card2, orient="horizontal", mode="determinate", maximum=100)
+        self.bar.pack(fill="x", padx=10, pady=5)
 
-        self.lbl_status = tk.Label(root, text="Prêt.", fg="#C084FC", bg="#0F172A", font=("Arial", 10, "bold"))
-        self.lbl_status.pack(pady=5)
+        self.status_lbl = tk.Label(card2, text="Prêt.", fg="#C084FC", bg="#1E293B", font=("Consolas", 10, "bold"))
+        self.status_lbl.pack(padx=10, pady=5, anchor="w")
 
-    def pick_source_file(self):
-        filename = filedialog.askopenfilename(title="Sélectionner un fichier PKG", filetypes=[("PKG Files", "*.pkg"), ("Tous les fichiers", "*.*")])
-        if filename:
-            self.source_path = filename
-            self.lbl_src.config(text=f"Source (Split) : {filename}")
-            self.mode = "SPLIT"
+    def toggle_mode(self):
+        if self.app_mode == "MERGE":
+            self.app_mode = "SPLIT"
+            self.btn_mode.config(text="📂 Mode : DÉCOUPAGE", fg="#4ADE80")
+            self.btn_go.config(text="▶️ LANCER LE DÉCOUPAGE", bg="#0284C7")
+        else:
+            self.app_mode = "MERGE"
+            self.btn_mode.config(text="📂 Mode : FUSION", fg="#38BDF8")
+            self.btn_go.config(text="▶️ LANCER LA FUSION", bg="#16A34A")
+        self.sources.clear()
+        self.update_listbox()
 
-    def pick_source_dir(self):
-        dirname = filedialog.askdirectory(title="Sélectionner le dossier contenant les parties .pkg.00...")
-        if dirname:
-            self.source_path = dirname
-            self.lbl_src.config(text=f"Dossier Source (Merge) : {dirname}")
-            self.mode = "MERGE"
+    def pick_files(self):
+        if self.app_mode == "MERGE":
+            files = filedialog.askopenfilenames(title="Sélectionner les parties PKG", filetypes=[("PKG Parts", "*.pkg*"), ("Tous les fichiers", "*.*")])
+            if files:
+                self.sources = list(files)
+        else:
+            file = filedialog.askopenfilename(title="Sélectionner le fichier PKG à découper", filetypes=[("PKG File", "*.pkg"), ("Tous les fichiers", "*.*")])
+            if file:
+                self.sources = [file]
+        self.update_listbox()
 
-    def pick_output_dir(self):
-        dirname = filedialog.askdirectory(title="Sélectionner le dossier de destination")
-        if dirname:
-            self.output_path = dirname
-            self.lbl_out.config(text=f"Sortie : {dirname}")
+    def toggle_reverse(self):
+        self.reversed_order = not self.reversed_order
+        self.sources.reverse()
+        self.update_listbox()
 
-    def execute_action(self):
-        if not self.source_path or not self.output_path:
-            messagebox.showerror("Erreur", "Veuillez choisir une source et un emplacement de sortie !")
+    def update_listbox(self):
+        self.listbox.delete(0, tk.END)
+        for f in self.sources:
+            self.listbox.insert(tk.END, os.path.basename(f))
+
+    def pick_output(self):
+        if self.app_mode == "SPLIT":
+            dir_path = filedialog.askdirectory(title="Choisir le dossier de destination des parties")
+            if dir_path:
+                self.output_path = dir_path
+                self.lbl_out.config(text=f"Sortie : {dir_path}")
+        else:
+            file_path = filedialog.asksaveasfilename(title="Enregistrer le fichier fusionné sous...", defaultextension=".pkg", filetypes=[("PKG file", "*.pkg")])
+            if file_path:
+                self.output_path = file_path
+                self.lbl_out.config(text=f"Sortie : {os.path.basename(file_path)}")
+
+    def execute(self):
+        if not self.sources:
+            messagebox.showerror("Erreur", "Veuillez sélectionner des fichiers sources !")
+            return
+        if not self.output_path:
+            messagebox.showerror("Erreur", "Veuillez définir l'emplacement de sortie !")
             return
 
-        self.progress["value"] = 0
-        self.root.update_idletasks()
-
         try:
-            if hasattr(self, "mode") and self.mode == "SPLIT":
-                self.split_pkg_action()
+            if self.app_mode == "MERGE":
+                self.merge_process()
             else:
-                self.merge_pkg_action()
+                self.split_process()
         except Exception as e:
             messagebox.showerror("Erreur critique", str(e))
-            self.lbl_status.config(text="Échec du traitement.")
+            self.status_lbl.config(text="Échec du traitement.")
 
-    def split_pkg_action(self):
-        file_size = os.path.getsize(self.source_path)
-        base_name = os.path.basename(self.source_path)
-        clean_name = base_name[:-4] if base_name.lower().endswith(".pkg") else base_name
-        max_part_size = 4 * 1024 * 1024 * 1024  # 4 Go
+    def merge_process(self):
+        self.status_lbl.config(text="Fusion en cours...")
+        self.root.update_idletasks()
+        
+        total_size = sum(os.path.getsize(f) for f in self.sources)
+        done = 0
 
-        self.lbl_status.config(text="Découpage en cours...")
+        with open(self.output_path, "wb") as f_out:
+            for src in self.sources:
+                with open(src, "rb") as f_in:
+                    while True:
+                        chunk = f_in.read(16 * 1024 * 1024)
+                        if not chunk:
+                            break
+                        f_out.write(chunk)
+                        done += len(chunk)
+                        pct = int((done / total_size) * 100)
+                        self.bar["value"] = pct
+                        self.root.update_idletasks()
+
+        self.status_lbl.config(text="Fusion réussie avec succès !")
+        messagebox.showinfo("Succès", "La fusion est terminée !")
+
+    def split_process(self):
+        self.status_lbl.config(text="Découpage en cours...")
         self.root.update_idletasks()
 
-        with open(self.source_path, "rb") as f_in:
-            part_index = 0
-            transferred = 0
+        src = self.sources[0]
+        file_size = os.path.getsize(src)
+        base_name = os.path.basename(src)
+        clean_name = base_name[:-4] if base_name.lower().endswith(".pkg") else base_name
+        max_part = 4 * 1024 * 1024 * 1024  # 4 Go
+
+        transferred = 0
+        part_idx = 0
+
+        with open(src, "rb") as f_in:
             while transferred < file_size:
-                part_name = f"{clean_name}.pkg.{part_index:02d}"
+                part_name = f"{clean_name}.pkg.{part_idx:02d}"
                 part_path = os.path.join(self.output_path, part_name)
-                target_size = min(max_part_size, file_size - transferred)
+                target_size = min(max_part, file_size - transferred)
 
                 with open(part_path, "wb") as f_out:
                     remaining = target_size
                     while remaining > 0:
-                        chunk = f_out.write(f_in.read(min(remaining, 16 * 1024 * 1024)))
-                        if not chunk:
-                            break
-                        remaining -= 16 * 1024 * 1024
-                        transferred += 16 * 1024 * 1024
-                        pct = int((transferred / file_size) * 100)
-                        self.progress["value"] = min(pct, 100)
-                        self.root.update_idletasks()
-
-                part_index += 1
-
-        self.progress["value"] = 100
-        self.lbl_status.config(text="Découpage réussi !")
-        messagebox.showinfo("Succès", "Le découpage s'est déroulé avec succès !")
-
-    def merge_pkg_action(self):
-        parts = sorted([os.path.join(self.source_path, f) for f in os.listdir(self.source_path) if ".pkg." in f.lower() or f.endswith(".00")])
-        if not parts:
-            messagebox.showerror("Erreur", "Aucune partie de PKG trouvée dans ce dossier.")
-            return
-
-        output_file = os.path.join(self.output_path, "merged_game.pkg")
-        total_size = sum(os.path.getsize(p) for p in parts)
-        transferred = 0
-
-        self.lbl_status.config(text="Fusion en cours...")
-        self.root.update_idletasks()
-
-        with open(output_file, "wb") as f_out:
-            for part in parts:
-                with open(part, "rb") as f_in:
-                    while True:
-                        data = f_in.read(16 * 1024 * 1024)
+                        chunk_size = min(remaining, 16 * 1024 * 1024)
+                        data = f_in.read(chunk_size)
                         if not data:
                             break
                         f_out.write(data)
+                        remaining -= len(data)
                         transferred += len(data)
-                        pct = int((transferred / total_size) * 100)
-                        self.progress["value"] = min(pct, 100)
+                        pct = int((transferred / file_size) * 100)
+                        self.bar["value"] = pct
                         self.root.update_idletasks()
 
-        self.progress["value"] = 100
-        self.lbl_status.config(text="Fusion réussie !")
-        messagebox.showinfo("Succès", f"Fusion réussie !\nEnregistré sous : {output_file}")
+                part_idx += 1
+
+        self.status_lbl.config(text="Découpage réussi !")
+        messagebox.showinfo("Succès", "Le découpage en parties .pkg.00... est terminé !")
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = PkgHubApp(root)
+    app = PkgHubPCApp(root)
     root.mainloop()
