@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.59
+      - name: Générer le projet Android v2.9.60
         env:
           FORCE: '1'
         run: |
@@ -90,13 +90,6 @@ jobs:
           include(":app")
           EOF
 
-          write build.gradle.kts <<'EOF'
-          plugins {
-              id("com.android.application") version "8.1.1" apply false
-              id("org.jetbrains.kotlin.android") version "1.9.0" apply false
-          }
-          EOF
-
           write gradle.properties <<'EOF'
           org.gradle.jvmargs=-Xmx3072m -Dfile.encoding=UTF-8
           org.gradle.parallel=false
@@ -119,7 +112,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2959
+                  versionCode = 2960
                   versionName = "2.1.0"
               }
 
@@ -259,6 +252,7 @@ jobs:
           import android.os.Bundle
           import android.os.Handler
           import android.os.Looper
+          import android.os.ParcelFileDescriptor
           import android.os.PowerManager
           import android.os.VibrationEffect
           import android.os.Vibrator
@@ -1243,7 +1237,6 @@ jobs:
                   statusView = text(tr("status_ready"), 13f, Color.MAGENTA).apply { setTypeface(Typeface.MONOSPACE, Typeface.BOLD) }
                   card2.addView(statusView, lp())
 
-                  // Cadre console de logs en direct avec auto-scroll
                   consoleScroll = ScrollView(this).apply {
                       layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, dp(120)).apply { topMargin = dp(8) }
                       background = GradientDrawable().apply {
@@ -2218,10 +2211,10 @@ jobs:
                               }
 
                               try {
+                                  val pfdOut = contentResolver.openFileDescriptor(currentPartUri, "w")
+                                      ?: throw IllegalStateException("Descripteur de sortie impossible pour $partName")
                                   currentOutputStream = BufferedOutputStream(
-                                      contentResolver.openOutputStream(currentPartUri, "wt") 
-                                          ?: contentResolver.openOutputStream(currentPartUri, "w")
-                                          ?: throw IllegalStateException("Ouverture impossible pour $partName"), 
+                                      FileOutputStream(pfdOut.fileDescriptor), 
                                       1 shl 20
                                   )
                                   log("Flux ouvert avec succès pour : $partName")
@@ -2563,12 +2556,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.9.59
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.59.apk
+      - name: Renommer l'APK v2.9.60
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.60.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.59-apk
-          path: PkgMerger-v2.9.59.apk
+          name: pkg-merger-v2.9.60-apk
+          path: PkgMerger-v2.9.60.apk
           if-no-files-found: error
