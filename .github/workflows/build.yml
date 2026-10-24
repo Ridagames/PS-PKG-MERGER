@@ -284,6 +284,7 @@ jobs:
           import androidx.core.content.FileProvider
           import java.io.BufferedOutputStream
           import java.io.File
+          import java.io.FileInputStream
           import java.io.FileOutputStream
           import java.io.OutputStream
           import java.net.HttpURLConnection
@@ -2232,58 +2233,63 @@ jobs:
                           }
 
                           openNextPart()
-                          log("Ouverture du flux d'entrée source...")
+                          log("Ouverture du descripteur de fichier natif source...")
 
-                          contentResolver.openInputStream(sourceUri)?.use { input ->
-                              log("Flux d'entrée ouvert. Taille totale : ${fmt(total)}")
-                              val buf = ByteArray(1 shl 20)
-                              var currentPartBytes = 0.toLong()
-                              
-                              while (true) {
-                                  if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
-                                  val bytesRead = input.read(buf)
-                                  if (bytesRead <= 0) {
-                                      log("Fin du flux source atteinte (bytesRead = $bytesRead).")
-                                      break
-                                  }
-
-                                  var offset = 0
-                                  while (offset < bytesRead) {
+                          val pfdSource = contentResolver.openFileDescriptor(sourceUri, "r")
+                              ?: throw IllegalStateException("Ouverture du descripteur source impossible")
+                          
+                          pfdSource.use { pfd ->
+                              FileInputStream(pfd.fileDescriptor).use { input ->
+                                  log("Flux source ouvert avec succès. Taille totale : ${fmt(total)}")
+                                  val buf = ByteArray(1 shl 20)
+                                  var currentPartBytes = 0.toLong()
+                                  
+                                  while (true) {
                                       if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
-                                      if (currentPartBytes >= maxPartSize) {
-                                          log("Partie pleine (${fmt(currentPartBytes)}). Passage à la suivante...")
-                                          openNextPart()
-                                          currentPartBytes = 0.toLong()
+                                      val bytesRead = input.read(buf)
+                                      if (bytesRead <= 0) {
+                                          log("Fin du flux source atteinte (bytesRead = $bytesRead).")
+                                          break
                                       }
-                                      val chunkToWrite = minOf(bytesRead - offset, (maxPartSize - currentPartBytes).toInt())
-                                      currentOutputStream!!.write(buf, offset, chunkToWrite)
-                                      sha256?.update(buf, offset, chunkToWrite)
-                                      offset += chunkToWrite
-                                      currentPartBytes += chunkToWrite.toLong()
-                                      done += chunkToWrite.toLong()
 
-                                      val now = System.currentTimeMillis()
-                                      if (now - lastPush > 250) {
-                                          lastPush = now
-                                          currentOutputStream!!.flush()
+                                      var offset = 0
+                                      while (offset < bytesRead) {
+                                          if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
+                                          if (currentPartBytes >= maxPartSize) {
+                                              log("Partie pleine (${fmt(currentPartBytes)}). Passage à la suivante...")
+                                              openNextPart()
+                                              currentPartBytes = 0.toLong()
+                                          }
+                                          val chunkToWrite = minOf(bytesRead - offset, (maxPartSize - currentPartBytes).toInt())
+                                          currentOutputStream!!.write(buf, offset, chunkToWrite)
+                                          sha256?.update(buf, offset, chunkToWrite)
+                                          offset += chunkToWrite
+                                          currentPartBytes += chunkToWrite.toLong()
+                                          done += chunkToWrite.toLong()
 
-                                          val elapsedSecs = (now - t0) / 1000.0
-                                          val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
-                                          val speedStr = fmt(speedBps.toLong()) + "/s"
-                                          val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0.toLong()
-                                          val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
-                                          
-                                          val pct = if (total > 0.toLong()) (done * 100 / total).toInt() else 0
-                                          val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
-                                          
-                                          ui.post {
-                                              bar.progress = pct * 10
-                                              statusView.text = msg
+                                          val now = System.currentTimeMillis()
+                                          if (now - lastPush > 250) {
+                                              lastPush = now
+                                              currentOutputStream!!.flush()
+
+                                              val elapsedSecs = (now - t0) / 1000.0
+                                              val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
+                                              val speedStr = fmt(speedBps.toLong()) + "/s"
+                                              val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0.toLong()
+                                              val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
+                                              
+                                              val pct = if (total > 0.toLong()) (done * 100 / total).toInt() else 0
+                                              val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
+                                              
+                                              ui.post {
+                                                  bar.progress = pct * 10
+                                                  statusView.text = msg
+                                              }
                                           }
                                       }
                                   }
                               }
-                          } ?: throw IllegalStateException("Ouverture du flux source impossible (inputStream == null)")
+                          }
 
                           try { 
                               currentOutputStream?.flush()
@@ -2375,34 +2381,37 @@ jobs:
                               for (u in list) {
                                   if (cancelled) throw InterruptedException("Annulé.")
                                   log("Fusion de la partie : ${getFileName(u)}")
-                                  contentResolver.openInputStream(u)?.use { input ->
-                                      while (true) {
-                                          if (cancelled) throw InterruptedException("Annulé.")
-                                          bytesRead = input.read(buf)
-                                          if (bytesRead <= 0) break
-                                          os.write(buf, 0, bytesRead)
-                                          sha256.update(buf, 0, bytesRead)
-                                          done += bytesRead.toLong()
-                                          
-                                          val now = System.currentTimeMillis()
-                                          if (now - lastPush > 250) {
-                                              lastPush = now
-                                              val elapsedSecs = (now - t0) / 1000.0
-                                              val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
-                                              val speedStr = fmt(speedBps.toLong()) + "/s"
-                                              val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0.toLong()
-                                              val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
+                                  
+                                  contentResolver.openFileDescriptor(u, "r")?.use { pfdIn ->
+                                      FileInputStream(pfdIn.fileDescriptor).use { input ->
+                                          while (true) {
+                                              if (cancelled) throw InterruptedException("Annulé.")
+                                              bytesRead = input.read(buf)
+                                              if (bytesRead <= 0) break
+                                              os.write(buf, 0, bytesRead)
+                                              sha256.update(buf, 0, bytesRead)
+                                              done += bytesRead.toLong()
                                               
-                                              val pct = if (total > 0.toLong()) (done * 100 / total).toInt() else 0
-                                              val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
-                                              
-                                              ui.post {
-                                                  bar.progress = pct * 10
-                                                  statusView.text = msg
-                                              }
-                                              if (now - lastNotifTime > 2000 || pct == 100) {
-                                                  lastNotifTime = now
-                                                  updateProgressNotif("Fusion : $pct%", pct)
+                                              val now = System.currentTimeMillis()
+                                              if (now - lastPush > 250) {
+                                                  lastPush = now
+                                                  val elapsedSecs = (now - t0) / 1000.0
+                                                  val speedBps = if (elapsedSecs > 0) done / elapsedSecs else 0.0
+                                                  val speedStr = fmt(speedBps.toLong()) + "/s"
+                                                  val remainingSecs = if (speedBps > 0) ((total - done) / speedBps).toLong() else 0.toLong()
+                                                  val remStr = String.format("%02d:%02d", remainingSecs / 60, remainingSecs % 60)
+                                                  
+                                                  val pct = if (total > 0.toLong()) (done * 100 / total).toInt() else 0
+                                                  val msg = "${fmt(done)} / ${fmt(total)} ($speedStr, Reste $remStr)"
+                                                  
+                                                  ui.post {
+                                                      bar.progress = pct * 10
+                                                      statusView.text = msg
+                                                  }
+                                                  if (now - lastNotifTime > 2000 || pct == 100) {
+                                                      lastNotifTime = now
+                                                      updateProgressNotif("Fusion : $pct%", pct)
+                                                  }
                                               }
                                           }
                                       }
@@ -2417,13 +2426,15 @@ jobs:
                               ui.post { statusView.text = "Vérification intégrité…" }
                               log("Vérification SHA-256 du fichier fusionné...")
                               val verifyDigest = MessageDigest.getInstance("SHA-256")
-                              contentResolver.openInputStream(out)?.use { verifyInput ->
-                                  val verifyBuf = ByteArray(1 shl 20)
-                                  while (true) {
-                                      if (cancelled) throw InterruptedException("Annulé.")
-                                      val r = verifyInput.read(verifyBuf)
-                                      if (r <= 0) break
-                                      verifyDigest.update(verifyBuf, 0, r)
+                              contentResolver.openFileDescriptor(out, "r")?.use { pfdVerify ->
+                                  FileInputStream(pfdVerify.fileDescriptor).use { verifyInput ->
+                                      val verifyBuf = ByteArray(1 shl 20)
+                                      while (true) {
+                                          if (cancelled) throw InterruptedException("Annulé.")
+                                          val r = verifyInput.read(verifyBuf)
+                                          if (r <= 0) break
+                                          verifyDigest.update(verifyBuf, 0, r)
+                                      }
                                   }
                               }
                           }
