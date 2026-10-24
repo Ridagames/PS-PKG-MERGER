@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.64 (Fix Splitter, Audio Resume & Version 2.1.0)
+      - name: Générer le projet Android v2.9.65 (Fix définitif du Splitter)
         env:
           FORCE: '1'
         run: |
@@ -119,7 +119,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2964
+                  versionCode = 2965
                   versionName = "2.1.0"
               }
 
@@ -525,7 +525,7 @@ jobs:
                       "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256", "es" to "📋 Copiar SHA-256", "pt" to "📋 Copiar SHA-256", "de" to "📋 SHA-256 kopieren"),
                       "menu_options" to mapOf("fr" to "⚙️ OPTIONS & MENU", "en" to "⚙️ OPTIONS & MENU", "es" to "⚙️ OPCIONES Y MENÚ", "pt" to "⚙️ OPÇÕES E MENU", "de" to "⚙️ OPTIONEN & MENÜ"),
                       "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode", "es" to "📂 Cambiar a Modo Divisor", "pt" to "📂 Mudar para o Modo Divisor", "de" to "📂 In den Splitter-Modus wechseln"),
-                      "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode", "es" to "🔗 Cambiar a Modo Fusão", "pt" to "🔗 Mudar para o Modo Zusammenführung"),
+                      "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode", "es" to "🔗 Cambiar a Modo Fusión", "pt" to "🔗 Mudar para o Modo Fusão", "de" to "🔗 In den Zusammenführungs-Modus wechseln"),
                       "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe", "es" to "🎨 Cambiar de Universo", "pt" to "🎨 Mudar de Universo", "de" to "🎨 Universum wechseln"),
                       "menu_lang" to mapOf("fr" to "🌐 Changer la Langue / Language", "en" to "🌐 Change Language", "es" to "🌐 Cambiar Idioma", "pt" to "🌐 Mudar Idioma", "de" to "🌐 Sprache ändern"),
                       "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates", "es" to "🔄 Buscar actualizaciones", "pt" to "🔄 Verificar atualizações", "de" to "🔄 Nach Updates suchen"),
@@ -2188,75 +2188,111 @@ jobs:
                       val total = size(sourceUri)
                       var done = 0L
                       var success = false
+                      val maxPartSize = 4L * 1024 * 1024 * 1024
+                      var partIndex = 0
+                      val baseFileName = getFileName(sourceUri)
+                      val baseName = if (baseFileName.contains(".")) baseFileName.substringBeforeLast(".") else baseFileName
+                      val cleanBase = if (baseName.lowercase().endsWith(".pkg")) baseName.substringBeforeLast(".") else baseName
+
+                      var currentOut: OutputStream? = null
+                      var currentPfd: ParcelFileDescriptor? = null
+
                       try {
-                          val maxPartSize = 4L * 1024 * 1024 * 1024
-                          var partIndex = 0
-                          val baseFileName = getFileName(sourceUri)
-                          val baseName = if (baseFileName.contains(".")) baseFileName.substringBeforeLast(".") else baseFileName
-                          val cleanBase = if (baseName.lowercase().endsWith(".pkg")) baseName.substringBeforeLast(".") else baseName
-                          var currentOutputStream: OutputStream? = null
-
                           val targetDir = DocumentFile.fromTreeUri(this, treeUri)
-                              ?: throw IllegalStateException("Impossible d'accéder au dossier de destination")
+                              ?: throw IllegalStateException("Impossible d'accéder au dossier sélectionné")
 
-                          fun openNextPart() {
-                              try { currentOutputStream?.flush(); currentOutputStream?.close() } catch (_: Exception) {}
+                          fun createAndOpenPart(): OutputStream {
+                              try {
+                                  currentOut?.flush()
+                                  currentOut?.close()
+                                  currentPfd?.close()
+                              } catch (_: Exception) {}
+
                               val partName = "$cleanBase.${String.format(Locale.US, "%02d", partIndex)}"
-                              log("Création de la partie : $partName")
-                              
+                              log("Création de la partie $partIndex : $partName")
+
                               val newFile = targetDir.createFile("application/octet-stream", partName)
-                                  ?: throw IllegalStateException("Impossible de créer $partName")
+                                  ?: throw IllegalStateException("Création de $partName échouée")
 
-                              val pfdOut = contentResolver.openFileDescriptor(newFile.uri, "w")
-                                  ?: throw IllegalStateException("Sortie impossible pour $partName")
-
-                              currentOutputStream = BufferedOutputStream(FileOutputStream(pfdOut.fileDescriptor), 1 shl 20)
+                              val pfd = contentResolver.openFileDescriptor(newFile.uri, "w")
+                                  ?: throw IllegalStateException("Ouverture du flux d'écriture impossible pour $partName")
+                              
+                              currentPfd = pfd
                               partIndex++
+                              val stream = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
+                              currentOut = stream
+                              return stream
                           }
 
-                          openNextPart()
-                          val pfdSource = contentResolver.openFileDescriptor(sourceUri, "r") ?: throw IllegalStateException("Source impossible")
-                          pfdSource.use { pfd ->
-                              FileInputStream(pfd.fileDescriptor).use { input ->
-                                  log("Flux source ouvert. Taille totale : ${fmt(total)}")
+                          var currentStream = createAndOpenPart()
+
+                          contentResolver.openFileDescriptor(sourceUri, "r")?.use { pfdIn ->
+                              FileInputStream(pfdIn.fileDescriptor).use { input ->
+                                  log("Lecture source démarrée...")
                                   val buf = ByteArray(1 shl 20)
-                                  var currentPartBytes = 0L
+                                  var bytesInCurrentPart = 0L
                                   var lastYieldTime = System.currentTimeMillis()
+
                                   while (!cancelled) {
-                                      val bytesRead = input.read(buf)
-                                      if (bytesRead <= 0) break
+                                      val read = input.read(buf)
+                                      if (read <= 0) break
+
                                       var offset = 0
-                                      while (offset < bytesRead && !cancelled) {
-                                          if (currentPartBytes >= maxPartSize) { openNextPart(); currentPartBytes = 0L }
-                                          val chunkToWrite = minOf(bytesRead - offset, (maxPartSize - currentPartBytes).toInt())
-                                          currentOutputStream!!.write(buf, offset, chunkToWrite)
-                                          offset += chunkToWrite; currentPartBytes += chunkToWrite; done += chunkToWrite
-                                          val pct = if (total > 0) (done * 100 / total).toInt() else 0
+                                      while (offset < read && !cancelled) {
+                                          if (bytesInCurrentPart >= maxPartSize) {
+                                              currentStream = createAndOpenPart()
+                                              bytesInCurrentPart = 0L
+                                          }
+
+                                          val toWrite = minOf(read - offset, (maxPartSize - bytesInCurrentPart).toInt())
+                                          currentStream.write(buf, offset, toWrite)
                                           
+                                          offset += toWrite
+                                          bytesInCurrentPart += toWrite
+                                          done += toWrite
+
                                           val now = System.currentTimeMillis()
-                                          if (now - lastYieldTime > 50) {
+                                          if (now - lastYieldTime > 200) {
                                               lastYieldTime = now
-                                              ui.post { bar.progress = pct * 10; statusView.text = "${fmt(done)} / ${fmt(total)}" }
-                                              Thread.sleep(5)
+                                              val pct = if (total > 0) (done * 100 / total).toInt() else 0
+                                              ui.post {
+                                                  bar.progress = pct * 10
+                                                  statusView.text = "${fmt(done)} / ${fmt(total)} ($pct%)"
+                                              }
                                           }
                                       }
                                   }
                               }
                           }
-                          currentOutputStream?.flush(); currentOutputStream?.close()
-                          if (!cancelled) { success = true; log("Découpage terminé avec succès.") } else { log("Découpage annulé par l'utilisateur.") }
+
+                          currentOut?.flush()
+                          if (!cancelled) {
+                              success = true
+                              log("Découpage terminé avec succès !")
+                          } else {
+                              log("Découpage annulé par l'utilisateur.")
+                          }
                       } catch (e: Throwable) {
-                          log("❌ ERREUR : ${e.message}")
+                          log("❌ ERREUR Découpage : ${e.message}")
+                      } finally {
+                          try {
+                              currentOut?.close()
+                              currentPfd?.close()
+                          } catch (_: Exception) {}
                       }
-                      ui.post { 
-                          processing = false; 
-                          doneUi(); 
-                          if (success) { 
+
+                      ui.post {
+                          processing = false
+                          doneUi()
+                          if (success) {
+                              bar.progress = 1000
                               statusView.text = "Découpage réussi !"
                               triggerSuccessReward()
                           } else if (cancelled) {
                               statusView.text = "Annulé."
-                          } 
+                          } else {
+                              statusView.text = "Échec du découpage"
+                          }
                       }
                   }.start()
               }
@@ -2473,12 +2509,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.9.64
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.64.apk
+      - name: Renommer l'APK v2.9.65
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.65.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.64-apk
-          path: PkgMerger-v2.9.64.apk
+          name: pkg-merger-v2.9.65-apk
+          path: PkgMerger-v2.9.65.apk
           if-no-files-found: error
