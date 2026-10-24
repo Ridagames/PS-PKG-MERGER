@@ -2143,18 +2143,22 @@ jobs:
                               val docUri = DocumentsContract.createDocument(contentResolver, baseDirUri, "application/octet-stream", partName)
                                   ?: throw IllegalStateException("Création de $partName impossible")
                               
-                              val pfd = contentResolver.openFileDescriptor(docUri, "w")
-                                  ?: throw IllegalStateException("Ouverture du descripteur impossible")
-                              currentOutputStream = BufferedOutputStream(FileOutputStream(pfd.fileDescriptor), 1 shl 20)
+                              val pfdOut = contentResolver.openFileDescriptor(docUri, "w")
+                                  ?: throw IllegalStateException("Ouverture du descripteur de sortie impossible")
+                              currentOutputStream = BufferedOutputStream(FileOutputStream(pfdOut.fileDescriptor), 1 shl 20)
                               partIndex++
                           }
 
                           openNextPart()
 
-                          val buf = ByteArray(1 shl 20)
-                          var currentPartBytes = 0.toLong()
+                          val pfdIn = contentResolver.openFileDescriptor(sourceUri, "r")
+                              ?: throw IllegalStateException("Ouverture du descripteur source impossible")
                           
-                          contentResolver.openInputStream(sourceUri)?.use { input ->
+                          try {
+                              val input = java.io.FileInputStream(pfdIn.fileDescriptor)
+                              val buf = ByteArray(1 shl 20)
+                              var currentPartBytes = 0.toLong()
+                              
                               while (true) {
                                   if (cancelled) throw InterruptedException("Annulé par l'utilisateur.")
                                   val bytesRead = input.read(buf)
@@ -2195,7 +2199,10 @@ jobs:
                                       }
                                   }
                               }
+                          } finally {
+                              pfdIn.close()
                           }
+
                           try { 
                               currentOutputStream?.flush()
                               currentOutputStream?.close() 
