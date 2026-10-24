@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.72 (Fix Extensions .pkg.00 et Notifications)
+      - name: Générer le projet Android v2.9.73 (Suppression de la console de logs)
         env:
           FORCE: '1'
         run: |
@@ -119,7 +119,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2972
+                  versionCode = 2973
                   versionName = "2.1.0"
               }
 
@@ -372,8 +372,6 @@ jobs:
               private lateinit var checkView: TextView
               private lateinit var outView: TextView
               private lateinit var statusView: TextView
-              private lateinit var consoleLogView: TextView
-              private lateinit var consoleScroll: ScrollView
               private lateinit var hashView: TextView
               private lateinit var hashField: EditText
               private lateinit var verifyBox: CheckBox
@@ -398,22 +396,6 @@ jobs:
               private lateinit var infoLayout: LinearLayout
 
               private val cardViews = ArrayList<LinearLayout>()
-              private val logBuffer = StringBuilder()
-
-              private fun log(msg: String) {
-                  ui.post {
-                      if (logBuffer.length > 3000) {
-                          logBuffer.setLength(0)
-                      }
-                      logBuffer.append("• $msg\n")
-                      if (::consoleLogView.isInitialized) {
-                          consoleLogView.text = logBuffer.toString()
-                          if (::consoleScroll.isInitialized) {
-                              consoleScroll.fullScroll(View.FOCUS_DOWN)
-                          }
-                      }
-                  }
-              }
 
               private data class ThemeConfig(
                   val name: String,
@@ -555,7 +537,6 @@ jobs:
                   showMergerScreen()
                   applyTheme()
 
-                  log("Application démarrée. Version 2.1.0")
                   checkFirstRunWelcome()
               }
 
@@ -933,7 +914,6 @@ jobs:
 
                   checkView.setTextColor(cfg.secondaryText)
                   statusView.setTextColor(cfg.primaryText)
-                  consoleLogView.setTextColor(cfg.dim)
                   hashView.setTextColor(cfg.secondaryText)
 
                   verifyBox.setTextColor(cfg.dim)
@@ -1265,24 +1245,6 @@ jobs:
                   statusView = text(tr("status_ready"), 13f, Color.MAGENTA).apply { setTypeface(Typeface.MONOSPACE, Typeface.BOLD) }
                   card2.addView(statusView, lp())
 
-                  consoleScroll = ScrollView(this).apply {
-                      layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, dp(120)).apply { topMargin = dp(8) }
-                      background = GradientDrawable().apply {
-                          setColor(Color.parseColor("#0A0D14"))
-                          cornerRadius = dp(6).toFloat()
-                          setStroke(dp(1), Color.parseColor("#1E293B"))
-                      }
-                      setPadding(dp(8), dp(8), dp(8), dp(8))
-                  }
-                  consoleLogView = TextView(this).apply {
-                      text = "• Console de logs initialisée...\n"
-                      textSize = 10f
-                      setTextColor(Color.parseColor("#94A3B8"))
-                      typeface = Typeface.MONOSPACE
-                  }
-                  consoleScroll.addView(consoleLogView)
-                  card2.addView(consoleScroll)
-
                   mainCol.addView(card2, lpCard())
 
                   val card3 = createCard()
@@ -1393,12 +1355,10 @@ jobs:
                           titleView.text = "⚡ PKG SPLITTER"
                           section1Title.text = tr("sec1_split")
                           statusView.text = tr("status_split_ready")
-                          log("Mode basculé : SPLIT")
                       } else {
                           titleView.text = tr("app_title")
                           section1Title.text = tr("sec1")
                           statusView.text = tr("status_ready")
-                          log("Mode basculé : MERGE")
                       }
                       output = null
                       outView.text = tr("out_lbl")
@@ -1832,7 +1792,6 @@ jobs:
               private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
 
               private fun pick() {
-                  log("Ouverture du sélecteur de fichiers...")
                   startActivityForResult(
                       Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                           addCategory(Intent.CATEGORY_OPENABLE)
@@ -1843,7 +1802,6 @@ jobs:
               }
 
               private fun pickFolder() {
-                  log("Ouverture du sélecteur de dossier...")
                   startActivityForResult(
                       Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
                           addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
@@ -1854,7 +1812,6 @@ jobs:
               private fun pickOutput() {
                   if (uris.isEmpty()) {
                       toast("Choisis d'abord les sources !")
-                      log("Erreur: Tentative de définir la sortie sans source.")
                       return
                   }
                   if (appMode == "SPLIT") {
@@ -1866,7 +1823,6 @@ jobs:
                   } else {
                       val rawName = suggestName()
                       val baseName = if (rawName.lowercase().endsWith(".pkg")) rawName.substringBeforeLast(".") else rawName
-                      log("Ouverture de la création de document pour : $baseName.pkg")
                       startActivityForResult(
                           Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                               addCategory(Intent.CATEGORY_OPENABLE)
@@ -1880,10 +1836,7 @@ jobs:
               @Deprecated("Deprecated in Java")
               override fun onActivityResult(req: Int, res: Int, data: Intent?) {
                   super.onActivityResult(req, res, data)
-                  if (res != RESULT_OK) {
-                      log("Action annulée par l'utilisateur (req=$req).")
-                      return
-                  }
+                  if (res != RESULT_OK) return
 
                   if (req == 1) {
                       uris.clear(); names.clear(); sizes.clear()
@@ -1898,13 +1851,11 @@ jobs:
                       }
                       reversed = false
                       rewardChestView?.visibility = View.GONE
-                      log("Fichiers chargés : ${uris.size} fichier(s)")
                       refresh()
                   } else if (req == 2 || req == 4) {
                       val u = data?.data ?: return
                       persist(u, true)
                       output = u
-                      log("Emplacement de sortie défini : ${u.lastPathSegment}")
                       if (::outView.isInitialized) {
                           outView.text = "Sortie : ${u.lastPathSegment}"
                       }
@@ -1916,9 +1867,7 @@ jobs:
                       if (req == 5) {
                           output = tree
                           if (::outView.isInitialized) outView.text = "Dossier de sortie défini"
-                          log("Dossier de destination du Splitter défini.")
                       } else {
-                          log("Dossier sélectionné via Tree API")
                           loadTree(tree)
                       }
                   }
@@ -1966,13 +1915,10 @@ jobs:
                               }
                           }
                       }
-                  } catch (e: Exception) {
-                      log("Erreur lecture dossier : ${e.message}")
-                  }
+                  } catch (_: Exception) {}
                   reversed = false
                   rewardChestView?.visibility = View.GONE
                   refresh()
-                  log("Dossier chargé : ${uris.size} fichier(s) PKG trouvé(s)")
               }
 
               private fun persist(u: Uri, write: Boolean = false) {
@@ -1988,12 +1934,10 @@ jobs:
                   var n = getFileName(u)
                   var s = size(u)
                   uris.add(u); names.add(n); sizes.add(s)
-                  log("Ajouté : $n (${fmt(s)})")
               }
 
               private fun removeAt(index: Int) {
                   if (index in uris.indices) {
-                      log("Suppression de : ${names[index]}")
                       uris.removeAt(index)
                       names.removeAt(index)
                       sizes.removeAt(index)
@@ -2159,12 +2103,10 @@ jobs:
               private fun executeAction() {
                   if (uris.isEmpty()) {
                       toast("Sélectionne d'abord des fichiers.")
-                      log("Erreur : Aucune source sélectionnée.")
                       return
                   }
                   if (output == null) {
                       toast("Définis d'abord l'emplacement de sortie !")
-                      log("Erreur : Sortie non définie.")
                       return
                   }
                   if (appMode == "SPLIT") {
@@ -2184,7 +2126,6 @@ jobs:
                   rewardChestView?.visibility = View.GONE
                   bar.progress = 0
                   statusView.text = "Découpage en cours…"
-                  log("=== DÉBUT DU DÉCOUPAGE HAUT DÉBIT (FileChannel) ===")
 
                   Thread {
                       var success = false
@@ -2196,8 +2137,6 @@ jobs:
                           persist(treeUri, true)
 
                           val total = size(sourceUri)
-                          log("Taille totale source : ${fmt(total)}")
-
                           val targetDir = DocumentFile.fromTreeUri(this, treeUri)
                               ?: throw IllegalStateException("Impossible d'accéder au dossier sélectionné")
 
@@ -2213,12 +2152,10 @@ jobs:
                                   var partIndex = 0
                                   val maxPartSize = 4L * 1024 * 1024 * 1024
                                   var transferredTotal = 0L
-                                  val t0 = System.currentTimeMillis()
                                   var lastPush = 0L
 
                                   while (transferredTotal < total && !cancelled) {
                                       val partName = "$cleanBase.pkg.${String.format(Locale.US, "%02d", partIndex)}"
-                                      log("Création partie $partIndex : $partName")
 
                                       val newFile = targetDir.createFile("application/octet-stream", partName)
                                           ?: throw IllegalStateException("Création de $partName échouée")
@@ -2263,13 +2200,8 @@ jobs:
 
                           if (!cancelled) {
                               success = true
-                              log("Découpage terminé avec succès via transferTo !")
-                          } else {
-                              log("Découpage annulé par l'utilisateur.")
                           }
-                      } catch (e: Throwable) {
-                          log("❌ ERREUR Découpage : ${e.message} (${e.javaClass.simpleName})")
-                      } finally {
+                      } catch (_: Throwable) {} finally {
                           try {
                               pfdIn?.close()
                               pfdOut?.close()
@@ -2305,11 +2237,9 @@ jobs:
                   rewardChestView?.visibility = View.GONE
                   bar.progress = 0
                   statusView.text = "Fusion en cours…"
-                  log("=== DÉBUT DE LA FUSION HAUT DÉBIT (FileChannel) ===")
 
                   Thread {
                       val total = list.sumOf { size(it) }
-                      val sha256 = MessageDigest.getInstance("SHA-256")
                       var done = 0.toLong()
                       var lastPush = 0.toLong()
                       var success = false
@@ -2322,7 +2252,6 @@ jobs:
                                       var outOffset = 0L
                                       for (u in list) {
                                           if (cancelled) throw InterruptedException("Annulé.")
-                                          log("Fusion de la partie : ${getFileName(u)}")
 
                                           contentResolver.openFileDescriptor(u, "r")?.use { pfdIn ->
                                               FileInputStream(pfdIn.fileDescriptor).use { fis ->
@@ -2369,9 +2298,7 @@ jobs:
                               }
                           }
                           success = true
-                          log("Fusion terminée avec succès via FileChannel transferFrom.")
                       } catch (e: Throwable) {
-                          log("❌ ERREUR Fusion : ${e.message}")
                           ui.post {
                               statusView.text = "Erreur : ${e.message}"
                               showResultNotif("PS PKG Manager", "Échec : ${e.message}")
@@ -2407,7 +2334,6 @@ jobs:
                   val h = lastHash ?: return
                   getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("sha256", h))
                   toast("SHA-256 copié")
-                  log("SHA-256 copié dans le presse-papier.")
               }
 
               private fun size(u: Uri): Long {
@@ -2418,8 +2344,6 @@ jobs:
                       } ?: 0.toLong()
                   } catch (_: Exception) { 0.toLong() }
               }
-
-              private fun hex(b: ByteArray): String = b.joinToString("") { "%02x".format(it) }
 
               private fun fmt(b: Long): String {
                   if (b <= 0.toLong()) return "0 o"
@@ -2488,12 +2412,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.9.72
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.72.apk
+      - name: Renommer l'APK v2.9.73
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.73.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.72-apk
-          path: PkgMerger-v2.9.72.apk
+          name: pkg-merger-v2.9.73-apk
+          path: PkgMerger-v2.9.73.apk
           if-no-files-found: error
