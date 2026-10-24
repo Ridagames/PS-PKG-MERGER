@@ -31,7 +31,7 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources
+      - name: Nettoyage et Normalisation des Ressources
         run: |
           echo "Nettoyage des fichiers obsolètes..."
           rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.65
+      - name: Générer le projet Android v2.1.2
         env:
           FORCE: '1'
         run: |
@@ -68,6 +68,12 @@ jobs:
             f="$1"
             echo "  écrit   $f"
             cat > "$f"
+          }
+
+          append() {
+            f="$1"
+            echo "  ajoute  $f"
+            cat >> "$f"
           }
 
           write .gitignore <<'EOF'
@@ -119,8 +125,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2965
-                  versionName = "2.1.0"
+                  versionCode = 2120
+                  versionName = "2.1.2"
               }
 
               compileOptions {
@@ -232,6 +238,7 @@ jobs:
           </paths>
           EOF
 
+          # PARTIE 1 DU CODE KOTLIN
           write app/src/main/java/com/venice/pkgmerger/MainActivity.kt <<'EOF'
           package com.venice.pkgmerger
 
@@ -499,12 +506,7 @@ jobs:
                       "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode"),
                       "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode"),
                       "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe"),
-                      "menu_lang" to mapOf("fr" to "🌐 Changer la Langue", "en" to "🌐 Change Language"),
-                      "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates"),
-                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.0)", "en" to "ℹ️ About (v2.1.0)"),
-                      "dialog_universe_title" to mapOf("fr" to "🌟 CHOISIS TON UNIVERS GAMING", "en" to "🌟 CHOOSE YOUR GAMING UNIVERSE"),
-                      "dialog_lang_title" to mapOf("fr" to "🌐 CHOISIR LA LANGUE", "en" to "🌐 CHOOSE LANGUAGE"),
-                      "bus_pop" to mapOf("fr" to "Tout le monde descend !", "en" to "Everyone out!")
+                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.2)", "en" to "ℹ️ About (v2.1.2)")
                   )
                   return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
               }
@@ -518,16 +520,10 @@ jobs:
                   checkPermissions()
                   showMergerScreen()
                   applyTheme()
-                  log("Application démarrée. Version 2.1.0")
+                  log("Application démarrée. Version 2.1.2")
               }
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-
-              private fun getResId(name: String): Int {
-                  var id = resources.getIdentifier(name, "drawable", packageName)
-                  if (id == 0) id = resources.getIdentifier("img_$name", "drawable", packageName)
-                  return id
-              }
 
               @SuppressLint("ClickableViewAccessibility")
               private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, treeSide: Int, onClickAction: () -> Unit): View {
@@ -858,7 +854,7 @@ jobs:
                       output = null; outView.text = tr("out_lbl"); rebuildButtons()
                   }
                   addMenuOption(tr("menu_universe")) { dialog.dismiss(); showThemeDialog() }
-                  addMenuOption(tr("menu_about")) { dialog.dismiss(); toast("PS PKG Freedom Hub v2.1.0") }
+                  addMenuOption(tr("menu_about")) { dialog.dismiss(); toast("PS PKG Freedom Hub v2.1.2") }
                   dialog.show()
               }
 
@@ -907,11 +903,15 @@ jobs:
                   startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE); type = "*/*"; putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) }, 1)
               }
               private fun pickFolder() {
-                  startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply { addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }, 3)
+                  startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply { addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }, 3)
               }
               private fun pickOutput() {
                   if (uris.isEmpty()) { toast("Choisis d'abord les sources !"); return }
-                  startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE); type = "application/octet-stream"; putExtra(Intent.EXTRA_TITLE, "${suggestName()}.00") }, 4)
+                  if (appMode == "SPLIT") {
+                      startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply { addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }, 5)
+                  } else {
+                      startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE); type = "application/octet-stream"; putExtra(Intent.EXTRA_TITLE, "${suggestName()}.pkg") }, 4)
+                  }
               }
 
               @Deprecated("Deprecated in Java")
@@ -929,10 +929,16 @@ jobs:
                       val u = data?.data ?: return
                       persist(u, true); output = u
                       if (::outView.isInitialized) { outView.text = "Sortie : ${u.lastPathSegment}" }
-                  } else if (req == 3) {
+                  } else if (req == 3 || req == 5) {
                       val tree = data?.data ?: return
-                      try { contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
-                      loadTree(tree)
+                      try { contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) } catch (_: Exception) {}
+                      if (req == 5) {
+                          output = tree
+                          if (::outView.isInitialized) { outView.text = "Dossier de sortie défini" }
+                          log("Dossier de destination du Splitter défini.")
+                      } else {
+                          loadTree(tree)
+                      }
                   }
               }
 
@@ -1030,9 +1036,13 @@ jobs:
                   if (uris.isEmpty()) { toast("Sélectionne d'abord des fichiers."); return }
                   if (appMode == "SPLIT") splitPkg() else mergePkg()
               }
+          EOF
+
+          # PARTIE 2 DU CODE KOTLIN (AJOUT SANS TROP CHARGER LE SHELL LINUX)
+          append app/src/main/java/com/venice/pkgmerger/MainActivity.kt <<'EOF'
 
               private fun splitPkg() {
-                  val baseOutputUri = output ?: return
+                  val treeUri = output ?: return
                   val sourceUri = uris[0]
                   processing = true; cancelled = false; goBtnLayout.isEnabled = false; cancelBtnLayout.isEnabled = true
                   bar.progress = 0; statusView.text = "Découpage en cours…"
@@ -1045,29 +1055,23 @@ jobs:
                       try {
                           val maxPartSize = 4.toLong() * 1024 * 1024 * 1024
                           var partIndex = 0
-                          val baseName = getFileName(baseOutputUri).let { if (it.contains(".")) it.substringBeforeLast(".") else it }
+                          val baseName = getFileName(sourceUri).let { if (it.contains(".")) it.substringBeforeLast(".") else it }
                           var currentOutputStream: OutputStream? = null
-                          var currentPartUri: Uri = baseOutputUri
+
+                          val docId = DocumentsContract.getTreeDocumentId(treeUri)
+                          val parentUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId)
 
                           fun openNextPart() {
                               try { currentOutputStream?.flush(); currentOutputStream?.close() } catch (_: Exception) {}
                               val partName = "$baseName.${String.format(Locale.US, "%02d", partIndex)}"
-                              log("Préparation partie : $partName")
-                              if (partIndex > 0) {
-                                  try {
-                                      val parentUri = DocumentsContract.getDocumentId(baseOutputUri)?.let { docId ->
-                                          val parentId = docId.substringBeforeLast('/', "")
-                                          if (parentId.isNotEmpty()) DocumentsContract.buildDocumentUriUsingTree(baseOutputUri, parentId) else null
-                                      }
-                                      if (parentUri != null) {
-                                          DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)?.let { currentPartUri = it }
-                                      }
-                                  } catch (_: Exception) {}
-                              }
-                              // CORRECTION ICI : Utilisation de openFileDescriptor avec "w" pour débloquer l'écriture sur les gros fichiers Android
-                              val pfdOut = contentResolver.openFileDescriptor(currentPartUri, "w") ?: throw IllegalStateException("Sortie impossible")
+                              log("Création de la partie : $partName")
+                              
+                              val createdUri = DocumentsContract.createDocument(contentResolver, parentUri, "application/octet-stream", partName)
+                                  ?: throw IllegalStateException("Impossible de créer $partName dans le dossier")
+
+                              val pfdOut = contentResolver.openFileDescriptor(createdUri, "w") ?: throw IllegalStateException("Sortie impossible pour $partName")
                               currentOutputStream = BufferedOutputStream(FileOutputStream(pfdOut.fileDescriptor), 1 shl 20)
-                              log("Flux de sortie natif ouvert avec succès pour : $partName")
+                              log("Flux ouvert avec succès pour : $partName")
                               partIndex++
                           }
 
@@ -1075,7 +1079,7 @@ jobs:
                           val pfdSource = contentResolver.openFileDescriptor(sourceUri, "r") ?: throw IllegalStateException("Source impossible")
                           pfdSource.use { pfd ->
                               FileInputStream(pfd.fileDescriptor).use { input ->
-                                  log("Flux source ouvert avec succès. Taille totale : ${fmt(total)}")
+                                  log("Flux source ouvert. Taille totale : ${fmt(total)}")
                                   val buf = ByteArray(1 shl 20)
                                   var currentPartBytes = 0.toLong()
                                   while (true) {
@@ -1095,7 +1099,7 @@ jobs:
                               }
                           }
                           currentOutputStream?.flush(); currentOutputStream?.close()
-                          success = true; log("Découpage terminé avec succès.")
+                          success = true; log("Découpage terminé avec succès sur tous les blocs.")
                       } catch (e: Throwable) {
                           log("❌ ERREUR : ${e.message}")
                       }
@@ -1185,12 +1189,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.9.65
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.65.apk
+      - name: Renommer l'APK v2.1.2
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.1.2.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.65-apk
-          path: PkgMerger-v2.9.65.apk
+          name: pkg-merger-v2.1.2-apk
+          path: PkgMerger-v2.1.2.apk
           if-no-files-found: error
