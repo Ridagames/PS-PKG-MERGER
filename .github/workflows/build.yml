@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.61
+      - name: Générer le projet Android v2.9.65
         env:
           FORCE: '1'
         run: |
@@ -119,7 +119,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2961
+                  versionCode = 2965
                   versionName = "2.1.0"
               }
 
@@ -1064,8 +1064,10 @@ jobs:
                                       }
                                   } catch (_: Exception) {}
                               }
+                              // CORRECTION ICI : Utilisation de openFileDescriptor avec "w" pour débloquer l'écriture sur les gros fichiers Android
                               val pfdOut = contentResolver.openFileDescriptor(currentPartUri, "w") ?: throw IllegalStateException("Sortie impossible")
                               currentOutputStream = BufferedOutputStream(FileOutputStream(pfdOut.fileDescriptor), 1 shl 20)
+                              log("Flux de sortie natif ouvert avec succès pour : $partName")
                               partIndex++
                           }
 
@@ -1073,6 +1075,7 @@ jobs:
                           val pfdSource = contentResolver.openFileDescriptor(sourceUri, "r") ?: throw IllegalStateException("Source impossible")
                           pfdSource.use { pfd ->
                               FileInputStream(pfd.fileDescriptor).use { input ->
+                                  log("Flux source ouvert avec succès. Taille totale : ${fmt(total)}")
                                   val buf = ByteArray(1 shl 20)
                                   var currentPartBytes = 0.toLong()
                                   while (true) {
@@ -1182,12 +1185,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.9.61
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.61.apk
+      - name: Renommer l'APK v2.9.65
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.65.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.61-apk
-          path: PkgMerger-v2.9.61.apk
+          name: pkg-merger-v2.9.65-apk
+          path: PkgMerger-v2.9.65.apk
           if-no-files-found: error
