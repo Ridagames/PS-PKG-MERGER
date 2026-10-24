@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.1.3
+      - name: Générer le projet Android v2.1.4
         env:
           FORCE: '1'
         run: |
@@ -119,8 +119,8 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2130
-                  versionName = "2.1.3"
+                  versionCode = 2140
+                  versionName = "2.1.4"
               }
 
               compileOptions {
@@ -334,22 +334,10 @@ jobs:
 
               private var bgVideoView: AspectRatioVideoView? = null
               private var musicPlayer: MediaPlayer? = null
-              private var clickPlayer: MediaPlayer? = null
-              private var fnBusPlayer: MediaPlayer? = null
-
-              private var busImageView: ImageView? = null
-              private var rewardChestView: ImageView? = null
-
-              private val busHandler = Handler(Looper.getMainLooper())
-              private val random = Random()
-
-              private val NOTIF_ID_PROGRESS = 101
-              private val NOTIF_ID_RESULT = 102
 
               @Volatile private var processing = false
               @Volatile private var cancelled = false
               private val ui = Handler(Looper.getMainLooper())
-              private var lastNotifTime = 0.toLong()
 
               private lateinit var prefs: SharedPreferences
               private lateinit var rootFrameLayout: FrameLayout
@@ -499,7 +487,7 @@ jobs:
                       "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode"),
                       "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode"),
                       "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe"),
-                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.3)", "en" to "ℹ️ About (v2.1.3)")
+                      "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.4)", "en" to "ℹ️ About (v2.1.4)")
                   )
                   return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
               }
@@ -513,7 +501,7 @@ jobs:
                   checkPermissions()
                   showMergerScreen()
                   applyTheme()
-                  log("Application démarrée. Version 2.1.3")
+                  log("Application démarrée. Version 2.1.4")
               }
 
               private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
@@ -602,7 +590,7 @@ jobs:
 
               override fun onResume() { super.onResume(); setupBackgroundMedia() }
               override fun onPause() { super.onPause(); bgVideoView?.pause(); try { musicPlayer?.pause() } catch (_: Exception) {} }
-              override fun onDestroy() { super.onDestroy(); try { musicPlayer?.release() } catch (_: Exception) {} clickPlayer?.release() }
+              override fun onDestroy() { super.onDestroy(); try { musicPlayer?.release() } catch (_: Exception) {} }
 
               private fun applyTheme() {
                   val cfg = getThemeConfig(currentTheme)
@@ -847,7 +835,7 @@ jobs:
                       output = null; outView.text = tr("out_lbl"); rebuildButtons()
                   }
                   addMenuOption(tr("menu_universe")) { dialog.dismiss(); showThemeDialog() }
-                  addMenuOption(tr("menu_about")) { dialog.dismiss(); toast("PS PKG Freedom Hub v2.1.3") }
+                  addMenuOption(tr("menu_about")) { dialog.dismiss(); toast("PS PKG Freedom Hub v2.1.4") }
                   dialog.show()
               }
 
@@ -1178,12 +1166,12 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.1.3
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.1.3.apk
+      - name: Renommer l'APK v2.1.4
+        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.1.4.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.1.3-apk
-          path: PkgMerger-v2.1.3.apk
+          name: pkg-merger-v2.1.4-apk
+          path: PkgMerger-v2.1.4.apk
           if-no-files-found: error
