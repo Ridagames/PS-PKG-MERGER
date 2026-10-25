@@ -23,12 +23,29 @@ jobs:
         with:
           gradle-version: '8.8'
 
-      - name: Lister les tâches disponibles pour comprendre le projet
+      - name: Nettoyer les noms de fichiers récalcitrants pour Android
         shell: pwsh
         run: |
-          gradle tasks --all
+          # Renomme automatiquement les fichiers pour enlever tout caractère spécial au début
+          Get-ChildItem -Path "app/src/main/res" -Recurse | Where-Object { $_.Name -match '^\?' } | ForEach-Object {
+            $newName = $_.Name -replace '^\?', ''
+            Write-Host "Renommage de $_.FullName en $newName"
+            Rename-Item $_.FullName -NewName $newName
+          }
 
       - name: Compiler le projet
         shell: pwsh
         run: |
-          gradle build
+          gradle assembleRelease
+
+      - name: Préparer l'archive finale
+        shell: pwsh
+        run: |
+          # Crée un zip propre avec la structure complète
+          Compress-Archive -Path "app/build/outputs/apk/release/*" -DestinationPath "PS5PkgMerger-Windows.zip" -Force
+
+      - name: Sauvegarder l'artefact Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps5pkg-merger-windows
+          path: PS5PkgMerger-Windows.zip
