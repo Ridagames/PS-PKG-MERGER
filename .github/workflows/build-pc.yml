@@ -26,12 +26,13 @@ jobs:
       - name: Compiler le projet avec Gradle
         shell: pwsh
         run: |
-          gradle createDistribution
+          gradle packageDistributionForCurrentOS
 
       - name: Préparer l'archive finale
         shell: pwsh
         run: |
-          Compress-Archive -Path "build/compose/binaries/main/msi/*" -DestinationPath "PS5PkgMerger-Windows.zip" -Force
+          # Le dossier généré contient les installateurs/exécutables (msi, exe, etc.)
+          Compress-Archive -Path "build/compose/binaries/main/*" -DestinationPath "PS5PkgMerger-Windows.zip" -Force
 
       - name: Sauvegarder l'artefact Windows
         uses: actions/upload-artifact@v4
