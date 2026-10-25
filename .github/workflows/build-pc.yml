@@ -18,8 +18,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Configurer Gradle
+      - name: Configurer Gradle (Version 8.8 stable)
         uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.8'
 
       - name: Compiler le projet avec Gradle
         shell: pwsh
