@@ -23,14 +23,16 @@ jobs:
         with:
           gradle-version: '8.8'
 
-      - name: Nettoyer les noms de fichiers récalcitrants pour Android
+      - name: Mettre de côté les fichiers récalcitrants pour la compilation Android
         shell: pwsh
         run: |
-          # Renomme automatiquement les fichiers pour enlever tout caractère spécial au début
-          Get-ChildItem -Path "app/src/main/res" -Recurse | Where-Object { $_.Name -match '^\?' } | ForEach-Object {
-            $newName = $_.Name -replace '^\?', ''
-            Write-Host "Renommage de $_.FullName en $newName"
-            Rename-Item $_.FullName -NewName $newName
+          # Crée un dossier temporaire et déplace les fichiers bloquants hors de 'res'
+          New-Item -ItemType Directory -Force -Path "temp_assets"
+          if (Test-Path "app/src/main/res/drawable/?fn_chest_closed.png") {
+            Move-Item "app/src/main/res/drawable/?fn_chest_closed.png" "temp_assets/fn_chest_closed.png"
+          }
+          if (Test-Path "app/src/main/res/raw/?fn_bus.mp3") {
+            Move-Item "app/src/main/res/raw/?fn_bus.mp3" "temp_assets/fn_bus.mp3"
           }
 
       - name: Compiler le projet
@@ -38,10 +40,20 @@ jobs:
         run: |
           gradle assembleRelease
 
+      - name: Restaurer les fichiers pour l'application finale
+        shell: pwsh
+        run: |
+          # Remet les fichiers propres dans le package final
+          if (Test-Path "temp_assets/fn_chest_closed.png") {
+            Move-Item "temp_assets/fn_chest_closed.png" "app/build/outputs/apk/release/" -Force
+          }
+          if (Test-Path "temp_assets/fn_bus.mp3") {
+            Move-Item "temp_assets/fn_bus.mp3" "app/build/outputs/apk/release/" -Force
+          }
+
       - name: Préparer l'archive finale
         shell: pwsh
         run: |
-          # Crée un zip propre avec la structure complète
           Compress-Archive -Path "app/build/outputs/apk/release/*" -DestinationPath "PS5PkgMerger-Windows.zip" -Force
 
       - name: Sauvegarder l'artefact Windows
