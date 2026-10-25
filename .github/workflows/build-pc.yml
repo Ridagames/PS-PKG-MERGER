@@ -23,19 +23,12 @@ jobs:
         with:
           gradle-version: '8.8'
 
-      - name: Compiler le projet avec Gradle
+      - name: Lister les tâches disponibles pour comprendre le projet
         shell: pwsh
         run: |
-          gradle packageDistributionForCurrentOS
+          gradle tasks --all
 
-      - name: Préparer l'archive finale
+      - name: Compiler le projet
         shell: pwsh
         run: |
-          # Le dossier généré contient les installateurs/exécutables (msi, exe, etc.)
-          Compress-Archive -Path "build/compose/binaries/main/*" -DestinationPath "PS5PkgMerger-Windows.zip" -Force
-
-      - name: Sauvegarder l'artefact Windows
-        uses: actions/upload-artifact@v4
-        with:
-          name: ps5pkg-merger-windows
-          path: PS5PkgMerger-Windows.zip
+          gradle build
