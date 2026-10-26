@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK (Lite & Full)
 
 on:
   push:
@@ -54,7 +54,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android v2.9.73 (Suppression de la console de logs)
+      - name: Générer le projet Android avec Flavors (Lite & Full)
         env:
           FORCE: '1'
         run: |
@@ -63,6 +63,10 @@ jobs:
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/res/raw
           mkdir -p app/src/main/res/xml
+          
+          # Dossiers spécifiques pour les flavors (Full intègre les gros assets, Lite les ignore)
+          mkdir -p app/src/full/res/raw
+          mkdir -p app/src/full/res/drawable
 
           write() {
             f="$1"
@@ -129,6 +133,20 @@ jobs:
               }
 
               kotlinOptions { jvmTarget = "17" }
+
+              flavorDimensions.add("version")
+
+              productFlavors {
+                  create("lite") {
+                      dimension = "version"
+                      applicationIdSuffix = ".lite"
+                      resValue("string", "app_variant", "Lite")
+                  }
+                  create("full") {
+                      dimension = "version"
+                      resValue("string", "app_variant", "Full")
+                  }
+              }
 
               signingConfigs {
                   create("release") {
@@ -1402,16 +1420,15 @@ jobs:
                           if (conn.responseCode == 200) {
                               val response = conn.inputStream.bufferedReader().use { it.readText() }
                               val tagMatch = Regex("\"tag_name\"\\s*:\\s*\"([^\"]+)\"").find(response)
-                              val apkUrlMatch = Regex("\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.apk)\"").find(response)
 
-                              if (tagMatch != null && apkUrlMatch != null) {
+                              if (tagMatch != null) {
                                   val latestTag = tagMatch.groupValues[1].replace("v", "")
-                                  val apkUrl = apkUrlMatch.groupValues[1]
                                   val currentVersion = "2.1.0"
 
+                                  // Condition stricte : uniquement si supérieur à 2.1.0 (ex: 2.2.0 et plus)
                                   ui.post {
                                       if (isVersionNewer(latestTag, currentVersion)) {
-                                          showUpdateDialog(latestTag, apkUrl)
+                                          showUpdateDialog(latestTag)
                                       } else {
                                           toast(tr("toast_already_up_to_date"))
                                       }
@@ -1442,7 +1459,7 @@ jobs:
                   return false
               }
 
-              private fun showUpdateDialog(newVersion: String, apkUrl: String) {
+              private fun showUpdateDialog(newVersion: String) {
                   val cfg = getThemeConfig(currentTheme)
                   val dialogView = LinearLayout(this).apply {
                       orientation = LinearLayout.VERTICAL
@@ -1454,7 +1471,7 @@ jobs:
                       }
                   }
                   val titleTv = TextView(this).apply {
-                      text = "🎉 Nouvelle mise à jour dispo (v$newVersion) !"
+                      text = "🎉 Mise à jour disponible (v$newVersion) !"
                       textSize = 14f
                       setTextColor(cfg.primaryText)
                       setTypeface(null, Typeface.BOLD)
@@ -1463,48 +1480,59 @@ jobs:
                   dialogView.addView(titleTv)
 
                   val msgTv = TextView(this).apply {
-                      text = "Une nouvelle version de PS PKG Freedom Hub est disponible.\n\nVeux-tu la télécharger ?"
+                      text = "Une nouvelle version est disponible. Quelle version souhaites-tu télécharger ?"
                       textSize = 12f
                       setTextColor(Color.WHITE)
                       setPadding(0, 0, 0, dp(12))
                   }
                   dialogView.addView(msgTv)
 
-                  val btnLayout = LinearLayout(this).apply {
-                      orientation = LinearLayout.HORIZONTAL
-                      gravity = Gravity.END
-                  }
-                  val btnLater = Button(this).apply {
-                      text = "Plus tard"
-                      setTextColor(Color.WHITE)
-                      textSize = 12f
-                      setBackgroundColor(Color.TRANSPARENT)
-                  }
-                  val btnUpdate = Button(this).apply {
-                      text = "Mettre à jour"
+                  val btnFull = Button(this).apply {
+                      text = "⭐ Version Full (Avec univers)"
                       setTextColor(cfg.primaryText)
                       textSize = 12f
                       setTypeface(null, Typeface.BOLD)
                       setBackgroundColor(Color.TRANSPARENT)
+                      setOnClickListener {
+                          // Ouvre le lien de téléchargement direct de la version Full sur les releases GitHub
+                          val fullUrl = "https://github.com/Ridagames/Pkg-merge/releases/latest/download/PkgMerger-v${newVersion}-full.apk"
+                          downloadAndInstallApk(fullUrl)
+                      }
                   }
-                  btnLayout.addView(btnLater)
-                  btnLayout.addView(btnUpdate)
-                  dialogView.addView(btnLayout)
+                  dialogView.addView(btnFull, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
+                  val btnLite = Button(this).apply {
+                      text = "⚡ Version Lite (Allégée sans univers)"
+                      setTextColor(Color.CYAN)
+                      textSize = 12f
+                      setTypeface(null, Typeface.BOLD)
+                      setBackgroundColor(Color.TRANSPARENT)
+                      setOnClickListener {
+                          // Ouvre le lien de téléchargement direct de la version Lite sur les releases GitHub
+                          val liteUrl = "https://github.com/Ridagames/Pkg-merge/releases/latest/download/PkgMerger-v${newVersion}-lite.apk"
+                          downloadAndInstallApk(liteUrl)
+                      }
+                  }
+                  dialogView.addView(btnLite, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
+                  val btnLater = Button(this).apply {
+                      text = "Plus tard"
+                      setTextColor(Color.GRAY)
+                      textSize = 11f
+                      setBackgroundColor(Color.TRANSPARENT)
+                  }
+                  dialogView.addView(btnLater, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
                   val dialog = AlertDialog.Builder(this)
                       .setView(dialogView)
                       .create()
                   dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
                   btnLater.setOnClickListener { dialog.dismiss() }
-                  btnUpdate.setOnClickListener {
-                      dialog.dismiss()
-                      downloadAndInstallApk(apkUrl)
-                  }
                   dialog.show()
               }
 
               private fun downloadAndInstallApk(apkUrl: String) {
-                  toast("📥 Téléchargement...")
+                  toast("📥 Téléchargement en cours...")
                   Thread {
                       try {
                           val url = URL(apkUrl)
@@ -1525,7 +1553,7 @@ jobs:
                               installApk(apkFile)
                           }
                       } catch (e: Exception) {
-                          ui.post { toast("❌ Erreur : ${e.message}") }
+                          ui.post { toast("❌ Erreur de téléchargement : ${e.message}") }
                       }
                   }.start()
               }
@@ -2401,23 +2429,27 @@ jobs:
             exit 1
           fi
 
-      - name: Build APK Release
+      - name: Build APK Release (Full & Lite)
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           ALIAS: ${{ secrets.ALIAS }}
         run: |
-          gradle clean assembleRelease --no-daemon --stacktrace \
+          gradle clean assembleFullRelease assembleLiteRelease --no-daemon --stacktrace \
             -Pandroid.injected.signing.store.file="${{ github.workspace }}/app/release.jks" \
             -Pandroid.injected.signing.store.password="${KEYSTORE_PASSWORD}" \
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer l'APK v2.9.73
-        run: cp app/build/outputs/apk/release/app-release.apk PkgMerger-v2.9.73.apk
+      - name: Renommer les APKs (Full & Lite)
+        run: |
+          cp app/build/outputs/apk/full/release/app-full-release.apk PkgMerger-v2.9.73-full.apk
+          cp app/build/outputs/apk/lite/release/app-lite-release.apk PkgMerger-v2.9.73-lite.apk
 
-      - name: Upload APK
+      - name: Upload APKs (Full & Lite)
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.73-apk
-          path: PkgMerger-v2.9.73.apk
+          name: pkg-merger-v2.9.73-apks
+          path: |
+            PkgMerger-v2.9.73-full.apk
+            PkgMerger-v2.9.73-lite.apk
           if-no-files-found: error
