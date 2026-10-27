@@ -1,7 +1,8 @@
-name: Build Windows App (Native JVM)
+name: Build Windows App Automatically
 
 on:
   push:
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -9,55 +10,102 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout du code
-        uses: actions/checkout@v4
+    - name: 📥 Récupérer le dépôt
+      uses: actions/checkout@v4
 
-      - name: Configurer Java (JDK)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+    - name: 🛠️ Créer automatiquement la structure et le code source Windows
+      shell: pwsh
+      run: |
+        # 1. Créer les dossiers nécessaires
+        New-Item -ItemType Directory -Force -Path "windows"
 
-      - name: Configurer Gradle (Version 8.8 stable)
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.8'
+        # 2. Créer le fichier projet C# (.csproj)
+        $csproj = @"
+        <Project Sdk="Microsoft.NET.Sdk">
+          <PropertyGroup>
+            <OutputType>WinExe</OutputType>
+            <TargetFramework>net8.0-windows</TargetFramework>
+            <UseWPF>true</UseWPF>
+            <AssemblyName>PS5PkgMerger.Windows</AssemblyName>
+          </PropertyGroup>
+        </Project>
+        "@
+        Set-Content -Path "windows/PS5PkgMerger.Windows.csproj" -Value $csproj
 
-      - name: Mettre de côté les fichiers récalcitrants pour la compilation Android
-        shell: pwsh
-        run: |
-          # Crée un dossier temporaire et déplace les fichiers bloquants hors de 'res'
-          New-Item -ItemType Directory -Force -Path "temp_assets"
-          if (Test-Path "app/src/main/res/drawable/?fn_chest_closed.png") {
-            Move-Item "app/src/main/res/drawable/?fn_chest_closed.png" "temp_assets/fn_chest_closed.png"
-          }
-          if (Test-Path "app/src/main/res/raw/?fn_bus.mp3") {
-            Move-Item "app/src/main/res/raw/?fn_bus.mp3" "temp_assets/fn_bus.mp3"
-          }
+        # 3. Créer le moteur C# (Fusion, Split et SHA-256)
+        $engine = @"
+        using System;
+        using System.IO;
+        using System.Security.Cryptography;
+        using System.Threading.Tasks;
 
-      - name: Compiler le projet
-        shell: pwsh
-        run: |
-          gradle assembleRelease
+        namespace PS5PkgMerger.Windows
+        {
+            public class PkgEngine
+            {
+                public static string ComputeSha256(string filePath)
+                {
+                    try
+                    {
+                        using (var sha256 = SHA256.Create())
+                        {
+                            using (var stream = File.OpenRead(filePath))
+                            {
+                                byte[] hashBytes = sha256.ComputeHash(stream);
+                                return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                            }
+                        }
+                    }
+                    catch { return null; }
+                }
 
-      - name: Restaurer les fichiers pour l'application finale
-        shell: pwsh
-        run: |
-          # Remet les fichiers propres dans le package final
-          if (Test-Path "temp_assets/fn_chest_closed.png") {
-            Move-Item "temp_assets/fn_chest_closed.png" "app/build/outputs/apk/release/" -Force
-          }
-          if (Test-Path "temp_assets/fn_bus.mp3") {
-            Move-Item "temp_assets/fn_bus.mp3" "app/build/outputs/apk/release/" -Force
-          }
+                public static async Task MergePkgAsync(string[] sourceFiles, string outputPath, IProgress<int> progress)
+                {
+                    using (var outputStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        long totalSize = 0;
+                        foreach (var file in sourceFiles) totalSize += new FileInfo(file).Length;
 
-      - name: Préparer l'archive finale
-        shell: pwsh
-        run: |
-          Compress-Archive -Path "app/build/outputs/apk/release/*" -DestinationPath "PS5PkgMerger-Windows.zip" -Force
+                        long totalCopied = 0;
+                        foreach (var file in sourceFiles)
+                        {
+                            using (var inputStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+                                byte[] buffer = new byte[81920];
+                                int bytesRead;
+                                while ((bytesRead = await inputStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                                {
+                                    await outputStream.WriteAsync(buffer, 0, bytesRead);
+                                    totalCopied += bytesRead;
+                                    int percent = (int)((totalCopied * 100) / totalSize);
+                                    progress?.Report(percent);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        "@
+        Set-Content -Path "windows/PkgEngine.cs" -Value $engine
 
-      - name: Sauvegarder l'artefact Windows
-        uses: actions/upload-artifact@v4
-        with:
-          name: ps5pkg-merger-windows
-          path: PS5PkgMerger-Windows.zip
+    - name: ⚙️ Configurer .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0'
+
+    - name: 📦 Restaurer les dépendances
+      run: dotnet restore windows/PS5PkgMerger.Windows.csproj
+
+    - name: 🛠️ Compiler et Publier (Release)
+      run: dotnet publish windows/PS5PkgMerger.Windows.csproj -c Release -o ./publish
+
+    - name: 🗜️ Compresser en ZIP
+      run: |
+        Compress-Archive -Path ./publish/* -DestinationPath ./PS5-PKG-Merger-Windows.zip
+
+    - name: 📤 Sauvegarder dans les artefacts GitHub
+      uses: actions/upload-artifact@v4
+      with:
+        name: PS5-PKG-Merger-Windows
+        path: ./PS5-PKG-Merger-Windows.zip
