@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -40,7 +42,7 @@ tasks.register("sanitizeResourceNames") {
         resDirs.forEach { file ->
             if (file.isFile && file.name.startsWith("?")) {
                 val cleanName = file.name.replace("?", "")
-                val newFile = java.io.File(file.parent, cleanName)
+                val newFile = File(file.parent, cleanName)
                 if (file.renameTo(newFile)) {
                     println("✅ Nettoyage automatique : ${file.name} renommé en $cleanName")
                 }
