@@ -12,7 +12,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -25,14 +24,11 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
-import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
-import android.provider.Settings
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
@@ -47,9 +43,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.VideoView
-import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
-import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
@@ -99,14 +93,6 @@ class MainActivity : Activity() {
 
     private var bgVideoView: AspectRatioVideoView? = null
     private var musicPlayer: MediaPlayer? = null
-    private var clickPlayer: MediaPlayer? = null
-    private var fnBusPlayer: MediaPlayer? = null
-
-    private var busImageView: ImageView? = null
-    private var rewardChestView: ImageView? = null
-
-    private val busHandler = Handler(Looper.getMainLooper())
-    private val random = Random()
 
     private val NOTIF_ID_PROGRESS = 101
     private val NOTIF_ID_RESULT = 102
@@ -245,15 +231,7 @@ class MainActivity : Activity() {
             "menu_options" to mapOf("fr" to "⚙️ OPTIONS & MENU", "en" to "⚙️ OPTIONS & MENU"),
             "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode"),
             "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode"),
-            "menu_universe" to mapOf("fr" to "🎨 Changer d'Univers", "en" to "🎨 Change Universe"),
-            "menu_lang" to mapOf("fr" to "🌐 Changer la Langue / Language", "en" to "🌐 Change Language"),
-            "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates"),
-            "menu_about" to mapOf("fr" to "ℹ️ À propos (v2.1.0)", "en" to "ℹ️ About (v2.1.0)"),
-            "dialog_universe_title" to mapOf("fr" to "🌟 CHOISIS TON UNIVERS GAMING", "en" to "🌟 CHOOSE YOUR GAMING UNIVERSE"),
-            "dialog_lang_title" to mapOf("fr" to "🌐 CHOISIR LA LANGUE", "en" to "🌐 CHOOSE LANGUAGE"),
-            "toast_checking_updates" to mapOf("fr" to "🔍 Recherche de mises à jour...", "en" to "🔍 Checking for updates..."),
-            "toast_already_up_to_date" to mapOf("fr" to "✅ Ton application est déjà à jour (v2.1.0) !", "en" to "✅ Your application is already up to date (v2.1.0) !"),
-            "bus_pop" to mapOf("fr" to "Tout le monde descend !", "en" to "Everyone out!")
+            "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates")
         )
         return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
     }
@@ -261,13 +239,7 @@ class MainActivity : Activity() {
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
-        
-        if (BuildConfig.FLAVOR == "lite") {
-            currentTheme = "CLASSIC"
-        } else {
-            currentTheme = prefs.getString("theme", "CLASSIC") ?: "CLASSIC"
-        }
-        
+        currentTheme = if (BuildConfig.FLAVOR == "lite") "CLASSIC" else (prefs.getString("theme", "CLASSIC") ?: "CLASSIC")
         currentLang = prefs.getString("lang", "fr") ?: "fr"
         
         createNotificationChannel()
@@ -278,12 +250,6 @@ class MainActivity : Activity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
-    private fun getResId(name: String): Int {
-        var id = resources.getIdentifier(name, "drawable", packageName)
-        if (id == 0) id = resources.getIdentifier("img_$name", "drawable", packageName)
-        return id
-    }
-
     @SuppressLint("ClickableViewAccessibility")
     private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, treeSide: Int, allowDuringProcessing: Boolean = false, onClickAction: () -> Unit): View {
         val cfg = getThemeConfig(currentTheme)
@@ -291,17 +257,6 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(4), 0, dp(4))
-        }
-
-        if (currentTheme == "FORTNITE" && (treeSide == 1 || treeSide == 3)) {
-            val treeRes = getResId("fn_tree1")
-            if (treeRes != 0) {
-                val treeIv = ImageView(this).apply {
-                    setImageResource(treeRes)
-                    scaleType = ImageView.ScaleType.FIT_CENTER
-                }
-                container.addView(treeIv, LinearLayout.LayoutParams(dp(54), dp(78)).apply { rightMargin = dp(8) })
-            }
         }
 
         val buttonContent = LinearLayout(this).apply {
@@ -315,12 +270,6 @@ class MainActivity : Activity() {
             cornerRadius = dp(6).toFloat()
             setStroke(dp(2), Color.parseColor(borderHexStr))
         }
-        
-        val pressedBg = GradientDrawable().apply {
-            setColor(Color.parseColor(cfg.pressColor))
-            cornerRadius = dp(6).toFloat()
-            setStroke(dp(3), Color.WHITE)
-        }
         buttonContent.background = normalBg
 
         val tv = TextView(this).apply {
@@ -331,19 +280,7 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
         }
         buttonContent.addView(tv, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
-
         container.addView(buttonContent, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-
-        if (currentTheme == "FORTNITE" && (treeSide == 2 || treeSide == 3)) {
-            val treeRes = getResId("fn_tree2")
-            if (treeRes != 0) {
-                val treeIv = ImageView(this).apply {
-                    setImageResource(treeRes)
-                    scaleType = ImageView.ScaleType.FIT_CENTER
-                }
-                container.addView(treeIv, LinearLayout.LayoutParams(dp(54), dp(78)).apply { leftMargin = dp(8) })
-            }
-        }
 
         buttonContent.setOnClickListener {
             if (processing && !allowDuringProcessing) {
@@ -494,24 +431,6 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun updateProgressNotif(msg: String, pct: Int) {
-        try {
-            val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) Notification.Builder(this, "pkg_channel") else @Suppress("DEPRECATION") Notification.Builder(this)
-            val notification = builder.setContentTitle("⚡ PS PKG Hub").setContentText(msg).setSmallIcon(R.drawable.ic_app_logo).setProgress(100, pct, false).setOngoing(true).build()
-            getSystemService(NotificationManager::class.java).notify(NOTIF_ID_PROGRESS, notification)
-        } catch (_: Exception) {}
-    }
-
-    private fun showResultNotif(title: String, message: String) {
-        try {
-            val nm = getSystemService(NotificationManager::class.java)
-            nm.cancel(NOTIF_ID_PROGRESS)
-            val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) Notification.Builder(this, "pkg_channel") else @Suppress("DEPRECATION") Notification.Builder(this)
-            val notification = builder.setContentTitle(title).setContentText(message).setSmallIcon(R.drawable.ic_app_logo).setAutoCancel(true).build()
-            nm.notify(NOTIF_ID_RESULT, notification)
-        } catch (_: Exception) {}
-    }
-
     private fun showMergerScreen() {
         rootFrameLayout = FrameLayout(this)
         bgVideoView = AspectRatioVideoView(this).apply {
@@ -594,7 +513,7 @@ class MainActivity : Activity() {
         card3.addView(verifyBox, lp())
         deleteBox = CheckBox(this).apply { text = tr("chk_delete"); isChecked = false; textSize = 12f }
         card3.addView(deleteBox, lp())
-        hashField = EditText(this).apply { hint = tr("hash_hint"); textColor = Color.WHITE; textSize = 11f; typeface = Typeface.MONOSPACE }
+        hashField = EditText(this).apply { hint = tr("hash_hint"); setTextColor(Color.WHITE); textSize = 11f; typeface = Typeface.MONOSPACE }
         card3.addView(hashField, lp())
         hashView = text("", 11f, Color.CYAN).apply { typeface = Typeface.MONOSPACE }
         card3.addView(hashView, lp())
@@ -619,7 +538,7 @@ class MainActivity : Activity() {
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         fun addMenu(txt: String, act: () -> Unit) {
-            val btn = Button(this).apply { text = txt; textColor = Color.WHITE; textSize = 12f; gravity = Gravity.START or Gravity.CENTER_VERTICAL; setBackgroundColor(Color.TRANSPARENT); setOnClickListener { act() } }
+            val btn = Button(this).apply { text = txt; setTextColor(Color.WHITE); textSize = 12f; gravity = Gravity.START or Gravity.CENTER_VERTICAL; setBackgroundColor(Color.TRANSPARENT); setOnClickListener { act() } }
             dialogView.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)))
         }
 
@@ -638,7 +557,7 @@ class MainActivity : Activity() {
     private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) }
     private fun lpCard() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12); bottomMargin = dp(4) }
     private fun createCard() = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16)).also { cardViews.add(this) } }
-    private fun text(t: String, size: Float, color: Int, bold: Boolean = false) = TextView(this).apply { text = t; textSize = size; textColor = color; if (bold) setTypeface(typeface, Typeface.BOLD) }
+    private fun text(t: String, size: Float, color: Int, bold: Boolean = false) = TextView(this).apply { text = t; textSize = size; setTextColor(color); if (bold) setTypeface(typeface, Typeface.BOLD) }
     private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
 
     private fun pick() { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE); type = "*/*"; putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true) }, 1) }
@@ -775,7 +694,7 @@ class MainActivity : Activity() {
                 success = !cancelled
             } catch (_: Exception) {}
 
-            // Vérification SHA-256 si activée
+            // Vérification SHA-256 si activée via la case à cocher
             var computedHash: String? = null
             if (success && verifyBox.isChecked && lastCreatedUri != null) {
                 ui.post { statusView.text = "Calcul du SHA-256..." }
@@ -787,7 +706,9 @@ class MainActivity : Activity() {
                 if (success) {
                     bar.progress = 1000
                     lastHash = computedHash
-                    if (computedHash != null) hashView.text = "SHA-256 : $computedHash"
+                    if (computedHash != null) {
+                        hashView.text = "SHA-256 : $computedHash"
+                    }
                     statusView.text = "Découpage réussi !"
                 } else {
                     statusView.text = "Découpage échoué/annulé."
@@ -829,7 +750,7 @@ class MainActivity : Activity() {
                 success = !cancelled
             } catch (_: Exception) {}
 
-            // Vérification SHA-256 si activée
+            // Vérification SHA-256 si activée via la case à cocher
             var computedHash: String? = null
             if (success && verifyBox.isChecked) {
                 ui.post { statusView.text = "Calcul du SHA-256..." }
@@ -841,7 +762,9 @@ class MainActivity : Activity() {
                 if (success) {
                     bar.progress = 1000
                     lastHash = computedHash
-                    if (computedHash != null) hashView.text = "SHA-256 : $computedHash"
+                    if (computedHash != null) {
+                        hashView.text = "SHA-256 : $computedHash"
+                    }
                     statusView.text = "Fusion réussie !"
                 } else {
                     statusView.text = "Fusion échouée/annulée."
