@@ -13,12 +13,12 @@ jobs:
     - name: 📥 Récupérer le dépôt
       uses: actions/checkout@v4
 
-    - name: 🛠️ Générer le code C# WPF complet (Parité Totale avec Android)
+    - name: 🛠️ Générer le code C# WPF corrigé
       shell: pwsh
       run: |
         New-Item -ItemType Directory -Force -Path "windows"
 
-        # 1. Fichier Projet .csproj (WPF .NET 8.0 avec support multimédia)
+        # 1. Fichier Projet .csproj
         $csproj = @"
         <Project Sdk="Microsoft.NET.Sdk">
           <PropertyGroup>
@@ -53,26 +53,22 @@ jobs:
         "@
         Set-Content -Path "windows/App.xaml.cs" -Value $appCode
 
-        # 3. MainWindow.xaml.cs : Clone exact de l'interface Android (Thèmes, Vidéos, Menus, Univers)
+        # 3. MainWindow.xaml.cs corrigé (sans erreurs de classes)
         $mainWindowCode = @"
         using System;
         using System.IO;
-        using System.Security.Cryptography;
         using System.Windows;
         using System.Windows.Controls;
         using System.Windows.Media;
-        using System.Windows.Media.Imaging;
-        using System.Windows.Threading;
 
         namespace PS5PkgMerger.Windows
         {
             public partial class MainWindow : Window
             {
-                private TextBlock titleView, subtitleView, statusView, checkView, outView;
+                private TextBlock titleView, subtitleView, statusText, checkText, outText;
                 private ProgressBar bar;
                 private MediaElement bgVideoView;
                 private string currentTheme = "CLASSIC";
-                private string currentLang = "fr";
                 private string appMode = "MERGE";
 
                 public MainWindow()
@@ -84,7 +80,6 @@ jobs:
 
                     var rootGrid = new Grid();
 
-                    // Lecteur Vidéo d'arrière-plan pour les univers (GoW, Fortnite)
                     bgVideoView = new MediaElement
                     {
                         LoadedBehavior = MediaState.Manual,
@@ -94,11 +89,9 @@ jobs:
                     };
                     rootGrid.Children.Add(bgVideoView);
 
-                    // Conteneur principal par-dessus la vidéo
-                    var mainScroll = new ScrollViewerViewer();
+                    var mainScroll = new ScrollViewer();
                     var mainStack = new StackPanel { Margin = new Thickness(16) };
 
-                    // En-tête
                     var headerGrid = new Grid();
                     headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                     headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -126,9 +119,11 @@ jobs:
 
                     mainStack.Children.Add(headerGrid);
 
-                    // Section 1 : Sources
+                    // Section 1
                     var card1 = CreateCard();
-                    card1.Children.Add(new TextBlock { Text = "1. FICHIERS SOURCE (PKG / PARTIES)", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.Cyan, FontFamily = new FontFamily("Consolas") });
+                    card1.Child = new StackPanel();
+                    var card1Content = (StackPanel)card1.Child;
+                    card1Content.Children.Add(new TextBlock { Text = "1. FICHIERS SOURCE (PKG / PARTIES)", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.Cyan, FontFamily = new FontFamily("Consolas") });
                     
                     var btnPick = CreateStyledButton("CHOISIR LES FICHIERS", "#0284C7", "#38BDF8");
                     btnPick.Click += (s, e) => {
@@ -137,27 +132,24 @@ jobs:
                             statusText.Text = $"Fichiers chargés : {dlg.FileNames.Length}";
                         }
                     };
-                    card1.Children.Add(btnPick);
-
-                    var btnDir = CreateStyledButton("CHOISIR UN DOSSIER COMPLET", "#0369A1", "#38BDF8");
-                    card1.Children.Add(btnDir);
-
-                    var btnRev = CreateStyledButton("INVERSER L'ORDRE DES PARTIES", "#334155", "#64748B");
-                    card1.Children.Add(btnRev);
+                    card1Content.Children.Add(btnPick);
+                    card1Content.Children.Add(CreateStyledButton("CHOISIR UN DOSSIER COMPLET", "#0369A1", "#38BDF8"));
+                    card1Content.Children.Add(CreateStyledButton("INVERSER L'ORDRE DES PARTIES", "#334155", "#64748B"));
 
                     checkText = new TextBlock { Text = "AUCUN FICHIER SÉLECTIONNÉ", FontSize = 11, Foreground = Brushes.Gray, FontFamily = new FontFamily("Consolas"), Margin = new Thickness(0, 8, 0, 0) };
-                    card1.Children.Add(checkText);
+                    card1Content.Children.Add(checkText);
                     mainStack.Children.Add(card1);
 
-                    // Section 2 : Sortie & Traitement
+                    // Section 2
                     var card2 = CreateCard();
-                    card2.Children.Add(new TextBlock { Text = "2. SORTIE & TRAITEMENT", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.Cyan, FontFamily = new FontFamily("Consolas") });
+                    card2.Child = new StackPanel();
+                    var card2Content = (StackPanel)card2.Child;
+                    card2Content.Children.Add(new TextBlock { Text = "2. SORTIE & TRAITEMENT", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.Cyan, FontFamily = new FontFamily("Consolas") });
 
-                    var btnOut = CreateStyledButton("DÉFINIR EMPLACEMENT DE SORTIE", "#0D9488", "#14B8A6");
-                    card2.Children.Add(btnOut);
+                    card2Content.Children.Add(CreateStyledButton("DÉFINIR EMPLACEMENT DE SORTIE", "#0D9488", "#14B8A6"));
 
                     outText = new TextBlock { Text = "Sortie : —", FontSize = 11, Foreground = Brushes.Gray, FontFamily = new FontFamily("Consolas"), Margin = new Thickness(0, 4, 0, 8) };
-                    card2.Children.Add(outText);
+                    card2Content.Children.Add(outText);
 
                     var actionRow = new StackPanel { Orientation = Orientation.Horizontal };
                     var btnGo = CreateStyledButton("▶️ LANCER LA FUSION", "#16A34A", "#22C55E");
@@ -165,13 +157,13 @@ jobs:
                     btnCancel.Width = 110;
                     actionRow.Children.Add(btnGo);
                     actionRow.Children.Add(btnCancel);
-                    card2.Children.Add(actionRow);
+                    card2Content.Children.Add(actionRow);
 
                     bar = new ProgressBar { Height = 18, Maximum = 1000, Value = 0, Margin = new Thickness(0, 10, 0, 4) };
-                    card2.Children.Add(bar);
+                    card2Content.Children.Add(bar);
 
-                    statusText = new TextBlock { Text = "Prêt.", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Colors.Magenta, FontFamily = new FontFamily("Consolas") };
-                    card2.Children.Add(statusText);
+                    statusText = new TextBlock { Text = "Prêt.", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.Magenta, FontFamily = new FontFamily("Consolas") };
+                    card2Content.Children.Add(statusText);
                     mainStack.Children.Add(card2);
 
                     mainScroll.Content = mainStack;
@@ -181,11 +173,9 @@ jobs:
                     ApplyTheme("CLASSIC");
                 }
 
-                private TextBlock checkText, outText, statusText;
-
-                private StackPanel CreateCard()
+                private Border CreateCard()
                 {
-                    return new StackPanel
+                    return new Border
                     {
                         Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
                         Margin = new Thickness(0, 10, 0, 5),
@@ -225,7 +215,7 @@ jobs:
                     AddMenuBtn(stack, "🎨 Changer d'Univers", () => { menuWin.Close(); ShowUniverseDialog(); });
                     AddMenuBtn(stack, "🌐 Changer la Langue", () => { menuWin.Close(); });
                     AddMenuBtn(stack, "🔄 Vérifier les mises à jour", () => { MessageBox.Show("Application déjà à jour (v2.1.0)"); });
-                    AddMenuBtn(stack, "ℹ️ À propos (v2.1.0)", () => { MessageBox.Show("PS PKG Freedom Hub v2.1.0\nParité totale Android/Windows"); });
+                    AddMenuBtn(stack, "ℹ️ À propos (v2.1.0)", () => { MessageBox.Show("PS PKG Freedom Hub v2.1.0"); });
 
                     menuWin.Content = stack;
                     menuWin.ShowDialog();
