@@ -32,7 +32,27 @@ jobs:
         "@
         Set-Content -Path "windows/PS5PkgMerger.Windows.csproj" -Value $csproj
 
-        # 3. Créer le moteur C# (Fusion, Split et SHA-256)
+        # 3. Créer le point d'entrée principal (Méthode Main requise pour l'exécutable)
+        $appCode = @"
+        using System;
+        using System.Windows;
+
+        namespace PS5PkgMerger.Windows
+        {
+            public partial class App : Application
+            {
+                [STAThread]
+                public static void Main()
+                {
+                    var app = new App();
+                    app.Run();
+                }
+            }
+        }
+        "@
+        Set-Content -Path "windows/App.xaml.cs" -Value $appCode
+
+        # 4. Créer le moteur C# (Fusion, Split et SHA-256)
         $engine = @"
         using System;
         using System.IO;
