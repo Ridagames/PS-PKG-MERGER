@@ -1,4 +1,4 @@
-name: Build Windows App (Gradle 8.4)
+name: Build Windows App (Auto Wrapper)
 
 on:
   push:
@@ -19,14 +19,19 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: 🐘 Configurer Gradle (Version 8.4 exacte)
+    - name: 🐘 Configurer Gradle (Version 8.4)
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.4'
 
-    - name: 🛠️ Compiler l'application avec Gradle
+    - name: 🛠️ Générer le wrapper Gradle et compiler l'application
       shell: pwsh
-      run: ./gradlew assembleDebug --info
+      run: |
+        # Génère les fichiers gradlew manquants à la volée
+        gradle wrapper --gradle-version 8.4
+        
+        # Lance la compilation avec le wrapper fraîchement créé
+        ./gradlew.bat assembleDebug --info
 
     - name: 📤 Sauvegarder les artefacts
       uses: actions/upload-artifact@v4
