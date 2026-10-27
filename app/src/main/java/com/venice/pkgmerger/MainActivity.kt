@@ -12,8 +12,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -23,7 +21,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.ParcelFileDescriptor
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.DocumentsContract
@@ -46,8 +43,6 @@ import android.widget.VideoView
 import androidx.documentfile.provider.DocumentFile
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
 import java.security.MessageDigest
 import java.util.Locale
 import java.util.Random
@@ -94,13 +89,9 @@ class MainActivity : Activity() {
     private var bgVideoView: AspectRatioVideoView? = null
     private var musicPlayer: MediaPlayer? = null
 
-    private val NOTIF_ID_PROGRESS = 101
-    private val NOTIF_ID_RESULT = 102
-
     @Volatile private var processing = false
     @Volatile private var cancelled = false
     private val ui = Handler(Looper.getMainLooper())
-    private var lastNotifTime = 0.toLong()
 
     private lateinit var prefs: SharedPreferences
     private lateinit var rootFrameLayout: FrameLayout
@@ -207,31 +198,30 @@ class MainActivity : Activity() {
 
     private fun tr(key: String): String {
         val map = mapOf(
-            "app_title" to mapOf("fr" to "⚡ PS PKG FREEDOM HUB", "en" to "⚡ PS PKG FREEDOM HUB"),
-            "universe" to mapOf("fr" to "UNIVERS", "en" to "UNIVERSE"),
-            "menu_btn" to mapOf("fr" to "⚙️ MENU", "en" to "⚙️ MENU"),
-            "sec1" to mapOf("fr" to "1. FICHIERS SOURCE (PKG / PARTIES)", "en" to "1. SOURCE FILES (PKG / PARTS)"),
-            "sec1_split" to mapOf("fr" to "1. FICHIER SOURCE UNIQUE (.PKG)", "en" to "1. SINGLE SOURCE FILE (.PKG)"),
-            "btn_pick" to mapOf("fr" to "CHOISIR LES FICHIERS", "en" to "CHOOSE FILES"),
-            "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET", "en" to "CHOOSE FOLDER"),
-            "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES", "en" to "REVERSE PARTS ORDER"),
-            "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT", "en" to "2. OUTPUT & PROCESSING"),
-            "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE", "en" to "SET OUTPUT LOCATION"),
-            "out_lbl" to mapOf("fr" to "Sortie : —", "en" to "Output : —"),
-            "btn_go_merge" to mapOf("fr" to "▶️ LANCER LA FUSION", "en" to "▶️ START MERGE"),
-            "btn_go_split" to mapOf("fr" to "▶️ LANCER LE DÉCOUPAGE", "en" to "▶️ START SPLITTING"),
-            "btn_cancel" to mapOf("fr" to "❌ ANNULER", "en" to "❌ CANCEL"),
-            "status_ready" to mapOf("fr" to "Prêt.", "en" to "Ready."),
-            "status_split_ready" to mapOf("fr" to "Prêt à découper.", "en" to "Ready to split."),
-            "sec3" to mapOf("fr" to "3. SÉCURITÉ & VÉRIFICATION", "en" to "3. SECURITY & CHECKSUM"),
-            "chk_verify" to mapOf("fr" to "Contrôle d'intégrité après écriture", "en" to "Integrity check after write"),
-            "chk_delete" to mapOf("fr" to "Supprimer les sources après succès", "en" to "Delete sources after success"),
-            "hash_hint" to mapOf("fr" to "Coller un hash SHA-256 de contrôle", "en" to "Paste control SHA-256 hash"),
-            "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256", "en" to "📋 Copy SHA-256"),
-            "menu_options" to mapOf("fr" to "⚙️ OPTIONS & MENU", "en" to "⚙️ OPTIONS & MENU"),
-            "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter", "en" to "📂 Switch to Splitter Mode"),
-            "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion", "en" to "🔗 Switch to Merge Mode"),
-            "menu_update" to mapOf("fr" to "🔄 Vérifier les mises à jour", "en" to "🔄 Check for Updates")
+            "app_title" to mapOf("fr" to "⚡ PS PKG FREEDOM HUB"),
+            "universe" to mapOf("fr" to "UNIVERS"),
+            "menu_btn" to mapOf("fr" to "⚙️ MENU"),
+            "sec1" to mapOf("fr" to "1. FICHIERS SOURCE (PKG / PARTIES)"),
+            "sec1_split" to mapOf("fr" to "1. FICHIER SOURCE UNIQUE (.PKG)"),
+            "btn_pick" to mapOf("fr" to "CHOISIR LES FICHIERS"),
+            "btn_dir" to mapOf("fr" to "CHOISIR UN DOSSIER COMPLET"),
+            "btn_rev" to mapOf("fr" to "INVERSER L'ORDRE DES PARTIES"),
+            "sec2" to mapOf("fr" to "2. SORTIE & TRAITEMENT"),
+            "btn_out" to mapOf("fr" to "DÉFINIR EMPLACEMENT DE SORTIE"),
+            "out_lbl" to mapOf("fr" to "Sortie : —"),
+            "btn_go_merge" to mapOf("fr" to "▶️ LANCER LA FUSION"),
+            "btn_go_split" to mapOf("fr" to "▶️ LANCER LE DÉCOUPAGE"),
+            "btn_cancel" to mapOf("fr" to "❌ ANNULER"),
+            "status_ready" to mapOf("fr" to "Prêt."),
+            "status_split_ready" to mapOf("fr" to "Prêt à découper."),
+            "sec3" to mapOf("fr" to "3. SÉCURITÉ & VÉRIFICATION"),
+            "chk_verify" to mapOf("fr" to "Contrôle d'intégrité après écriture"),
+            "chk_delete" to mapOf("fr" to "Supprimer les sources après succès"),
+            "hash_hint" to mapOf("fr" to "Coller un hash SHA-256 de contrôle"),
+            "btn_copy" to mapOf("fr" to "📋 Copier le SHA-256"),
+            "menu_options" to mapOf("fr" to "⚙️ OPTIONS & MENU"),
+            "mode_split" to mapOf("fr" to "📂 Basculer en Mode Splitter"),
+            "mode_merge" to mapOf("fr" to "🔗 Basculer en Mode Fusion")
         )
         return map[key]?.get(currentLang) ?: map[key]?.get("fr") ?: key
     }
@@ -251,8 +241,7 @@ class MainActivity : Activity() {
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
     @SuppressLint("ClickableViewAccessibility")
-    private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, treeSide: Int, allowDuringProcessing: Boolean = false, onClickAction: () -> Unit): View {
-        val cfg = getThemeConfig(currentTheme)
+    private fun createCustomButton(labelText: String, bgHex: String, borderHexStr: String, allowDuringProcessing: Boolean = false, onClickAction: () -> Unit): View {
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -265,12 +254,11 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(14), dp(16), dp(14))
         }
 
-        val normalBg = GradientDrawable().apply {
+        buttonContent.background = GradientDrawable().apply {
             setColor(Color.parseColor(bgHex))
             cornerRadius = dp(6).toFloat()
             setStroke(dp(2), Color.parseColor(borderHexStr))
         }
-        buttonContent.background = normalBg
 
         val tv = TextView(this).apply {
             text = labelText
@@ -294,45 +282,6 @@ class MainActivity : Activity() {
 
         return container
     }
-
-    private fun setupBackgroundMedia() {
-        try {
-            if (musicPlayer != null) {
-                if (!musicPlayer!!.isPlaying) musicPlayer?.start()
-                bgVideoView?.start()
-                return
-            }
-            bgVideoView?.stopPlayback()
-            bgVideoView?.visibility = View.GONE
-            
-            if (currentTheme == "GOW" || currentTheme == "FORTNITE") {
-                bgVideoView?.visibility = View.VISIBLE
-                val videoName = if (currentTheme == "GOW") "gow_bg" else "fn_bg"
-                val videoResId = resources.getIdentifier(videoName, "raw", packageName)
-                if (videoResId != 0 && bgVideoView != null) {
-                    val uri = Uri.parse("android.resource://$packageName/$videoResId")
-                    bgVideoView?.setVideoURI(uri)
-                    bgVideoView?.setOnPreparedListener { mp ->
-                        mp.isLooping = true
-                        mp.setVolume(0f, 0f)
-                        bgVideoView?.setVideoSize(mp.videoWidth, mp.videoHeight)
-                        bgVideoView?.start()
-                    }
-                }
-                val musicName = if (currentTheme == "GOW") "gow_music" else "fn_music"
-                val musicResId = resources.getIdentifier(musicName, "raw", packageName)
-                if (musicResId != 0) {
-                    musicPlayer = MediaPlayer.create(this, musicResId)
-                    musicPlayer?.isLooping = true
-                    musicPlayer?.start()
-                }
-            }
-        } catch (_: Exception) {}
-    }
-
-    override fun onResume() { super.onResume(); setupBackgroundMedia() }
-    override fun onPause() { super.onPause(); bgVideoView?.pause(); try { musicPlayer?.pause() } catch (_: Exception) {} }
-    override fun onDestroy() { super.onDestroy(); try { musicPlayer?.release() } catch (_: Exception) {} }
 
     private fun applyTheme() {
         val cfg = getThemeConfig(currentTheme)
@@ -365,7 +314,6 @@ class MainActivity : Activity() {
         }
 
         rebuildButtons()
-        setupBackgroundMedia()
         refresh()
     }
 
@@ -385,17 +333,17 @@ class MainActivity : Activity() {
 
         val actionContainer = goBtnLayout.parent as? LinearLayout
 
-        pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1, false) { pick() }
-        dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2, false) { pickFolder() }
-        revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1, false) { reversed = !reversed; refresh() }
-        outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2, false) { pickOutput() }
+        pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, false) { pick() }
+        dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, false) { pickFolder() }
+        revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, false) { reversed = !reversed; refresh() }
+        outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, false) { pickOutput() }
         
         val goTextKey = if (appMode == "SPLIT") "btn_go_split" else "btn_go_merge"
-        goBtnLayout = createCustomButton(tr(goTextKey), cfg.btnGo.first, cfg.btnGo.second, 0, false) { executeAction() }
-        cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0, true) {
+        goBtnLayout = createCustomButton(tr(goTextKey), cfg.btnGo.first, cfg.btnGo.second, false) { executeAction() }
+        cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, true) {
             if (processing) { cancelled = true; statusView.text = "Annulation..." }
         }
-        copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 0, false) { copyHash() }
+        copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, false) { copyHash() }
 
         if (parentCard1 != null && idxPick != -1) {
             parentCard1.removeViewAt(idxPick); parentCard1.addView(pickBtnLayout, idxPick, lp())
@@ -453,7 +401,7 @@ class MainActivity : Activity() {
         titlesLayout.addView(subtitleView)
         headerLayout.addView(titlesLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
 
-        menuBtn = Button(this).apply { text = tr("menu_btn"); setOnClickListener { showCustomMenu(it) } }
+        menuBtn = Button(this).apply { text = tr("menu_btn"); setOnClickListener { showCustomMenu() } }
         headerLayout.addView(menuBtn, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.CENTER_VERTICAL })
         mainCol.addView(headerLayout)
 
@@ -463,11 +411,11 @@ class MainActivity : Activity() {
         val card1 = createCard()
         section1Title = text(tr("sec1"), 13f, Color.CYAN, true)
         card1.addView(section1Title)
-        pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, 1, false) { pick() }
+        pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, false) { pick() }
         card1.addView(pickBtnLayout, lp())
-        dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, 2, false) { pickFolder() }
+        dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, false) { pickFolder() }
         card1.addView(dirBtnLayout, lp())
-        revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, 1, false) { reversed = !reversed; refresh() }
+        revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, false) { reversed = !reversed; refresh() }
         card1.addView(revBtnLayout, lp())
 
         listContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, dp(4)) }
@@ -485,15 +433,15 @@ class MainActivity : Activity() {
         val card2 = createCard()
         section2Title = text(tr("sec2"), 13f, Color.CYAN, true)
         card2.addView(section2Title)
-        outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, 2, false) { pickOutput() }
+        outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, false) { pickOutput() }
         card2.addView(outBtnLayout, lp())
         outView = text(tr("out_lbl"), 11f, Color.GRAY).apply { typeface = Typeface.MONOSPACE }
         card2.addView(outView, lp())
 
         val actionLayout = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        goBtnLayout = createCustomButton(tr("btn_go_merge"), cfg.btnGo.first, cfg.btnGo.second, 0, false) { executeAction() }
+        goBtnLayout = createCustomButton(tr("btn_go_merge"), cfg.btnGo.first, cfg.btnGo.second, false) { executeAction() }
         actionLayout.addView(goBtnLayout, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-        cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, 0, true) {
+        cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, true) {
             if (processing) { cancelled = true; statusView.text = "Annulation..." }
         }
         actionLayout.addView(cancelBtnLayout, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
@@ -517,7 +465,7 @@ class MainActivity : Activity() {
         card3.addView(hashField, lp())
         hashView = text("", 11f, Color.CYAN).apply { typeface = Typeface.MONOSPACE }
         card3.addView(hashView, lp())
-        copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, 0, false) { copyHash() }
+        copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, false) { copyHash() }
         card3.addView(copyBtnLayout, lp())
         mainCol.addView(card3, lpCard())
 
@@ -526,7 +474,7 @@ class MainActivity : Activity() {
         setContentView(rootFrameLayout)
     }
 
-    private fun showCustomMenu(anchor: View) {
+    private fun showCustomMenu() {
         if (processing) { toast("⚠️ Traitement en cours !"); return }
         val cfg = getThemeConfig(currentTheme)
         val dialogView = LinearLayout(this).apply {
@@ -550,7 +498,6 @@ class MainActivity : Activity() {
             output = null; outView.text = tr("out_lbl")
             rebuildButtons()
         }
-        addMenu(tr("menu_update")) { dialog.dismiss(); toast(tr("toast_checking_updates")) }
         dialog.show()
     }
 
@@ -637,7 +584,7 @@ class MainActivity : Activity() {
         if (appMode == "SPLIT") splitPkg() else mergePkg()
     }
 
-    // Fonction de calcul SHA-256 universelle pour l'intégrité
+    // Fonction de calcul SHA-256 universelle
     private fun computeSha256(u: Uri): String? {
         return try {
             val digest = MessageDigest.getInstance("SHA-256")
@@ -652,6 +599,7 @@ class MainActivity : Activity() {
         } catch (_: Exception) { null }
     }
 
+    // MODE SPLITTER AVEC CONTRÔLE SHA-256 INTÉGRÉ
     private fun splitPkg() {
         val treeUri = output ?: return
         val sourceUri = uris[0]
@@ -661,7 +609,6 @@ class MainActivity : Activity() {
 
         Thread {
             var success = false
-            var lastCreatedUri: Uri? = null
             try {
                 val total = size(sourceUri)
                 val targetDir = DocumentFile.fromTreeUri(this, treeUri) ?: throw Exception("Dossier invalide")
@@ -674,7 +621,6 @@ class MainActivity : Activity() {
                             while (transferred < total && !cancelled) {
                                 val partName = "${cleanBase}_${String.format(Locale.US, "%02d", partIndex)}.pkg"
                                 val newFile = targetDir.createFile("application/octet-stream", partName) ?: throw Exception("Création fichier échouée")
-                                lastCreatedUri = newFile.uri
 
                                 contentResolver.openFileDescriptor(newFile.uri, "w")?.use { pfdOut ->
                                     FileOutputStream(pfdOut.fileDescriptor).use { fos ->
@@ -694,11 +640,11 @@ class MainActivity : Activity() {
                 success = !cancelled
             } catch (_: Exception) {}
 
-            // Vérification SHA-256 en mode Split si la case est cochée
+            // VÉRIFICATION D'INTÉGRITÉ SHA-256 DU FICHIER SOURCE AU SPLITTER
             var computedHash: String? = null
-            if (success && verifyBox.isChecked && lastCreatedUri != null) {
-                ui.post { statusView.text = "Calcul du SHA-256..." }
-                computedHash = computeSha256(lastCreatedUri!!)
+            if (success && verifyBox.isChecked) {
+                ui.post { statusView.text = "Calcul du SHA-256 de la source..." }
+                computedHash = computeSha256(sourceUri)
             }
 
             ui.post {
@@ -707,16 +653,17 @@ class MainActivity : Activity() {
                     bar.progress = 1000
                     lastHash = computedHash
                     if (computedHash != null) {
-                        hashView.text = "SHA-256 : $computedHash"
+                        hashView.text = "SHA-256 (Source) : $computedHash"
                     }
                     statusView.text = "Découpage réussi !"
                 } else {
-                    statusView.text = "Découpage échoué/annulé."
+                    statusView.text = "Découpage échoué ou annulé."
                 }
             }
         }.start()
     }
 
+    // MODE FUSION AVEC CONTRÔLE SHA-256
     private fun mergePkg() {
         val out = output ?: return
         processing = true; cancelled = false
@@ -750,7 +697,7 @@ class MainActivity : Activity() {
                 success = !cancelled
             } catch (_: Exception) {}
 
-            // Vérification SHA-256 en mode Fusion si la case est cochée
+            // VÉRIFICATION D'INTÉGRITÉ SHA-256 APRÈS FUSION
             var computedHash: String? = null
             if (success && verifyBox.isChecked) {
                 ui.post { statusView.text = "Calcul du SHA-256..." }
