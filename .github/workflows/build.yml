@@ -195,21 +195,18 @@ jobs:
           }
           EOF
 
-          # Nom de l'app pour la version Lite
           write app/src/lite/res/values/strings.xml <<'EOF'
           <resources>
               <string name="app_name_custom">⚡ PS PKG Freedom Hub Lite</string>
           </resources>
           EOF
 
-          # Nom de l'app pour la version Full
           write app/src/full/res/values/strings.xml <<'EOF'
           <resources>
               <string name="app_name_custom">⚡ PS PKG Freedom Hub</string>
           </resources>
           EOF
 
-          # Fallback values
           write app/src/main/res/values/strings.xml <<'EOF'
           <resources>
               <string name="app_name_custom">⚡ PS PKG Freedom Hub</string>
@@ -592,7 +589,7 @@ jobs:
                   super.onCreate(state)
                   prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
                   
-                  # Version Lite verrouillée en thème classique (pas de sélecteur d'univers)
+                  // Version Lite verrouillée en thème classique (pas de sélecteur d'univers)
                   if (BuildConfig.FLAVOR == "lite") {
                       currentTheme = "CLASSIC"
                   } else {
@@ -610,7 +607,7 @@ jobs:
               }
 
               private fun checkFirstRunWelcome() {
-                  # Pas de popup de bienvenue "nouveaux univers" sur la version Lite
+                  // Pas de popup de bienvenue "nouveaux univers" sur la version Lite
                   if (BuildConfig.FLAVOR == "lite") return
 
                   val isFirstRun = prefs.getBoolean("is_first_run", true)
@@ -1437,7 +1434,7 @@ jobs:
                       rebuildButtons()
                   }
 
-                  # Le sélecteur d'univers est présent uniquement dans la version Full
+                  // Le sélecteur d'univers est présent uniquement dans la version Full
                   if (BuildConfig.FLAVOR != "lite") {
                       addMenuOption(tr("menu_universe")) {
                           dialog.dismiss()
@@ -2490,6 +2487,7 @@ jobs:
         run: |
           gradle clean assembleFullRelease assembleLiteRelease --no-daemon --stacktrace
 
+      
       - name: Renommer les APKs v2.1.0 (Full & Lite)
         run: |
           cp app/build/outputs/apk/full/release/app-full-release.apk PkgMerger-v2.1.0-full.apk
