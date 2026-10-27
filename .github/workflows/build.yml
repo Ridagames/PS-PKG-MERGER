@@ -31,6 +31,11 @@ jobs:
         with:
           gradle-version: '8.4'
 
+      - name: Nettoyer les anciens fichiers conflictuels
+        run: |
+          echo "Suppression des anciens fichiers obsolètes..."
+          rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
+
       - name: Isoler les univers lourds pour la version Full (laissant Lite allégée)
         run: |
           echo "Séparation des assets pour créer une vraie version LITE..."
@@ -186,7 +191,7 @@ jobs:
           }
           EOF
 
-          # Nom de l'app pour la version Lite (contient "Lite")
+          # Nom de l'app pour la version Lite
           write app/src/lite/res/values/strings.xml <<'EOF'
           <resources>
               <string name="app_name_custom">⚡ PS PKG Freedom Hub Lite</string>
@@ -582,7 +587,14 @@ jobs:
               override fun onCreate(state: Bundle?) {
                   super.onCreate(state)
                   prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
-                  currentTheme = prefs.getString("theme", "CLASSIC") ?: "CLASSIC"
+                  
+                  // Version Lite verrouillée en thème classique (pas de sélecteur d'univers)
+                  if (BuildConfig.FLAVOR == "lite") {
+                      currentTheme = "CLASSIC"
+                  } else {
+                      currentTheme = prefs.getString("theme", "CLASSIC") ?: "CLASSIC"
+                  }
+                  
                   currentLang = prefs.getString("lang", "fr") ?: "fr"
                   
                   createNotificationChannel()
@@ -594,6 +606,9 @@ jobs:
               }
 
               private fun checkFirstRunWelcome() {
+                  // Pas de popup de bienvenue "nouveaux univers" sur la version Lite
+                  if (BuildConfig.FLAVOR == "lite") return
+
                   val isFirstRun = prefs.getBoolean("is_first_run", true)
                   if (isFirstRun) {
                       prefs.edit().putBoolean("is_first_run", false).apply()
@@ -1418,9 +1433,12 @@ jobs:
                       rebuildButtons()
                   }
 
-                  addMenuOption(tr("menu_universe")) {
-                      dialog.dismiss()
-                      showThemeDialog()
+                  // Le sélecteur d'univers est présent uniquement dans la version Full
+                  if (BuildConfig.FLAVOR != "lite") {
+                      addMenuOption(tr("menu_universe")) {
+                          dialog.dismiss()
+                          showThemeDialog()
+                      }
                   }
 
                   addMenuOption(tr("menu_lang")) {
@@ -1460,7 +1478,6 @@ jobs:
                                   val latestTag = tagMatch.groupValues[1].replace("v", "")
                                   val currentVersion = "2.1.0"
 
-                                  // Condition stricte : uniquement si supérieur à 2.1.0 (ex: 2.2.0 et plus)
                                   ui.post {
                                       if (isVersionNewer(latestTag, currentVersion)) {
                                           showUpdateDialog(latestTag)
@@ -2463,9 +2480,6 @@ jobs:
           fi
 
       - name: Build APK Release (Full & Lite)
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          ALIAS: ${{ secrets.ALIAS }}
         run: |
           gradle clean assembleFullRelease assembleLiteRelease --no-daemon --stacktrace
 
