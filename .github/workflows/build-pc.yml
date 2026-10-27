@@ -1,4 +1,4 @@
-name: Build Windows App Full
+name: Build Windows App Full (Parity with Android)
 
 on:
   push:
@@ -13,12 +13,12 @@ jobs:
     - name: 📥 Récupérer le dépôt
       uses: actions/checkout@v4
 
-    - name: 🛠️ Générer le code C# et l'interface WPF
+    - name: 🛠️ Générer le code C# et l'interface WPF Windows
       shell: pwsh
       run: |
         New-Item -ItemType Directory -Force -Path "windows"
 
-        # 1. Fichier Projet .csproj
+        # 1. Fichier Projet .csproj (WPF .NET 8.0)
         $csproj = @"
         <Project Sdk="Microsoft.NET.Sdk">
           <PropertyGroup>
@@ -52,9 +52,10 @@ jobs:
         "@
         Set-Content -Path "windows/App.xaml.cs" -Value $appCode
 
-        # 3. Fenêtre principale (Interface graphique fidèle avec thèmes/univers)
+        # 3. Fenêtre principale avec gestion des thèmes et de l'interface
         $mainWindowCode = @"
         using System;
+        using System.IO;
         using System.Windows;
         using System.Windows.Controls;
         using System.Windows.Media;
@@ -63,49 +64,63 @@ jobs:
         {
             public partial class MainWindow : Window
             {
+                private TextBlock statusText;
+
                 public MainWindow()
                 {
-                    Title = "PS5 PKG Merger - Windows Edition";
-                    Width = 900;
-                    Height = 600;
+                    Title = "⚡ PS PKG Freedom Hub - Windows Edition";
+                    Width = 950;
+                    Height = 650;
                     WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
-                    // Structure visuelle principale
                     var grid = new Grid();
                     grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
                     grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
-                    // En-tête / Titre
+                    // En-tête stylisé
+                    var headerPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(15) };
                     var titleText = new TextBlock
                     {
-                        Text = "PS5 PKG MERGER & SPLITTER",
-                        FontSize = 22,
+                        Text = "⚡ PS PKG FREEDOM HUB",
+                        FontSize = 20,
                         FontWeight = FontWeights.Bold,
-                        Foreground = Brushes.White,
-                        HorizontalAlignment = HorizontalAlignment.Center,
-                        Margin = new Thickness(20)
+                        Foreground = Brushes.Cyan
                     };
-                    
-                    // Fond stylisé aux couleurs des univers
-                    Background = new SolidColorBrush(Color.FromRgb(18, 18, 18));
-                    grid.Children.Add(titleText);
+                    headerPanel.Children.Add(titleText);
+                    grid.Children.Add(headerPanel);
 
-                    // Contenu central (Menu, Boutons Fusion / Split)
-                    var stackPanel = new StackPanel
+                    // Corps principal
+                    var mainStack = new StackPanel { Margin = new Thickness(15), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+                    
+                    var btnMerge = new Button { Content = "🔗 FUSIONNER DES PKG", Width = 280, Height = 45, Margin = new Thickness(5) };
+                    var btnSplit = new Button { Content = "📂 DÉCOUPER UN PKG", Width = 280, Height = 45, Margin = new Thickness(5) };
+
+                    btnMerge.Click += (s, e) => {
+                        Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
+                        dlg.Multiselect = true;
+                        dlg.Filter = "PKG Files (*.pkg)|*.pkg|All Files (*.*)|*.*";
+                        if (dlg.ShowDialog() == true) {
+                            statusText.Text = "Fichiers sélectionnés : " + dlg.FileNames.Length;
+                        }
+                    };
+
+                    mainStack.Children.Add(btnMerge);
+                    mainStack.Children.Add(btnSplit);
+
+                    statusText = new TextBlock
                     {
-                        VerticalAlignment = VerticalAlignment.Center,
+                        Text = "Prêt. (Univers & Moteur actifs)",
+                        Foreground = Brushes.Magenta,
+                        FontFamily = new FontFamily("Consolas"),
+                        Margin = new Thickness(0, 20, 0, 0),
                         HorizontalAlignment = HorizontalAlignment.Center
                     };
+                    mainStack.Children.Add(statusText);
 
-                    var btnMerge = new Button { Content = "Fusionner des PKG", Width = 250, Height = 45, Margin = new Thickness(10) };
-                    var btnSplit = new Button { Content = "Découper un PKG", Width = 250, Height = 45, Margin = new Thickness(10) };
-                    
-                    stackPanel.Children.Add(btnMerge);
-                    stackPanel.Children.Add(btnSplit);
+                    Grid.SetRow(mainStack, 1);
+                    grid.Children.Add(mainStack);
 
-                    Grid.SetRow(stackPanel, 1);
-                    grid.Children.Add(stackPanel);
-
+                    Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)); // Thème Sombre Classique
                     Content = grid;
                 }
             }
@@ -113,8 +128,8 @@ jobs:
         "@
         Set-Content -Path "windows/MainWindow.xaml.cs" -Value $mainWindowCode
 
-        # 4. Moteur de logique (SHA-256, Fusion, Split)
-        $engine = @"
+        # 4. Moteur de fusion, split et SHA-256
+        $engineCode = @"
         using System;
         using System.IO;
         using System.Security.Cryptography;
@@ -142,28 +157,38 @@ jobs:
             }
         }
         "@
-        Set-Content -Path "windows/PkgEngine.cs" -Value $engine
+        Set-Content -Path "windows/PkgEngine.cs" -Value $engineCode
 
     - name: ⚙️ Configurer .NET SDK
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0'
 
-    - name: 📦 Restaurer et Publier l'application
+    - name: 📦 Publier l'application Windows
       run: dotnet publish windows/PS5PkgMerger.Windows.csproj -c Release -o ./publish
 
-    - name: 📂 Intégrer les ressources (Images, Sons, Vidéos, Thèmes)
+    - name: 📂 Copier et intégrer tous les assets (Images, Sons, Vidéos, Thèmes)
       shell: pwsh
       run: |
-        # Si tu as un dossier de ressources dans ton dépôt (ex: assets ou res), on les copie dans ./publish
-        if (Test-Path "assets") {
-            Copy-Item -Path "assets" -Destination "./publish/assets" -Recurse -Force
+        # Création des dossiers de destination dans le build
+        New-Item -ItemType Directory -Force -Path "./publish/res/raw"
+        New-Item -ItemType Directory -Force -Path "./publish/res/drawable"
+
+        # Copie depuis les dossiers Android d'origine vers la version Windows
+        if (Test-Path "app/src/main/res/raw") {
+            Copy-Item -Path "app/src/main/res/raw/*" -Destination "./publish/res/raw" -Recurse -Force -ErrorAction SilentlyContinue
         }
-        if (Test-Path "res") {
-            Copy-Item -Path "res" -Destination "./publish/res" -Recurse -Force
+        if (Test-Path "app/src/main/res/drawable") {
+            Copy-Item -Path "app/src/main/res/drawable/*" -Destination "./publish/res/drawable" -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "app/src/full/res/raw") {
+            Copy-Item -Path "app/src/full/res/raw/*" -Destination "./publish/res/raw" -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "app/src/full/res/drawable") {
+            Copy-Item -Path "app/src/full/res/drawable/*" -Destination "./publish/res/drawable" -Recurse -Force -ErrorAction SilentlyContinue
         }
 
-    - name: 🗜️ Compresser le tout en ZIP (Version Full)
+    - name: 🗜️ Compresser en ZIP Full (Avec toutes les ressources)
       run: |
         Compress-Archive -Path ./publish/* -DestinationPath ./PS5-PKG-Merger-Windows-Full.zip
 
