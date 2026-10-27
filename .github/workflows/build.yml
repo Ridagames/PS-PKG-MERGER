@@ -360,6 +360,7 @@ jobs:
           import java.io.FileOutputStream
           import java.net.HttpURLConnection
           import java.net.URL
+          import java.security.MessageDigest
           import java.util.Locale
           import java.util.Random
 
@@ -2190,6 +2191,21 @@ jobs:
                   }
               }
 
+              private fun computeSha256(u: Uri): String? {
+                  try {
+                      val digest = MessageDigest.getInstance("SHA-256")
+                      contentResolver.openInputStream(u)?.use { input ->
+                          val buffer = ByteArray(8192)
+                          var bytesRead: Int
+                          while (input.read(buffer).also { bytesRead = it } != -1) {
+                              digest.update(buffer, 0, bytesRead)
+                          }
+                      }
+                      return digest.digest().joinToString("") { "%02x".format(it) }
+                  } catch (_: Exception) {}
+                  return null
+              }
+
               private fun splitPkg() {
                   val treeUri = output ?: return
                   val sourceUri = uris[0]
@@ -2203,8 +2219,8 @@ jobs:
 
                   Thread {
                       var success = false
-                      var pfdIn: android.os.ParcelFileDescriptor? = null
-                      var pfdOut: android.os.ParcelFileDescriptor? = null
+                      var pfdIn: ParcelFileDescriptor? = null
+                      var pfdOut: ParcelFileDescriptor? = null
 
                       try {
                           persist(sourceUri, false)
@@ -2387,9 +2403,20 @@ jobs:
                           return@Thread
                       }
 
+                      // Vérification d'intégrité après écriture si activée
+                      var computedHash: String? = null
+                      if (verifyBox.isChecked) {
+                          ui.post { statusView.text = "Calcul du SHA-256..." }
+                          computedHash = computeSha256(out)
+                      }
+
                       val secs = (System.currentTimeMillis() - t0) / 1000
                       ui.post {
                           bar.progress = 1000
+                          lastHash = computedHash
+                          if (computedHash != null) {
+                              hashView.text = "SHA-256 : $computedHash"
+                          }
                           statusView.text = "Terminé avec succès en ${secs}s"
                           showResultNotif("PS PKG Manager", "Fusion réussie en ${secs}s !")
                           processing = false
