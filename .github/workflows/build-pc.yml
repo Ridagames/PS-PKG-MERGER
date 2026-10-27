@@ -1,4 +1,4 @@
-name: Build Windows App Full Parity (Android Match)
+name: Build Windows App (Compose Multiplatform Kotlin)
 
 on:
   push:
@@ -6,344 +6,48 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-windows:
+  build-windows-kotlin:
     runs-on: windows-latest
 
     steps:
     - name: 📥 Récupérer le dépôt
       uses: actions/checkout@v4
 
-    - name: 🛠️ Générer le code C# WPF corrigé
-      shell: pwsh
-      run: |
-        New-Item -ItemType Directory -Force -Path "windows"
-
-        # 1. Fichier Projet .csproj
-        $csproj = @"
-        <Project Sdk="Microsoft.NET.Sdk">
-          <PropertyGroup>
-            <OutputType>WinExe</OutputType>
-            <TargetFramework>net8.0-windows</TargetFramework>
-            <UseWPF>true</UseWPF>
-            <AssemblyName>PS5PkgMerger.Windows</AssemblyName>
-            <LangVersion>latest</LangVersion>
-          </PropertyGroup>
-        </Project>
-        "@
-        Set-Content -Path "windows/PS5PkgMerger.Windows.csproj" -Value $csproj
-
-        # 2. Point d'entrée App.xaml.cs
-        $appCode = @"
-        using System;
-        using System.Windows;
-
-        namespace PS5PkgMerger.Windows
-        {
-            public partial class App : Application
-            {
-                [STAThread]
-                public static void Main()
-                {
-                    var app = new App();
-                    var window = new MainWindow();
-                    app.Run(window);
-                }
-            }
-        }
-        "@
-        Set-Content -Path "windows/App.xaml.cs" -Value $appCode
-
-        # 3. MainWindow.xaml.cs corrigé (sans erreurs de classes)
-        $mainWindowCode = @"
-        using System;
-        using System.IO;
-        using System.Windows;
-        using System.Windows.Controls;
-        using System.Windows.Media;
-
-        namespace PS5PkgMerger.Windows
-        {
-            public partial class MainWindow : Window
-            {
-                private TextBlock titleView, subtitleView, statusText, checkText, outText;
-                private ProgressBar bar;
-                private MediaElement bgVideoView;
-                private string currentTheme = "CLASSIC";
-                private string appMode = "MERGE";
-
-                public MainWindow()
-                {
-                    Title = "⚡ PS PKG Freedom Hub - Windows Edition v2.1.0";
-                    Width = 980;
-                    Height = 720;
-                    WindowStartupLocation = WindowStartupLocation.CenterScreen;
-
-                    var rootGrid = new Grid();
-
-                    bgVideoView = new MediaElement
-                    {
-                        LoadedBehavior = MediaState.Manual,
-                        UnloadedBehavior = MediaState.Stop,
-                        IsMuted = true,
-                        Stretch = Stretch.UniformToFill
-                    };
-                    rootGrid.Children.Add(bgVideoView);
-
-                    var mainScroll = new ScrollViewer();
-                    var mainStack = new StackPanel { Margin = new Thickness(16) };
-
-                    var headerGrid = new Grid();
-                    headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                    headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-                    var titlesStack = new StackPanel();
-                    titleView = new TextBlock { Text = "⚡ PS PKG FREEDOM HUB", FontSize = 20, FontWeight = FontWeights.Bold, Foreground = Brushes.White };
-                    subtitleView = new TextBlock { Text = "UNIVERS : SOMBRE CLASSIQUE", FontSize = 11, FontFamily = new FontFamily("Consolas"), Foreground = Brushes.Cyan };
-                    titlesStack.Children.Add(titleView);
-                    titlesStack.Children.Add(subtitleView);
-                    Grid.SetColumn(titlesStack, 0);
-                    headerGrid.Children.Add(titlesStack);
-
-                    var menuBtn = new Button
-                    {
-                        Content = "⚙️ MENU",
-                        Width = 90,
-                        Height = 35,
-                        Background = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
-                        Foreground = Brushes.White,
-                        FontWeight = FontWeights.Bold
-                    };
-                    menuBtn.Click += (s, e) => ShowCustomMenu();
-                    Grid.SetColumn(menuBtn, 1);
-                    headerGrid.Children.Add(menuBtn);
-
-                    mainStack.Children.Add(headerGrid);
-
-                    // Section 1
-                    var card1 = CreateCard();
-                    card1.Child = new StackPanel();
-                    var card1Content = (StackPanel)card1.Child;
-                    card1Content.Children.Add(new TextBlock { Text = "1. FICHIERS SOURCE (PKG / PARTIES)", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.Cyan, FontFamily = new FontFamily("Consolas") });
-                    
-                    var btnPick = CreateStyledButton("CHOISIR LES FICHIERS", "#0284C7", "#38BDF8");
-                    btnPick.Click += (s, e) => {
-                        Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog { Multiselect = true, Filter = "PKG Files (*.pkg)|*.pkg|All Files (*.*)|*.*" };
-                        if (dlg.ShowDialog() == true) {
-                            statusText.Text = $"Fichiers chargés : {dlg.FileNames.Length}";
-                        }
-                    };
-                    card1Content.Children.Add(btnPick);
-                    card1Content.Children.Add(CreateStyledButton("CHOISIR UN DOSSIER COMPLET", "#0369A1", "#38BDF8"));
-                    card1Content.Children.Add(CreateStyledButton("INVERSER L'ORDRE DES PARTIES", "#334155", "#64748B"));
-
-                    checkText = new TextBlock { Text = "AUCUN FICHIER SÉLECTIONNÉ", FontSize = 11, Foreground = Brushes.Gray, FontFamily = new FontFamily("Consolas"), Margin = new Thickness(0, 8, 0, 0) };
-                    card1Content.Children.Add(checkText);
-                    mainStack.Children.Add(card1);
-
-                    // Section 2
-                    var card2 = CreateCard();
-                    card2.Child = new StackPanel();
-                    var card2Content = (StackPanel)card2.Child;
-                    card2Content.Children.Add(new TextBlock { Text = "2. SORTIE & TRAITEMENT", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.Cyan, FontFamily = new FontFamily("Consolas") });
-
-                    card2Content.Children.Add(CreateStyledButton("DÉFINIR EMPLACEMENT DE SORTIE", "#0D9488", "#14B8A6"));
-
-                    outText = new TextBlock { Text = "Sortie : —", FontSize = 11, Foreground = Brushes.Gray, FontFamily = new FontFamily("Consolas"), Margin = new Thickness(0, 4, 0, 8) };
-                    card2Content.Children.Add(outText);
-
-                    var actionRow = new StackPanel { Orientation = Orientation.Horizontal };
-                    var btnGo = CreateStyledButton("▶️ LANCER LA FUSION", "#16A34A", "#22C55E");
-                    var btnCancel = CreateStyledButton("❌ ANNULER", "#DC2626", "#EF4444");
-                    btnCancel.Width = 110;
-                    actionRow.Children.Add(btnGo);
-                    actionRow.Children.Add(btnCancel);
-                    card2Content.Children.Add(actionRow);
-
-                    bar = new ProgressBar { Height = 18, Maximum = 1000, Value = 0, Margin = new Thickness(0, 10, 0, 4) };
-                    card2Content.Children.Add(bar);
-
-                    statusText = new TextBlock { Text = "Prêt.", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.Magenta, FontFamily = new FontFamily("Consolas") };
-                    card2Content.Children.Add(statusText);
-                    mainStack.Children.Add(card2);
-
-                    mainScroll.Content = mainStack;
-                    rootGrid.Children.Add(mainScroll);
-                    Content = rootGrid;
-
-                    ApplyTheme("CLASSIC");
-                }
-
-                private Border CreateCard()
-                {
-                    return new Border
-                    {
-                        Background = new SolidColorBrush(Color.FromRgb(30, 41, 59)),
-                        Margin = new Thickness(0, 10, 0, 5),
-                        Padding = new Thickness(14)
-                    };
-                }
-
-                private Button CreateStyledButton(string text, string bgHex, string borderHex)
-                {
-                    return new Button
-                    {
-                        Content = text,
-                        Height = 42,
-                        Margin = new Thickness(0, 5, 0, 5),
-                        Background = (Brush)new BrushConverter().ConvertFromString(bgHex),
-                        Foreground = Brushes.White,
-                        FontWeight = FontWeights.Bold
-                    };
-                }
-
-                private void ShowCustomMenu()
-                {
-                    Window menuWin = new Window
-                    {
-                        Title = "⚙️ OPTIONS & MENU",
-                        Width = 380,
-                        Height = 420,
-                        WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                        Owner = this,
-                        Background = new SolidColorBrush(Color.FromRgb(15, 23, 42))
-                    };
-
-                    var stack = new StackPanel { Margin = new Thickness(15) };
-                    stack.Children.Add(new TextBlock { Text = "⚙️ OPTIONS & MENU", FontSize = 14, FontWeight = FontWeights.Bold, Foreground = Brushes.Cyan, Margin = new Thickness(0, 0, 0, 15) });
-
-                    AddMenuBtn(stack, "📂 Basculer en Mode Splitter", () => { appMode = (appMode == "MERGE") ? "SPLIT" : "MERGE"; menuWin.Close(); });
-                    AddMenuBtn(stack, "🎨 Changer d'Univers", () => { menuWin.Close(); ShowUniverseDialog(); });
-                    AddMenuBtn(stack, "🌐 Changer la Langue", () => { menuWin.Close(); });
-                    AddMenuBtn(stack, "🔄 Vérifier les mises à jour", () => { MessageBox.Show("Application déjà à jour (v2.1.0)"); });
-                    AddMenuBtn(stack, "ℹ️ À propos (v2.1.0)", () => { MessageBox.Show("PS PKG Freedom Hub v2.1.0"); });
-
-                    menuWin.Content = stack;
-                    menuWin.ShowDialog();
-                }
-
-                private void AddMenuBtn(Panel parent, string text, Action onClick)
-                {
-                    var btn = new Button { Content = text, Height = 40, Margin = new Thickness(0, 4, 0, 4), HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(10, 0, 0, 0), Background = Brushes.Transparent, Foreground = Brushes.White };
-                    btn.Click += (s, e) => onClick();
-                    parent.Children.Add(btn);
-                }
-
-                private void ShowUniverseDialog()
-                {
-                    Window uniWin = new Window
-                    {
-                        Title = "🌟 CHOISIS TON UNIVERS GAMING",
-                        Width = 380,
-                        Height = 420,
-                        WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                        Owner = this,
-                        Background = new SolidColorBrush(Color.FromRgb(15, 23, 42))
-                    };
-
-                    var stack = new StackPanel { Margin = new Thickness(15) };
-                    stack.Children.Add(new TextBlock { Text = "🌟 CHOISIS TON UNIVERS GAMING", FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Brushes.Cyan, Margin = new Thickness(0, 0, 0, 15) });
-
-                    AddUniverseOpt(stack, "🔵 Sombre Classique", "CLASSIC", true, uniWin);
-                    AddUniverseOpt(stack, "⚡ Fortnite Battle Royale", "FORTNITE", true, uniWin);
-                    AddUniverseOpt(stack, "🪓 God of War Ragnarök", "GOW", true, uniWin);
-                    AddUniverseOpt(stack, "🌿 The Last of Us Part II (En cours)", "TLOU", false, null);
-                    AddUniverseOpt(stack, "🌌 Genshin Impact Teyvat (En cours)", "GENSHIN", false, null);
-                    AddUniverseOpt(stack, "🚗 GTA V Los Santos (En cours)", "GTA", false, null);
-                    AddUniverseOpt(stack, "🌐 Cyberpunk Neo Hub (En cours)", "CYBERPUNK", false, null);
-
-                    uniWin.Content = stack;
-                    uniWin.ShowDialog();
-                }
-
-                private void AddUniverseOpt(Panel parent, string label, string key, bool enabled, Window windowToClose)
-                {
-                    var btn = new Button
-                    {
-                        Content = label,
-                        Height = 36,
-                        Margin = new Thickness(0, 3, 0, 3),
-                        HorizontalContentAlignment = HorizontalAlignment.Left,
-                        Background = Brushes.Transparent,
-                        Foreground = enabled ? Brushes.White : Brushes.Gray
-                    };
-                    btn.Click += (s, e) => {
-                        if (enabled) {
-                            windowToClose?.Close();
-                            ApplyTheme(key);
-                        } else {
-                            MessageBox.Show("Bientôt disponible (En cours de développement)");
-                        }
-                    };
-                    parent.Children.Add(btn);
-                }
-
-                private void ApplyTheme(string themeKey)
-                {
-                    currentTheme = themeKey;
-                    if (themeKey == "GOW") {
-                        subtitleView.Text = "UNIVERS : GOD OF WAR RAGNARÖK";
-                        PlayBackgroundMedia("gow_bg.mp4");
-                    } else if (themeKey == "FORTNITE") {
-                        subtitleView.Text = "UNIVERS : FORTNITE BATTLE ROYALE";
-                        PlayBackgroundMedia("fn_bg.mp4");
-                    } else {
-                        subtitleView.Text = "UNIVERS : SOMBRE CLASSIQUE";
-                        bgVideoView.Stop();
-                    }
-                }
-
-                private void PlayBackgroundMedia(string videoFileName)
-                {
-                    try
-                    {
-                        string videoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "res", "raw", videoFileName);
-                        if (File.Exists(videoPath))
-                        {
-                            bgVideoView.Source = new Uri(videoPath);
-                            bgVideoView.MediaEnded += (s, e) => { bgVideoView.Position = TimeSpan.FromSeconds(0); bgVideoView.Play(); };
-                            bgVideoView.Play();
-                        }
-                    }
-                    catch { }
-                }
-            }
-        }
-        "@
-        Set-Content -Path "windows/MainWindow.xaml.cs" -Value $mainWindowCode
-
-    - name: ⚙️ Configurer .NET SDK
-      uses: actions/setup-dotnet@v4
+    - name: ☕ Configurer Java JDK (nécessaire pour Gradle / Kotlin)
+      uses: actions/setup-java@v4
       with:
-        dotnet-version: '8.0'
+        distribution: 'temurin'
+        java-version: '17'
 
-    - name: 📦 Publier l'application Windows
-      run: dotnet publish windows/PS5PkgMerger.Windows.csproj -c Release -o ./publish
-
-    - name: 📂 Copier et intégrer tous les assets (Images, Sons, Vidéos, Thèmes)
+    - name: 🛠️ Compiler l'application Desktop via Gradle (Compose Multiplatform)
       shell: pwsh
       run: |
-        New-Item -ItemType Directory -Force -Path "./publish/res/raw"
-        New-Item -ItemType Directory -Force -Path "./publish/res/drawable"
-
-        if (Test-Path "app/src/main/res/raw") {
-            Copy-Item -Path "app/src/main/res/raw/*" -Destination "./publish/res/raw" -Recurse -Force -ErrorAction SilentlyContinue
-        }
-        if (Test-Path "app/src/main/res/drawable") {
-            Copy-Item -Path "app/src/main/res/drawable/*" -Destination "./publish/res/drawable" -Recurse -Force -ErrorAction SilentlyContinue
-        }
-        if (Test-Path "app/src/full/res/raw") {
-            Copy-Item -Path "app/src/full/res/raw/*" -Destination "./publish/res/raw" -Recurse -Force -ErrorAction SilentlyContinue
-        }
-        if (Test-Path "app/src/full/res/drawable") {
-            Copy-Item -Path "app/src/full/res/drawable/*" -Destination "./publish/res/drawable" -Recurse -Force -ErrorAction SilentlyContinue
+        # Lancement de la tâche Gradle pour empaqueter l'application Desktop pour Windows
+        # Selon ton fichier build.gradle.kts, la tâche s'appelle souvent packageDistributionForCurrentOS ou createDistribution
+        if (Test-Path "./gradlew.bat") {
+            ./gradlew.bat packageDistributionForCurrentOS --info
+        } else {
+            gradle packageDistributionForCurrentOS --info
         }
 
-    - name: 🗜️ Compresser en ZIP Full (Avec toutes les ressources)
+    - name: 📦 Archiver et préparer les artefacts Windows
+      shell: pwsh
       run: |
-        Compress-Archive -Path ./publish/* -DestinationPath ./PS5-PKG-Merger-Windows-Full.zip
+        $targetDir = "build/compose/binaries/main/msi"
+        if (-not (Test-Path $targetDir)) {
+            $targetDir = "build/compose/binaries/main"
+        }
+        
+        New-Item -ItemType Directory -Force -Path "./publish_windows"
+        if (Test-Path $targetDir) {
+            Copy-Item -Path "$targetDir/*" -Destination "./publish_windows" -Recurse -Force
+        }
+
+        # Compression du tout dans un ZIP
+        Compress-Archive -Path ./publish_windows/* -DestinationPath ./PS5-PKG-Merger-Kotlin-Windows.zip -Force
 
     - name: 📤 Sauvegarder dans les artefacts GitHub
       uses: actions/upload-artifact@v4
       with:
-        name: PS5-PKG-Merger-Windows-Full
-        path: ./PS5-PKG-Merger-Windows-Full.zip
+        name: PS5-PKG-Merger-Kotlin-Windows
+        path: ./PS5-PKG-Merger-Kotlin-Windows.zip
