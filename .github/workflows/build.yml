@@ -31,11 +31,29 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Nettoyage et Normalisation des Ressources et Sources
+      - name: Isoler les univers lourds pour la version Full (laissant Lite allégée)
         run: |
-          echo "Nettoyage des fichiers obsolètes..."
-          rm -f app/src/main/java/com/venice/pkgmerger/PkgManagerHelper.kt
+          echo "Séparation des assets pour créer une vraie version LITE..."
+          mkdir -p app/src/full/res/drawable
+          mkdir -p app/src/full/res/raw
 
+          # Déplace les fichiers d'univers lourds (Fortnite, GoW, etc.) vers 'full'
+          for dir in app/src/main/res/drawable app/src/main/res/raw; do
+            if [ -d "$dir" ]; then
+              for f in "$dir"/*; do
+                if [ -f "$f" ]; then
+                  filename=$(basename "$f")
+                  if echo "$filename" | grep -qE '^(fn_|gow_|universe)'; then
+                    sub=$(basename "$dir")
+                    echo "Basculement de $filename vers Full (exclu de Lite)"
+                    mv "$f" "app/src/full/res/$sub/"
+                  fi
+                fi
+              done
+            fi
+          done
+
+          # Nettoyage et normalisation des noms restants dans main
           for dir in app/src/main/res/drawable app/src/main/res/raw; do
             if [ -d "$dir" ]; then
               for f in "$dir"/*; do
@@ -54,7 +72,7 @@ jobs:
             fi
           done
 
-      - name: Générer le projet Android avec Flavors (Lite & Full)
+      - name: Générer le projet Android v2.1.0 (Lite & Full)
         env:
           FORCE: '1'
         run: |
@@ -63,10 +81,8 @@ jobs:
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/res/raw
           mkdir -p app/src/main/res/xml
-          
-          # Dossiers spécifiques pour les flavors (Full intègre les gros assets, Lite les ignore)
-          mkdir -p app/src/full/res/raw
-          mkdir -p app/src/full/res/drawable
+          mkdir -p app/src/lite/res/values
+          mkdir -p app/src/full/res/values
 
           write() {
             f="$1"
@@ -123,7 +139,7 @@ jobs:
                   applicationId = "com.venice.pkgmerger"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 2973
+                  versionCode = 210
                   versionName = "2.1.0"
               }
 
@@ -140,11 +156,9 @@ jobs:
                   create("lite") {
                       dimension = "version"
                       applicationIdSuffix = ".lite"
-                      resValue("string", "app_variant", "Lite")
                   }
                   create("full") {
                       dimension = "version"
-                      resValue("string", "app_variant", "Full")
                   }
               }
 
@@ -165,6 +179,27 @@ jobs:
               implementation("androidx.core:core-ktx:1.12.0")
               implementation("androidx.documentfile:documentfile:1.0.1")
           }
+          EOF
+
+          # Nom de l'app pour la version Lite (contient "Lite")
+          write app/src/lite/res/values/strings.xml <<'EOF'
+          <resources>
+              <string name="app_name_custom">⚡ PS PKG Freedom Hub Lite</string>
+          </resources>
+          EOF
+
+          # Nom de l'app pour la version Full
+          write app/src/full/res/values/strings.xml <<'EOF'
+          <resources>
+              <string name="app_name_custom">⚡ PS PKG Freedom Hub</string>
+          </resources>
+          EOF
+
+          # Fallback values si le flavor ne charge pas la string
+          write app/src/main/res/values/strings.xml <<'EOF'
+          <resources>
+              <string name="app_name_custom">⚡ PS PKG Freedom Hub</string>
+          </resources>
           EOF
 
           write app/src/main/res/drawable/rounded_progress.xml <<'EOF'
@@ -221,7 +256,7 @@ jobs:
               <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
               <application
-                  android:label="PS PKG Freedom Hub"
+                  android:label="@string/app_name_custom"
                   android:icon="@drawable/ic_app_logo"
                   android:roundIcon="@drawable/ic_app_logo"
                   android:largeHeap="true"
@@ -231,7 +266,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:label="PS PKG Freedom Hub">
+                      android:label="@string/app_name_custom">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -311,16 +346,11 @@ jobs:
           import android.widget.VideoView
           import androidx.core.content.FileProvider
           import androidx.documentfile.provider.DocumentFile
-          import java.io.BufferedInputStream
-          import java.io.BufferedOutputStream
           import java.io.File
           import java.io.FileInputStream
           import java.io.FileOutputStream
-          import java.io.OutputStream
           import java.net.HttpURLConnection
           import java.net.URL
-          import java.nio.channels.FileChannel
-          import java.security.MessageDigest
           import java.util.Locale
           import java.util.Random
 
@@ -1494,7 +1524,6 @@ jobs:
                       setTypeface(null, Typeface.BOLD)
                       setBackgroundColor(Color.TRANSPARENT)
                       setOnClickListener {
-                          // Ouvre le lien de téléchargement direct de la version Full sur les releases GitHub
                           val fullUrl = "https://github.com/Ridagames/Pkg-merge/releases/latest/download/PkgMerger-v${newVersion}-full.apk"
                           downloadAndInstallApk(fullUrl)
                       }
@@ -1508,7 +1537,6 @@ jobs:
                       setTypeface(null, Typeface.BOLD)
                       setBackgroundColor(Color.TRANSPARENT)
                       setOnClickListener {
-                          // Ouvre le lien de téléchargement direct de la version Lite sur les releases GitHub
                           val liteUrl = "https://github.com/Ridagames/Pkg-merge/releases/latest/download/PkgMerger-v${newVersion}-lite.apk"
                           downloadAndInstallApk(liteUrl)
                       }
@@ -2157,8 +2185,8 @@ jobs:
 
                   Thread {
                       var success = false
-                      var pfdIn: ParcelFileDescriptor? = null
-                      var pfdOut: ParcelFileDescriptor? = null
+                      var pfdIn: android.os.ParcelFileDescriptor? = null
+                      var pfdOut: android.os.ParcelFileDescriptor? = null
 
                       try {
                           persist(sourceUri, false)
@@ -2440,16 +2468,16 @@ jobs:
             -Pandroid.injected.signing.key.alias="${ALIAS}" \
             -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
 
-      - name: Renommer les APKs (Full & Lite)
+      - name: Renommer les APKs v2.1.0 (Full & Lite)
         run: |
-          cp app/build/outputs/apk/full/release/app-full-release.apk PkgMerger-v2.9.73-full.apk
-          cp app/build/outputs/apk/lite/release/app-lite-release.apk PkgMerger-v2.9.73-lite.apk
+          cp app/build/outputs/apk/full/release/app-full-release.apk PkgMerger-v2.1.0-full.apk
+          cp app/build/outputs/apk/lite/release/app-lite-release.apk PkgMerger-v2.1.0-lite.apk
 
       - name: Upload APKs (Full & Lite)
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-merger-v2.9.73-apks
+          name: pkg-merger-v2.1.0-apks
           path: |
-            PkgMerger-v2.9.73-full.apk
-            PkgMerger-v2.9.73-lite.apk
+            PkgMerger-v2.1.0-full.apk
+            PkgMerger-v2.1.0-lite.apk
           if-no-files-found: error
