@@ -1,4 +1,4 @@
-name: Build Windows App Automatically
+name: Build Windows App Full
 
 on:
   push:
@@ -13,13 +13,12 @@ jobs:
     - name: 📥 Récupérer le dépôt
       uses: actions/checkout@v4
 
-    - name: 🛠️ Créer automatiquement la structure et le code source Windows
+    - name: 🛠️ Générer le code C# et l'interface WPF
       shell: pwsh
       run: |
-        # 1. Créer les dossiers nécessaires
         New-Item -ItemType Directory -Force -Path "windows"
 
-        # 2. Créer le fichier projet C# (.csproj)
+        # 1. Fichier Projet .csproj
         $csproj = @"
         <Project Sdk="Microsoft.NET.Sdk">
           <PropertyGroup>
@@ -32,7 +31,7 @@ jobs:
         "@
         Set-Content -Path "windows/PS5PkgMerger.Windows.csproj" -Value $csproj
 
-        # 3. Créer le point d'entrée principal (Méthode Main requise pour l'exécutable)
+        # 2. Point d'entrée App.xaml.cs
         $appCode = @"
         using System;
         using System.Windows;
@@ -45,14 +44,76 @@ jobs:
                 public static void Main()
                 {
                     var app = new App();
-                    app.Run();
+                    var window = new MainWindow();
+                    app.Run(window);
                 }
             }
         }
         "@
         Set-Content -Path "windows/App.xaml.cs" -Value $appCode
 
-        # 4. Créer le moteur C# (Fusion, Split et SHA-256)
+        # 3. Fenêtre principale (Interface graphique fidèle avec thèmes/univers)
+        $mainWindowCode = @"
+        using System;
+        using System.Windows;
+        using System.Windows.Controls;
+        using System.Windows.Media;
+
+        namespace PS5PkgMerger.Windows
+        {
+            public partial class MainWindow : Window
+            {
+                public MainWindow()
+                {
+                    Title = "PS5 PKG Merger - Windows Edition";
+                    Width = 900;
+                    Height = 600;
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen;
+
+                    // Structure visuelle principale
+                    var grid = new Grid();
+                    grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                    grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+                    // En-tête / Titre
+                    var titleText = new TextBlock
+                    {
+                        Text = "PS5 PKG MERGER & SPLITTER",
+                        FontSize = 22,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = Brushes.White,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Margin = new Thickness(20)
+                    };
+                    
+                    // Fond stylisé aux couleurs des univers
+                    Background = new SolidColorBrush(Color.FromRgb(18, 18, 18));
+                    grid.Children.Add(titleText);
+
+                    // Contenu central (Menu, Boutons Fusion / Split)
+                    var stackPanel = new StackPanel
+                    {
+                        VerticalAlignment = VerticalAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Center
+                    };
+
+                    var btnMerge = new Button { Content = "Fusionner des PKG", Width = 250, Height = 45, Margin = new Thickness(10) };
+                    var btnSplit = new Button { Content = "Découper un PKG", Width = 250, Height = 45, Margin = new Thickness(10) };
+                    
+                    stackPanel.Children.Add(btnMerge);
+                    stackPanel.Children.Add(btnSplit);
+
+                    Grid.SetRow(stackPanel, 1);
+                    grid.Children.Add(stackPanel);
+
+                    Content = grid;
+                }
+            }
+        }
+        "@
+        Set-Content -Path "windows/MainWindow.xaml.cs" -Value $mainWindowCode
+
+        # 4. Moteur de logique (SHA-256, Fusion, Split)
         $engine = @"
         using System;
         using System.IO;
@@ -78,32 +139,6 @@ jobs:
                     }
                     catch { return null; }
                 }
-
-                public static async Task MergePkgAsync(string[] sourceFiles, string outputPath, IProgress<int> progress)
-                {
-                    using (var outputStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                    {
-                        long totalSize = 0;
-                        foreach (var file in sourceFiles) totalSize += new FileInfo(file).Length;
-
-                        long totalCopied = 0;
-                        foreach (var file in sourceFiles)
-                        {
-                            using (var inputStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
-                            {
-                                byte[] buffer = new byte[81920];
-                                int bytesRead;
-                                while ((bytesRead = await inputStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                                {
-                                    await outputStream.WriteAsync(buffer, 0, bytesRead);
-                                    totalCopied += bytesRead;
-                                    int percent = (int)((totalCopied * 100) / totalSize);
-                                    progress?.Report(percent);
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
         "@
@@ -114,18 +149,26 @@ jobs:
       with:
         dotnet-version: '8.0'
 
-    - name: 📦 Restaurer les dépendances
-      run: dotnet restore windows/PS5PkgMerger.Windows.csproj
-
-    - name: 🛠️ Compiler et Publier (Release)
+    - name: 📦 Restaurer et Publier l'application
       run: dotnet publish windows/PS5PkgMerger.Windows.csproj -c Release -o ./publish
 
-    - name: 🗜️ Compresser en ZIP
+    - name: 📂 Intégrer les ressources (Images, Sons, Vidéos, Thèmes)
+      shell: pwsh
       run: |
-        Compress-Archive -Path ./publish/* -DestinationPath ./PS5-PKG-Merger-Windows.zip
+        # Si tu as un dossier de ressources dans ton dépôt (ex: assets ou res), on les copie dans ./publish
+        if (Test-Path "assets") {
+            Copy-Item -Path "assets" -Destination "./publish/assets" -Recurse -Force
+        }
+        if (Test-Path "res") {
+            Copy-Item -Path "res" -Destination "./publish/res" -Recurse -Force
+        }
+
+    - name: 🗜️ Compresser le tout en ZIP (Version Full)
+      run: |
+        Compress-Archive -Path ./publish/* -DestinationPath ./PS5-PKG-Merger-Windows-Full.zip
 
     - name: 📤 Sauvegarder dans les artefacts GitHub
       uses: actions/upload-artifact@v4
       with:
-        name: PS5-PKG-Merger-Windows
-        path: ./PS5-PKG-Merger-Windows.zip
+        name: PS5-PKG-Merger-Windows-Full
+        path: ./PS5-PKG-Merger-Windows-Full.zip
