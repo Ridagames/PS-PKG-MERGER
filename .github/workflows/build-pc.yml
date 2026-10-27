@@ -1,4 +1,4 @@
-name: Build Windows App (Compose Multiplatform Kotlin)
+name: Build Windows App (Gradle 8.4)
 
 on:
   push:
@@ -13,41 +13,23 @@ jobs:
     - name: 📥 Récupérer le dépôt
       uses: actions/checkout@v4
 
-    - name: ☕ Configurer Java JDK (nécessaire pour Gradle / Kotlin)
+    - name: ☕ Configurer Java JDK (nécessaire pour Gradle)
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: 🛠️ Compiler l'application Desktop via Gradle (Compose Multiplatform)
+    - name: 🐘 Configurer Gradle (Version 8.4 exacte)
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.4'
+
+    - name: 🛠️ Compiler l'application avec Gradle
       shell: pwsh
-      run: |
-        # Lancement de la tâche Gradle pour empaqueter l'application Desktop pour Windows
-        # Selon ton fichier build.gradle.kts, la tâche s'appelle souvent packageDistributionForCurrentOS ou createDistribution
-        if (Test-Path "./gradlew.bat") {
-            ./gradlew.bat packageDistributionForCurrentOS --info
-        } else {
-            gradle packageDistributionForCurrentOS --info
-        }
+      run: ./gradlew assembleDebug --info
 
-    - name: 📦 Archiver et préparer les artefacts Windows
-      shell: pwsh
-      run: |
-        $targetDir = "build/compose/binaries/main/msi"
-        if (-not (Test-Path $targetDir)) {
-            $targetDir = "build/compose/binaries/main"
-        }
-        
-        New-Item -ItemType Directory -Force -Path "./publish_windows"
-        if (Test-Path $targetDir) {
-            Copy-Item -Path "$targetDir/*" -Destination "./publish_windows" -Recurse -Force
-        }
-
-        # Compression du tout dans un ZIP
-        Compress-Archive -Path ./publish_windows/* -DestinationPath ./PS5-PKG-Merger-Kotlin-Windows.zip -Force
-
-    - name: 📤 Sauvegarder dans les artefacts GitHub
+    - name: 📤 Sauvegarder les artefacts
       uses: actions/upload-artifact@v4
       with:
-        name: PS5-PKG-Merger-Kotlin-Windows
-        path: ./PS5-PKG-Merger-Kotlin-Windows.zip
+        name: PS5-PKG-Merger-Windows-Output
+        path: app/build/outputs/apk/debug/*.apk
