@@ -81,6 +81,7 @@ jobs:
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/res/raw
           mkdir -p app/src/main/res/xml
+          mkdir -p app/src/main/res/values
           mkdir -p app/src/lite/res/values
           mkdir -p app/src/full/res/values
 
@@ -195,7 +196,7 @@ jobs:
           </resources>
           EOF
 
-          # Fallback values si le flavor ne charge pas la string
+          # Fallback values
           write app/src/main/res/values/strings.xml <<'EOF'
           <resources>
               <string name="app_name_custom">⚡ PS PKG Freedom Hub</string>
