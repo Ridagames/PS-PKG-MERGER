@@ -637,7 +637,7 @@ class MainActivity : Activity() {
         if (appMode == "SPLIT") splitPkg() else mergePkg()
     }
 
-    // Fonction de calcul SHA-256 pour la vérification d'intégrité
+    // Fonction de calcul SHA-256 universelle pour l'intégrité
     private fun computeSha256(u: Uri): String? {
         return try {
             val digest = MessageDigest.getInstance("SHA-256")
@@ -694,7 +694,7 @@ class MainActivity : Activity() {
                 success = !cancelled
             } catch (_: Exception) {}
 
-            // Vérification SHA-256 si activée via la case à cocher
+            // Vérification SHA-256 en mode Split si la case est cochée
             var computedHash: String? = null
             if (success && verifyBox.isChecked && lastCreatedUri != null) {
                 ui.post { statusView.text = "Calcul du SHA-256..." }
@@ -750,7 +750,7 @@ class MainActivity : Activity() {
                 success = !cancelled
             } catch (_: Exception) {}
 
-            // Vérification SHA-256 si activée via la case à cocher
+            // Vérification SHA-256 en mode Fusion si la case est cochée
             var computedHash: String? = null
             if (success && verifyBox.isChecked) {
                 ui.post { statusView.text = "Calcul du SHA-256..." }
