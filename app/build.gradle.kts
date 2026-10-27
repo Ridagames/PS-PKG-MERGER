@@ -35,23 +35,32 @@ dependencies {
     implementation("androidx.documentfile:documentfile:1.0.1")
 }
 
-// Tâche automatique pour nettoyer les noms de fichiers (supprime les ? au début)
+// Tâche ultra-robuste : nettoie automatiquement tout caractère non valide au début des ressources
 tasks.register("sanitizeResourceNames") {
     doLast {
-        val resDirs = fileTree("src/main/res")
-        resDirs.forEach { file ->
-            if (file.isFile && file.name.startsWith("?")) {
-                val cleanName = file.name.replace("?", "")
-                val newFile = File(file.parent, cleanName)
-                if (file.renameTo(newFile)) {
-                    println("✅ Nettoyage automatique : ${file.name} renommé en $cleanName")
+        val resDir = file("src/main/res")
+        if (resDir.exists()) {
+            resDir.walkTopDown().forEach { file ->
+                if (file.isFile) {
+                    val name = file.name
+                    // Si le nom ne commence pas par une lettre minuscule de a à z
+                    if (!name.matches(Regex("^[a-z].*"))) {
+                        // Supprime tous les caractères spéciaux / chiffres / symboles au début et met en minuscules
+                        val cleanName = name.replace(Regex("^[^a-zA-Z]+"), "").lowercase()
+                        if (cleanName.isNotEmpty() && cleanName != name) {
+                            val newFile = File(file.parent, cleanName)
+                            if (file.renameTo(newFile)) {
+                                println("✅ Nettoyage automatique : '$name' a été renommé proprement en '$cleanName'")
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-// Force l'exécution de ce nettoyage avant chaque compilation
+// S'exécute avant la construction pour intercepter et corriger les fichiers à la volée
 tasks.named("preBuild") {
     dependsOn("sanitizeResourceNames")
 }
