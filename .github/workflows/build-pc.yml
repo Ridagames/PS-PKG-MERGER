@@ -1,4 +1,4 @@
-name: Build Windows App (Auto Wrapper)
+name: Build Windows App (Gradle 8.4)
 
 on:
   push:
@@ -27,11 +27,11 @@ jobs:
     - name: 🛠️ Générer le wrapper Gradle et compiler l'application
       shell: pwsh
       run: |
-        # Génère les fichiers gradlew manquants à la volée
+        # Génère les fichiers gradlew à la volée
         gradle wrapper --gradle-version 8.4
         
-        # Lance la compilation avec le wrapper fraîchement créé
-        ./gradlew.bat assembleDebug --info
+        # Lance la compilation propre (avec nettoyage du cache build)
+        ./gradlew.bat clean assembleDebug --info
 
     - name: 📤 Sauvegarder les artefacts
       uses: actions/upload-artifact@v4
