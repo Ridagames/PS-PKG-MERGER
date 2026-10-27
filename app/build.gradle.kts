@@ -31,4 +31,25 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.documentfile:documentfile:1.0.1")
-} 
+}
+
+// Tâche automatique pour nettoyer les noms de fichiers (supprime les ? au début)
+tasks.register("sanitizeResourceNames") {
+    doLast {
+        val resDirs = fileTree("src/main/res")
+        resDirs.forEach { file ->
+            if (file.isFile && file.name.startsWith("?")) {
+                val cleanName = file.name.replace("?", "")
+                val newFile = java.io.File(file.parent, cleanName)
+                if (file.renameTo(newFile)) {
+                    println("✅ Nettoyage automatique : ${file.name} renommé en $cleanName")
+                }
+            }
+        }
+    }
+}
+
+// Force l'exécution de ce nettoyage avant chaque compilation
+tasks.named("preBuild") {
+    dependsOn("sanitizeResourceNames")
+}
