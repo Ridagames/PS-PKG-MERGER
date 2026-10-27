@@ -589,7 +589,6 @@ jobs:
                   super.onCreate(state)
                   prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
                   
-                  // Version Lite verrouillée en thème classique (pas de sélecteur d'univers)
                   if (BuildConfig.FLAVOR == "lite") {
                       currentTheme = "CLASSIC"
                   } else {
@@ -607,7 +606,6 @@ jobs:
               }
 
               private fun checkFirstRunWelcome() {
-                  // Pas de popup de bienvenue "nouveaux univers" sur la version Lite
                   if (BuildConfig.FLAVOR == "lite") return
 
                   val isFirstRun = prefs.getBoolean("is_first_run", true)
@@ -1434,7 +1432,6 @@ jobs:
                       rebuildButtons()
                   }
 
-                  // Le sélecteur d'univers est présent uniquement dans la version Full
                   if (BuildConfig.FLAVOR != "lite") {
                       addMenuOption(tr("menu_universe")) {
                           dialog.dismiss()
@@ -1954,7 +1951,7 @@ jobs:
 
               private fun isPkgFile(name: String): Boolean {
                   val lower = name.lowercase()
-                  return lower.endsWith(".pkg") || lower.contains(".pkg.")
+                  return lower.endsWith(".pkg") || lower.contains(".pkg.") || lower.contains("_")
               }
 
               private fun getFileName(u: Uri): String {
@@ -2234,7 +2231,8 @@ jobs:
                                   var lastPush = 0L
 
                                   while (transferredTotal < total && !cancelled) {
-                                      val partName = "$cleanBase.pkg.${String.format(Locale.US, "%02d", partIndex)}"
+                                      # Modification ici : format _00.pkg, _01.pkg, etc.
+                                      val partName = "${cleanBase}_${String.format(Locale.US, "%02d", partIndex)}.pkg"
 
                                       val newFile = targetDir.createFile("application/octet-stream", partName)
                                           ?: throw IllegalStateException("Création de $partName échouée")
@@ -2487,7 +2485,6 @@ jobs:
         run: |
           gradle clean assembleFullRelease assembleLiteRelease --no-daemon --stacktrace
 
-      
       - name: Renommer les APKs v2.1.0 (Full & Lite)
         run: |
           cp app/build/outputs/apk/full/release/app-full-release.apk PkgMerger-v2.1.0-full.apk
