@@ -165,6 +165,10 @@ jobs:
 
               signingConfigs {
                   create("release") {
+                      storeFile = file("release.jks")
+                      storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
+                      keyAlias = System.getenv("ALIAS") ?: ""
+                      keyPassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
                   }
               }
 
@@ -2463,11 +2467,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           ALIAS: ${{ secrets.ALIAS }}
         run: |
-          gradle clean assembleFullRelease assembleLiteRelease --no-daemon --stacktrace \
-            -Pandroid.injected.signing.store.file="${{ github.workspace }}/app/release.jks" \
-            -Pandroid.injected.signing.store.password="${KEYSTORE_PASSWORD}" \
-            -Pandroid.injected.signing.key.alias="${ALIAS}" \
-            -Pandroid.injected.signing.key.password="${KEYSTORE_PASSWORD}"
+          gradle clean assembleFullRelease assembleLiteRelease --no-daemon --stacktrace
 
       - name: Renommer les APKs v2.1.0 (Full & Lite)
         run: |
