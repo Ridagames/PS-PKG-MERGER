@@ -24,17 +24,15 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: 🛠️ Générer le wrapper Gradle et compiler l'application
+    - name: 🛠️ Compiler l'application pour Windows (Desktop)
       shell: pwsh
       run: |
-        # Génère les fichiers gradlew à la volée
-        gradle wrapper --gradle-version 8.4
-        
-        # Lance la compilation propre (avec nettoyage du cache build)
-        ./gradlew.bat clean assembleDebug --info
+        # Lance la compilation de la version bureau (Desktop)
+        ./gradlew.bat clean createDistribution --info
 
-    - name: 📤 Sauvegarder les artefacts
+    - name: 📤 Sauvegarder les artefacts (Exécutable Windows)
       uses: actions/upload-artifact@v4
       with:
         name: PS5-PKG-Merger-Windows-Output
-        path: app/build/outputs/apk/debug/*.apk
+        path: app/build/compose/binaries/main/msi/*.msi # ou l'équivalent .exe / dossier zippé selon ta conf Compose Desktop
+
