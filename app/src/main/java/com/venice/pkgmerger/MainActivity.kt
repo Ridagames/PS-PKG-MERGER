@@ -229,7 +229,7 @@ class MainActivity : Activity() {
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
-        currentTheme = if (BuildConfig.FLAVOR == "lite") "CLASSIC" else (prefs.getString("theme", "CLASSIC") ?: "CLASSIC")
+        currentTheme = prefs.getString("theme", "CLASSIC") ?: "CLASSIC"
         currentLang = prefs.getString("lang", "fr") ?: "fr"
         
         createNotificationChannel()
