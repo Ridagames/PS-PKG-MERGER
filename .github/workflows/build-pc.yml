@@ -1,13 +1,11 @@
-name: Build Desktop App
+name: Build PC Desktop App
 
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
 
 jobs:
-  build:
+  build-pc:
     runs-on: windows-latest
 
     steps:
@@ -25,14 +23,12 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: 🛠️ Compiler l'application
+    - name: 🛠️ Compiler l'installateur Windows (Compose Desktop)
       shell: pwsh
-      run: |
-        # Utilise l'exécutable gradle géré par l'action setup-gradle
-        gradle clean assembleDebug --info
+      run: gradle :desktop:packageDistributionForCurrentOs --info
 
-    - name: 📤 Sauvegarder les artefacts
+    - name: 📤 Sauvegarder l'installateur PC (MSI)
       uses: actions/upload-artifact@v4
       with:
-        name: PS5-PKG-Merger-Output
-        path: app/build/outputs/apk/debug/*.apk
+        name: PS5-PKG-Merger-Windows-Installer
+        path: desktop/build/compose/binaries/main/msi/*.msi
