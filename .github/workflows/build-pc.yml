@@ -28,8 +28,8 @@ jobs:
     - name: 🛠️ Compiler l'application
       shell: pwsh
       run: |
-        # Utilise directement le gradlew généré ou la commande gradle avec la version 8.4 épinglée
-        gradlew clean assembleDebug --info
+        # Utilise l'exécutable gradle géré par l'action setup-gradle
+        gradle clean assembleDebug --info
 
     - name: 📤 Sauvegarder les artefacts
       uses: actions/upload-artifact@v4
