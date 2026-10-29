@@ -1,38 +1,37 @@
-name: Build Windows App (Gradle 8.4)
+name: Build Desktop App
 
 on:
   push:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 
 jobs:
-  build-windows-kotlin:
+  build:
     runs-on: windows-latest
 
     steps:
-    - name: 📥 Récupérer le dépôt
+    - name: 📥 Cloner le dépôt
       uses: actions/checkout@v4
 
-    - name: ☕ Configurer Java JDK (nécessaire pour Gradle)
+    - name: ☕ Configurer Java 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: 🐘 Configurer Gradle (Version 8.4)
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: '8.4'
+    - name: ⚙️ Générer le wrapper Gradle à la volée
+      shell: pwsh
+      run: gradle wrapper
 
-    - name: 🛠️ Compiler l'application pour Windows (Desktop)
+    - name: 🛠️ Compiler la version bureau (Desktop)
       shell: pwsh
       run: |
-        # Lance la compilation de la version bureau (Desktop)
-        ./gradlew.bat clean createDistribution --info
+        # Utilise le gradlew fraîchement généré
+        ./gradlew.bat clean assembleDebug --info
 
-    - name: 📤 Sauvegarder les artefacts (Exécutable Windows)
+    - name: 📤 Sauvegarder les artefacts
       uses: actions/upload-artifact@v4
       with:
-        name: PS5-PKG-Merger-Windows-Output
-        path: app/build/compose/binaries/main/msi/*.msi # ou l'équivalent .exe / dossier zippé selon ta conf Compose Desktop
-
+        name: PS5-PKG-Merger-Output
+        path: app/build/outputs/apk/debug/*.apk
