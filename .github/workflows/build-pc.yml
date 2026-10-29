@@ -23,12 +23,12 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: 🛠️ Compiler l'installateur Windows (Compose Desktop)
+    - name: 🛠️ Compiler l'application Windows (EXE)
       shell: pwsh
       run: gradle :desktop:packageDistributionForCurrentOs --info
 
-    - name: 📤 Sauvegarder l'installateur PC (MSI)
+    - name: 📤 Sauvegarder l'exécutable PC
       uses: actions/upload-artifact@v4
       with:
-        name: PS5-PKG-Merger-Windows-Installer
-        path: desktop/build/compose/binaries/main/msi/*.msi
+        name: PS5-PKG-Merger-Windows-App
+        path: desktop/build/compose/binaries/main/exe/*.exe
