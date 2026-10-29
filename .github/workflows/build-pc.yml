@@ -20,15 +20,16 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: ⚙️ Générer le wrapper Gradle à la volée
-      shell: pwsh
-      run: gradle wrapper
+    - name: 🐘 Configurer Gradle (Version 8.4)
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.4'
 
-    - name: 🛠️ Compiler la version bureau (Desktop)
+    - name: 🛠️ Compiler l'application
       shell: pwsh
       run: |
-        # Utilise le gradlew fraîchement généré
-        ./gradlew.bat clean assembleDebug --info
+        # Utilise directement le gradlew généré ou la commande gradle avec la version 8.4 épinglée
+        gradlew clean assembleDebug --info
 
     - name: 📤 Sauvegarder les artefacts
       uses: actions/upload-artifact@v4
