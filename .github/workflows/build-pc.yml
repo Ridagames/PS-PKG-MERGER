@@ -27,8 +27,9 @@ jobs:
       shell: pwsh
       run: gradle :desktop:packageDistributionForCurrentOs --info
 
-    - name: 📤 Sauvegarder l'exécutable PC
+    - name: 📤 Sauvegarder la version portable (ZIP)
       uses: actions/upload-artifact@v4
       with:
-        name: PS5-PKG-Merger-Windows-App
-        path: desktop/build/compose/binaries/main/exe/*.exe
+        name: PS5-PKG-Merger-Portable
+        path: desktop/build/compose/binaries/main/zip/*.zip
+
