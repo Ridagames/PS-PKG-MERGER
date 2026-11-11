@@ -14,6 +14,11 @@ compose.desktop {
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe)
             packageName = "PS5 PKG Merger"
             packageVersion = "2.1.0"
+            
+            windows {
+                iconFile.set(project.file("src/desktopMain/resources/icon.ico"))
+            }
         }
     }
 }
+
