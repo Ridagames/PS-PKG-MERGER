@@ -11,7 +11,7 @@ compose.desktop {
     application {
         mainClass = "com.venice.pkgmerger.desktop.MainKt"
         nativeDistributions {
-            targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe)
+            targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Zip)
             packageName = "PS5 PKG Merger"
             packageVersion = "2.1.0"
             
@@ -21,4 +21,5 @@ compose.desktop {
         }
     }
 }
+
 
