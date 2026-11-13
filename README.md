@@ -1,33 +1,24 @@
-# 🎮 PS5 PKG Merger
+# 🎮 PS5 PKG Merger & Splitter
 
-A modern, cross-platform GUI tool built with **Kotlin** and **Jetpack Compose** to seamlessly join split PlayStation PKG files (**PS3, PS4, PS5**) with built-in **SHA-256** integrity verification.
+A modern, cross-platform GUI tool built with **Kotlin** and **Jetpack Compose** to easily manage large PlayStation package files (**PS3, PS4, PS5**):
+* **Merger:** Join split PKG parts (`_0.pkg`, `_1.pkg`, etc.) into a single complete file with **SHA-256** integrity verification.
+* **Splitter:** Split oversized PKG files into smaller chunks to fit them onto FAT32 storage devices.
 
 ---
 
 ## ✨ Features
 
 * **Cross-Platform Support:** Available for both **Android** and **Windows Desktop**.
-* **Fast & Reliable Merging:** Recombines multi-part `.pkg` archives (`_0.pkg`, `_1.pkg`, etc.) into a single complete package.
-* **SHA-256 Verification:** Automatically verifies file integrity before and after merging to prevent corrupted installations.
+* **Dual Mode:** Seamlessly switch between merging and splitting files.
+* **SHA-256 Verification:** Automatic integrity checks to ensure files are never corrupted.
 * **Clean Material UI:** Intuitive and lightweight graphical interface.
 
 ---
 
 ## 📥 Installation
 
-1. Go to the [**Releases**](https://github.com/Ridagames/PS-PKG-MERGER/releases) section on the right side of this page.
-2. Download the latest version for your platform:
-   * **Android:** Download the `.apk` file and install it on your device.
-   * **Windows (PC):** Download the Windows release package.
-
----
-
-## 🛠️ How to Use
-
-1. Launch **PS5 PKG Merger**.
-2. Select the folder or the first part (`_0.pkg`) of your split PKG files.
-3. Choose your desired output destination.
-4. Click **Merge** and wait for the process and SHA-256 hash check to complete.
+1. Go to the [**Releases**](https://github.com/Ridagames/PS-PKG-MERGER/releases) section.
+2. Download the latest version for your platform (**Android APK** or **Windows Desktop package**).
 
 ---
 
