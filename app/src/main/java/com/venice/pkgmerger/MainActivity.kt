@@ -537,8 +537,8 @@ class MainActivity : Activity() {
     private fun isPkgFile(name: String): Boolean {
         val lower = name.lowercase(Locale.ROOT)
         return lower.endsWith(".pkg") ||
-            Regex("""\\.pkg\\.\\d+$""").containsMatchIn(lower) ||
-            Regex("""[_-]\\d+\\.pkg$""").containsMatchIn(lower)
+            Regex("""\.pkg\.\d+$""").containsMatchIn(lower) ||
+            Regex("""[_-]\d+\.pkg$""").containsMatchIn(lower)
     }
 
         private fun getFileName(u: Uri): String {
@@ -603,8 +603,8 @@ class MainActivity : Activity() {
     }
 
     private fun naturalCompare(a: String, b: String): Int {
-        val left = Regex("""(\\d+|\\D+)""").findAll(a.lowercase(Locale.ROOT)).map { it.value }.toList()
-        val right = Regex("""(\\d+|\\D+)""").findAll(b.lowercase(Locale.ROOT)).map { it.value }.toList()
+        val left = Regex("""(\d+|\D+)""").findAll(a.lowercase(Locale.ROOT)).map { it.value }.toList()
+        val right = Regex("""(\d+|\D+)""").findAll(b.lowercase(Locale.ROOT)).map { it.value }.toList()
         for (i in 0 until minOf(left.size, right.size)) {
             val x = left[i]; val y = right[i]
             val result = if (x.firstOrNull()?.isDigit() == true && y.firstOrNull()?.isDigit() == true) {
