@@ -15,6 +15,22 @@ android {
         targetSdk = 34
         versionCode = 23
         versionName = "2.1.0"
+        manifestPlaceholders["appLabel"] = "PS PKG MERGER"
+    }
+
+    flavorDimensions += "edition"
+    productFlavors {
+        create("lite") {
+            dimension = "edition"
+            applicationIdSuffix = ".lite"
+            manifestPlaceholders["appLabel"] = "PS PKG MERGER Lite"
+            buildConfigField("boolean", "IS_FULL_EDITION", "false")
+        }
+        create("full") {
+            dimension = "edition"
+            manifestPlaceholders["appLabel"] = "PS PKG MERGER Full"
+            buildConfigField("boolean", "IS_FULL_EDITION", "true")
+        }
     }
 
     buildFeatures {
