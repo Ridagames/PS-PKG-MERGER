@@ -534,8 +534,14 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun isPkgFile(n: String) = n.lowercase().run { endsWith(".pkg") || contains(".pkg.") || contains("_") }
-    private fun getFileName(u: Uri): String {
+    private fun isPkgFile(name: String): Boolean {
+        val lower = name.lowercase(Locale.ROOT)
+        return lower.endsWith(".pkg") ||
+            Regex("""\\.pkg\\.\\d+$""").containsMatchIn(lower) ||
+            Regex("""[_-]\\d+\\.pkg$""").containsMatchIn(lower)
+    }
+
+        private fun getFileName(u: Uri): String {
         var n = "game.pkg"
         contentResolver.query(u, null, null, null, null)?.use { c ->
             val ni = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
@@ -546,32 +552,72 @@ class MainActivity : Activity() {
 
     private fun add(u: Uri) { uris.add(u); names.add(getFileName(u)); sizes.add(size(u)) }
     private fun size(u: Uri): Long {
-        return contentResolver.query(u, null, null, null, null)?.use { c ->
-            val i = c.getColumnIndex(OpenableColumns.SIZE)
-            if (c.moveToFirst() && i >= 0 && !c.isNull(i)) c.getLong(i) else 0L
-        } ?: 0L
+        val queried = try {
+            contentResolver.query(u, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c ->
+                val index = c.getColumnIndex(OpenableColumns.SIZE)
+                if (c.moveToFirst() && index >= 0 && !c.isNull(index)) c.getLong(index) else -1L
+            } ?: -1L
+        } catch (_: Exception) { -1L }
+        if (queried >= 0L) return queried
+        return try {
+            contentResolver.openFileDescriptor(u, "r")?.use { it.statSize.takeIf { value -> value >= 0L } ?: 0L } ?: 0L
+        } catch (_: Exception) { 0L }
     }
 
-    private fun loadTree(tree: Uri) {
+        private fun loadTree(tree: Uri) {
         uris.clear(); names.clear(); sizes.clear()
         try {
             val docId = DocumentsContract.getTreeDocumentId(tree)
             val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, docId)
-            contentResolver.query(children, arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_SIZE, DocumentsContract.Document.COLUMN_MIME_TYPE), null, null, null)?.use { c ->
+            val found = ArrayList<Triple<Uri, String, Long>>()
+            contentResolver.query(
+                children,
+                arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_SIZE,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE
+                ),
+                null, null, null
+            )?.use { c ->
                 while (c.moveToNext()) {
-                    val id = c.getString(0); val name = c.getString(1); val mime = c.getString(3)
-                    if (id != null && name != null && mime != DocumentsContract.Document.MIME_TYPE_DIR && isPkgFile(name)) {
-                        uris.add(DocumentsContract.buildDocumentUriUsingTree(tree, id))
-                        names.add(name)
-                        sizes.add(if (c.isNull(2)) 0L else c.getLong(2))
+                    val id = c.getString(0)
+                    val name = c.getString(1)
+                    val mime = c.getString(3)
+                    if (id != null && name != null &&
+                        mime != DocumentsContract.Document.MIME_TYPE_DIR && isPkgFile(name)) {
+                        val itemUri = DocumentsContract.buildDocumentUriUsingTree(tree, id)
+                        val itemSize = if (c.isNull(2)) size(itemUri) else c.getLong(2)
+                        found.add(Triple(itemUri, name, itemSize))
                     }
                 }
             }
-        } catch (_: Exception) {}
+            found.sortWith { left, right -> naturalCompare(left.second, right.second) }
+            found.forEach { (uri, name, itemSize) ->
+                uris.add(uri); names.add(name); sizes.add(itemSize)
+            }
+        } catch (e: Exception) {
+            toast("Erreur lecture dossier : ${e.message ?: "inconnue"}")
+        }
         refresh()
     }
 
-    private fun refresh() {
+    private fun naturalCompare(a: String, b: String): Int {
+        val left = Regex("""(\\d+|\\D+)""").findAll(a.lowercase(Locale.ROOT)).map { it.value }.toList()
+        val right = Regex("""(\\d+|\\D+)""").findAll(b.lowercase(Locale.ROOT)).map { it.value }.toList()
+        for (i in 0 until minOf(left.size, right.size)) {
+            val x = left[i]; val y = right[i]
+            val result = if (x.firstOrNull()?.isDigit() == true && y.firstOrNull()?.isDigit() == true) {
+                val nx = x.trimStart('0').ifEmpty { "0" }
+                val ny = y.trimStart('0').ifEmpty { "0" }
+                if (nx.length != ny.length) nx.length.compareTo(ny.length) else nx.compareTo(ny)
+            } else x.compareTo(y)
+            if (result != 0) return result
+        }
+        return left.size.compareTo(right.size)
+    }
+
+        private fun refresh() {
         if (!::listContainer.isInitialized) return
         listContainer.removeAllViews()
         if (uris.isEmpty()) { listContainer.addView(text("AUCUN FICHIER SÉLECTIONNÉ", 11f, Color.GRAY)); checkView.text = ""; return }
@@ -588,120 +634,193 @@ class MainActivity : Activity() {
     private fun computeSha256(u: Uri): String? {
         return try {
             val digest = MessageDigest.getInstance("SHA-256")
-            contentResolver.openInputStream(u)?.use { input ->
-                val buffer = ByteArray(8192)
-                var read: Int
-                while (input.read(buffer).also { read = it } != -1) {
-                    digest.update(buffer, 0, read)
+            val input = contentResolver.openInputStream(u) ?: return null
+            input.use {
+                val buffer = ByteArray(1024 * 1024)
+                while (true) {
+                    val count = it.read(buffer)
+                    if (count < 0) break
+                    if (count > 0) digest.update(buffer, 0, count)
                 }
             }
-            digest.digest().joinToString("") { "%02x".format(it) }
+            digest.digest().joinToString("") { byte -> "%02x".format(byte) }
         } catch (_: Exception) { null }
     }
 
-    // MODE SPLITTER AVEC CONTRÔLE SHA-256 INTÉGRÉ
+
+
+        // MODE SPLITTER AVEC CONTRÔLE SHA-256 INTÉGRÉ
     private fun splitPkg() {
         val treeUri = output ?: return
+        if (uris.size != 1) {
+            toast("Le découpage nécessite un seul fichier source.")
+            return
+        }
         val sourceUri = uris[0]
         processing = true; cancelled = false
         goBtnLayout.isEnabled = false; cancelBtnLayout.isEnabled = true
         bar.progress = 0; statusView.text = "Découpage en cours…"
 
         Thread {
+            val created = ArrayList<DocumentFile>()
             var success = false
+            var failure: String? = null
+            var sourceHash: String? = null
             try {
                 val total = size(sourceUri)
-                val targetDir = DocumentFile.fromTreeUri(this, treeUri) ?: throw Exception("Dossier invalide")
-                val cleanBase = getFileName(sourceUri).substringBeforeLast(".")
+                val targetDir = DocumentFile.fromTreeUri(this, treeUri)
+                    ?: throw IllegalStateException("Dossier de sortie invalide")
+                val originalName = getFileName(sourceUri)
+                val cleanBase = originalName.substringBeforeLast(".", originalName).ifBlank { "package" }
+                val input = contentResolver.openInputStream(sourceUri)
+                    ?: throw IllegalStateException("Impossible d'ouvrir le fichier source")
+                val sourceDigest = if (verifyBox.isChecked) MessageDigest.getInstance("SHA-256") else null
+                var totalWritten = 0L
+                var partIndex = 0
+                val maxPartSize = 3_900_000_000L // inférieur à la limite FAT32 de 4 Gio
+                val buffer = ByteArray(1024 * 1024)
 
-                contentResolver.openFileDescriptor(sourceUri, "r")?.use { pfdIn ->
-                    FileInputStream(pfdIn.fileDescriptor).use { fis ->
-                        fis.channel.use { inChannel ->
-                            var partIndex = 0; var transferred = 0L
-                            while (transferred < total && !cancelled) {
-                                val partName = "${cleanBase}_${String.format(Locale.US, "%02d", partIndex)}.pkg"
-                                val newFile = targetDir.createFile("application/octet-stream", partName) ?: throw Exception("Création fichier échouée")
-
-                                contentResolver.openFileDescriptor(newFile.uri, "w")?.use { pfdOut ->
-                                    FileOutputStream(pfdOut.fileDescriptor).use { fos ->
-                                        fos.channel.use { outChannel ->
-                                            val partSize = minOf(4L * 1024 * 1024 * 1024, total - transferred)
-                                            val n = inChannel.transferTo(transferred, partSize, outChannel)
-                                            transferred += n
-                                            outChannel.force(true)
-                                        }
+                input.use { source ->
+                    var eof = false
+                    while (!eof && !cancelled) {
+                        val partName = "${cleanBase}_${String.format(Locale.US, "%02d", partIndex)}.pkg"
+                        val partFile = targetDir.createFile("application/octet-stream", partName)
+                            ?: throw IllegalStateException("Création de $partName impossible")
+                        created.add(partFile)
+                        val partDigest = if (verifyBox.isChecked) MessageDigest.getInstance("SHA-256") else null
+                        var partBytes = 0L
+                        val outputStream = contentResolver.openOutputStream(partFile.uri, "wt")
+                            ?: throw IllegalStateException("Ouverture de $partName impossible")
+                        outputStream.use { destination ->
+                            while (partBytes < maxPartSize && !eof && !cancelled) {
+                                val wanted = minOf(buffer.size.toLong(), maxPartSize - partBytes).toInt()
+                                val count = source.read(buffer, 0, wanted)
+                                if (count < 0) { eof = true; break }
+                                if (count == 0) continue
+                                destination.write(buffer, 0, count)
+                                sourceDigest?.update(buffer, 0, count)
+                                partDigest?.update(buffer, 0, count)
+                                partBytes += count
+                                totalWritten += count
+                                if (total > 0L) {
+                                    val percent = ((totalWritten * 100L) / total).coerceIn(0L, 100L).toInt()
+                                    ui.post {
+                                        bar.progress = percent * 10
+                                        statusView.text = "${fmt(totalWritten)} / ${fmt(total)} ($percent%)"
                                     }
+                                } else {
+                                    ui.post { statusView.text = "Découpage : ${fmt(totalWritten)}" }
                                 }
-                                partIndex++
+                            }
+                            destination.flush()
+                        }
+                        if (partBytes == 0L) {
+                            partFile.delete()
+                            created.remove(partFile)
+                            break
+                        }
+                        if (partDigest != null) {
+                            val expectedPartHash = partDigest.digest().joinToString("") { byte -> "%02x".format(byte) }
+                            val actualPartHash = computeSha256(partFile.uri)
+                                ?: throw IllegalStateException("Impossible de vérifier $partName")
+                            if (!expectedPartHash.equals(actualPartHash, ignoreCase = true)) {
+                                throw IllegalStateException("Vérification SHA-256 échouée pour $partName")
                             }
                         }
+                        partIndex++
                     }
                 }
-                success = !cancelled
-            } catch (_: Exception) {}
-
-            // VÉRIFICATION D'INTÉGRITÉ SHA-256 DU FICHIER SOURCE AU SPLITTER
-            var computedHash: String? = null
-            if (success && verifyBox.isChecked) {
-                ui.post { statusView.text = "Calcul du SHA-256 de la source..." }
-                computedHash = computeSha256(sourceUri)
+                if (cancelled) throw InterruptedException("Découpage annulé")
+                if (totalWritten == 0L) throw IllegalStateException("Le fichier source est vide ou illisible")
+                if (total > 0L && totalWritten != total) {
+                    throw IllegalStateException("Taille lue incorrecte : $totalWritten / $total octets")
+                }
+                sourceHash = sourceDigest?.digest()?.joinToString("") { byte -> "%02x".format(byte) }
+                success = true
+            } catch (e: Exception) {
+                failure = e.message ?: e.javaClass.simpleName
+                created.forEach { try { it.delete() } catch (_: Exception) {} }
             }
 
             ui.post {
                 processing = false; doneUi()
                 if (success) {
                     bar.progress = 1000
-                    lastHash = computedHash
-                    if (computedHash != null) {
-                        hashView.text = "SHA-256 (Source) : $computedHash"
-                    }
-                    statusView.text = "Découpage réussi !"
+                    lastHash = sourceHash
+                    if (sourceHash != null) hashView.text = "SHA-256 (Source) : $sourceHash"
+                    statusView.text = "Découpage réussi — ${created.size} partie(s)"
                 } else {
-                    statusView.text = "Découpage échoué ou annulé."
+                    statusView.text = if (cancelled) "Découpage annulé." else "Échec : ${failure ?: "erreur inconnue"}"
                 }
             }
         }.start()
     }
 
-    // MODE FUSION AVEC CONTRÔLE SHA-256
+
+
+        // MODE FUSION AVEC CONTRÔLE SHA-256
     private fun mergePkg() {
         val out = output ?: return
+        val orderedUris = uris.toList()
+        if (orderedUris.isEmpty()) return
         processing = true; cancelled = false
         goBtnLayout.isEnabled = false; cancelBtnLayout.isEnabled = true
         bar.progress = 0; statusView.text = "Fusion en cours…"
 
         Thread {
-            val total = uris.sumOf { size(it) }
-            var done = 0L; var success = false
-
+            var success = false
+            var failure: String? = null
+            var computedHash: String? = null
+            var bytesWritten = 0L
+            val total = orderedUris.sumOf { size(it).coerceAtLeast(0L) }
             try {
-                contentResolver.openFileDescriptor(out, "w")?.use { pfdOut ->
-                    FileOutputStream(pfdOut.fileDescriptor).use { fos ->
-                        fos.channel.use { outChannel ->
-                            var offset = 0L
-                            for (u in uris) {
-                                if (cancelled) break
-                                contentResolver.openFileDescriptor(u, "r")?.use { pfdIn ->
-                                    FileInputStream(pfdIn.fileDescriptor).use { fis ->
-                                        fis.channel.use { inChannel ->
-                                            val n = outChannel.transferFrom(inChannel, offset, inChannel.size())
-                                            offset += n; done += n
-                                        }
+                val sourceDigest = if (verifyBox.isChecked) MessageDigest.getInstance("SHA-256") else null
+                val outputStream = contentResolver.openOutputStream(out, "wt")
+                    ?: throw IllegalStateException("Impossible d'ouvrir le fichier de sortie")
+                outputStream.use { destination ->
+                    val buffer = ByteArray(1024 * 1024)
+                    for (uri in orderedUris) {
+                        if (cancelled) throw InterruptedException("Fusion annulée")
+                        val input = contentResolver.openInputStream(uri)
+                            ?: throw IllegalStateException("Impossible de lire ${getFileName(uri)}")
+                        input.use { source ->
+                            while (true) {
+                                if (cancelled) throw InterruptedException("Fusion annulée")
+                                val count = source.read(buffer)
+                                if (count < 0) break
+                                if (count == 0) continue
+                                destination.write(buffer, 0, count)
+                                sourceDigest?.update(buffer, 0, count)
+                                bytesWritten += count
+                                if (total > 0L) {
+                                    val percent = ((bytesWritten * 100L) / total).coerceIn(0L, 100L).toInt()
+                                    ui.post {
+                                        bar.progress = percent * 10
+                                        statusView.text = "${fmt(bytesWritten)} / ${fmt(total)} ($percent%)"
                                     }
+                                } else {
+                                    ui.post { statusView.text = "Fusion : ${fmt(bytesWritten)}" }
                                 }
                             }
-                            outChannel.force(true)
                         }
                     }
+                    destination.flush()
                 }
-                success = !cancelled
-            } catch (_: Exception) {}
-
-            // VÉRIFICATION D'INTÉGRITÉ SHA-256 APRÈS FUSION
-            var computedHash: String? = null
-            if (success && verifyBox.isChecked) {
-                ui.post { statusView.text = "Calcul du SHA-256..." }
-                computedHash = computeSha256(out)
+                if (cancelled) throw InterruptedException("Fusion annulée")
+                if (total > 0L && bytesWritten != total) {
+                    throw IllegalStateException("Taille finale incorrecte : $bytesWritten / $total octets")
+                }
+                if (sourceDigest != null) {
+                    val expectedHash = sourceDigest.digest().joinToString("") { byte -> "%02x".format(byte) }
+                    computedHash = computeSha256(out)
+                        ?: throw IllegalStateException("Impossible de relire le fichier fusionné")
+                    if (!expectedHash.equals(computedHash, ignoreCase = true)) {
+                        throw IllegalStateException("SHA-256 différent : le fichier de sortie ne correspond pas aux sources")
+                    }
+                }
+                success = true
+            } catch (e: Exception) {
+                failure = e.message ?: e.javaClass.simpleName
             }
 
             ui.post {
@@ -709,18 +828,18 @@ class MainActivity : Activity() {
                 if (success) {
                     bar.progress = 1000
                     lastHash = computedHash
-                    if (computedHash != null) {
-                        hashView.text = "SHA-256 : $computedHash"
-                    }
-                    statusView.text = "Fusion réussie !"
+                    if (computedHash != null) hashView.text = "SHA-256 : $computedHash"
+                    statusView.text = "Fusion réussie — ${fmt(bytesWritten)}"
                 } else {
-                    statusView.text = "Fusion échouée/annulée."
+                    statusView.text = if (cancelled) "Fusion annulée." else "Échec : ${failure ?: "erreur inconnue"}"
                 }
             }
         }.start()
     }
 
-    private fun doneUi() { goBtnLayout.isEnabled = true; cancelBtnLayout.isEnabled = false }
+
+
+        private fun doneUi() { goBtnLayout.isEnabled = true; cancelBtnLayout.isEnabled = false }
     private fun copyHash() {
         val h = lastHash ?: return
         getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("sha256", h))
