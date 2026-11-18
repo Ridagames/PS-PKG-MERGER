@@ -198,7 +198,7 @@ class MainActivity : Activity() {
 
     private fun tr(key: String): String {
         val map = mapOf(
-            "app_title" to mapOf("fr" to "⚡ PS PKG FREEDOM HUB"),
+            "app_title" to mapOf("fr" to "⚡ PS PKG MERGER"),
             "universe" to mapOf("fr" to "UNIVERS"),
             "menu_btn" to mapOf("fr" to "⚙️ MENU"),
             "sec1" to mapOf("fr" to "1. FICHIERS SOURCE (PKG / PARTIES)"),
@@ -275,15 +275,25 @@ class MainActivity : Activity() {
                 toast("⚠️ Traitement en cours...")
                 return@setOnClickListener
             }
-            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-            vibrator?.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
-            onClickAction()
+            try {
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && vibrator?.hasVibrator() == true) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(70, VibrationEffect.DEFAULT_AMPLITUDE))
+                }
+            } catch (_: Exception) {
+                // Le retour haptique ne doit jamais empêcher une action.
+            }
+            try {
+                onClickAction()
+            } catch (e: Exception) {
+                toast("Action impossible : ${e.message ?: "erreur inconnue"}")
+            }
         }
 
         return container
     }
 
-    private fun applyTheme() {
+    private fun applyTheme()    private fun applyTheme() {
         val cfg = getThemeConfig(currentTheme)
         rootFrameLayout.setBackgroundColor(cfg.bg)
         rootLayout.setBackgroundColor(Color.TRANSPARENT)
@@ -317,54 +327,45 @@ class MainActivity : Activity() {
         refresh()
     }
 
-    private fun rebuildButtons() {
-        val cfg = getThemeConfig(currentTheme)
-        val parentCard1 = pickBtnLayout.parent as? LinearLayout
-        val parentCard2 = outBtnLayout.parent as? LinearLayout
-        val parentCard3 = copyBtnLayout.parent as? LinearLayout
-
-        val idxPick = parentCard1?.indexOfChild(pickBtnLayout) ?: -1
-        val idxDir = parentCard1?.indexOfChild(dirBtnLayout) ?: -1
-        val idxRev = parentCard1?.indexOfChild(revBtnLayout) ?: -1
-        val idxOut = parentCard2?.indexOfChild(outBtnLayout) ?: -1
-        val idxGo = (goBtnLayout.parent as? LinearLayout)?.indexOfChild(goBtnLayout) ?: -1
-        val idxCancel = (cancelBtnLayout.parent as? LinearLayout)?.indexOfChild(cancelBtnLayout) ?: -1
-        val idxCopy = parentCard3?.indexOfChild(copyBtnLayout) ?: -1
-
-        val actionContainer = goBtnLayout.parent as? LinearLayout
-
-        pickBtnLayout = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second, false) { pick() }
-        dirBtnLayout = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second, false) { pickFolder() }
-        revBtnLayout = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second, false) { reversed = !reversed; refresh() }
-        outBtnLayout = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second, false) { pickOutput() }
-        
-        val goTextKey = if (appMode == "SPLIT") "btn_go_split" else "btn_go_merge"
-        goBtnLayout = createCustomButton(tr(goTextKey), cfg.btnGo.first, cfg.btnGo.second, false) { executeAction() }
-        cancelBtnLayout = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, true) {
-            if (processing) { cancelled = true; statusView.text = "Annulation..." }
-        }
-        copyBtnLayout = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second, false) { copyHash() }
-
-        if (parentCard1 != null && idxPick != -1) {
-            parentCard1.removeViewAt(idxPick); parentCard1.addView(pickBtnLayout, idxPick, lp())
-            parentCard1.removeViewAt(idxDir); parentCard1.addView(dirBtnLayout, idxDir, lp())
-            parentCard1.removeViewAt(idxRev); parentCard1.addView(revBtnLayout, idxRev, lp())
-        }
-        if (parentCard2 != null && idxOut != -1) {
-            parentCard2.removeViewAt(idxOut); parentCard2.addView(outBtnLayout, idxOut, lp())
-        }
-        if (actionContainer != null && idxGo != -1) {
-            actionContainer.removeViewAt(idxGo)
-            actionContainer.addView(goBtnLayout, idxGo, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-            actionContainer.removeViewAt(idxCancel)
-            actionContainer.addView(cancelBtnLayout, idxCancel, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
-        }
-        if (parentCard3 != null && idxCopy != -1) {
-            parentCard3.removeViewAt(idxCopy); parentCard3.addView(copyBtnLayout, idxCopy, lp())
-        }
+    private fun replaceButtonView(oldView: View, newView: View, params: LinearLayout.LayoutParams) {
+        val parent = oldView.parent as? LinearLayout ?: return
+        val index = parent.indexOfChild(oldView)
+        if (index < 0) return
+        parent.removeView(oldView)
+        parent.addView(newView, index, params)
     }
 
-    private fun createNotificationChannel() {
+    private fun rebuildButtons() {
+        val cfg = getThemeConfig(currentTheme)
+        val newPick = createCustomButton(tr("btn_pick"), cfg.btnPick.first, cfg.btnPick.second) { pick() }
+        val newDir = createCustomButton(tr("btn_dir"), cfg.btnDir.first, cfg.btnDir.second) { pickFolder() }
+        val newRev = createCustomButton(tr("btn_rev"), cfg.btnRev.first, cfg.btnRev.second) { reversed = !reversed; refresh() }
+        val newOut = createCustomButton(tr("btn_out"), cfg.btnOut.first, cfg.btnOut.second) { pickOutput() }
+        val goTextKey = if (appMode == "SPLIT") "btn_go_split" else "btn_go_merge"
+        val newGo = createCustomButton(tr(goTextKey), cfg.btnGo.first, cfg.btnGo.second) { executeAction() }
+        val newCancel = createCustomButton(tr("btn_cancel"), cfg.btnCancel.first, cfg.btnCancel.second, true) {
+            if (processing) { cancelled = true; statusView.text = "Annulation..." }
+        }
+        val newCopy = createCustomButton(tr("btn_copy"), cfg.btnRev.first, cfg.btnRev.second) { copyHash() }
+
+        replaceButtonView(pickBtnLayout, newPick, lp())
+        replaceButtonView(dirBtnLayout, newDir, lp())
+        replaceButtonView(revBtnLayout, newRev, lp())
+        replaceButtonView(outBtnLayout, newOut, lp())
+        replaceButtonView(goBtnLayout, newGo, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        replaceButtonView(cancelBtnLayout, newCancel, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { leftMargin = dp(8) })
+        replaceButtonView(copyBtnLayout, newCopy, lp())
+
+        pickBtnLayout = newPick
+        dirBtnLayout = newDir
+        revBtnLayout = newRev
+        outBtnLayout = newOut
+        goBtnLayout = newGo
+        cancelBtnLayout = newCancel
+        copyBtnLayout = newCopy
+    }
+
+    private fun createNotificationChannel()    private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel("pkg_channel", "PS PKG Notifications", NotificationManager.IMPORTANCE_LOW)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -479,29 +480,70 @@ class MainActivity : Activity() {
         val cfg = getThemeConfig(currentTheme)
         val dialogView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(16), dp(16), dp(16))
-            background = GradientDrawable().apply { setColor(cfg.card); cornerRadius = dp(10).toFloat(); setStroke(dp(2), Color.parseColor(cfg.border)) }
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            background = GradientDrawable().apply {
+                setColor(cfg.card)
+                cornerRadius = dp(10).toFloat()
+                setStroke(dp(2), Color.parseColor(cfg.border))
+            }
         }
+        val heading = TextView(this).apply {
+            text = tr("menu_options")
+            setTextColor(cfg.primaryText)
+            textSize = 17f
+            setTypeface(null, Typeface.BOLD)
+            setPadding(dp(8), dp(4), dp(8), dp(10))
+        }
+        dialogView.addView(heading, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        fun addMenu(txt: String, act: () -> Unit) {
-            val btn = Button(this).apply { text = txt; setTextColor(Color.WHITE); textSize = 12f; gravity = Gravity.START or Gravity.CENTER_VERTICAL; setBackgroundColor(Color.TRANSPARENT); setOnClickListener { act() } }
-            dialogView.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(40)))
+        fun addMenu(txt: String, action: () -> Unit) {
+            val btn = Button(this).apply {
+                text = txt
+                setTextColor(cfg.primaryText)
+                textSize = 13f
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                setBackgroundColor(Color.TRANSPARENT)
+                setOnClickListener { action() }
+            }
+            dialogView.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, dp(46)))
         }
 
-        addMenu(if (appMode == "MERGE") tr("mode_split") else tr("mode_merge")) {
+        addMenu(if (appMode == "MERGE") "📂 Passer en mode Splitter" else "🔗 Passer en mode Fusion") {
             dialog.dismiss()
             appMode = if (appMode == "MERGE") "SPLIT" else "MERGE"
             section1Title.text = if (appMode == "SPLIT") tr("sec1_split") else tr("sec1")
             statusView.text = if (appMode == "SPLIT") tr("status_split_ready") else tr("status_ready")
-            output = null; outView.text = tr("out_lbl")
+            output = null
+            outView.text = tr("out_lbl")
             rebuildButtons()
+            refresh()
         }
+
+        dialogView.addView(TextView(this).apply {
+            text = "🎨 APPARENCE"
+            setTextColor(cfg.secondaryText)
+            textSize = 12f
+            setTypeface(null, Typeface.BOLD)
+            setPadding(dp(8), dp(8), dp(8), dp(2))
+        }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
+        fun chooseTheme(key: String) {
+            currentTheme = key
+            prefs.edit().putString("theme", key).apply()
+            dialog.dismiss()
+            applyTheme()
+        }
+        addMenu(if (currentTheme == "CLASSIC") "✓ Sombre classique" else "Sombre classique") { chooseTheme("CLASSIC") }
+        addMenu(if (currentTheme == "FORTNITE") "✓ Fortnite Battle Royale" else "Fortnite Battle Royale") { chooseTheme("FORTNITE") }
+        addMenu(if (currentTheme == "GOW") "✓ God of War Ragnarök" else "God of War Ragnarök") { chooseTheme("GOW") }
+        addMenu("✖ Fermer") { dialog.dismiss() }
+
         dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     }
 
-    private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) }
+    private fun lp()    private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) }
     private fun lpCard() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12); bottomMargin = dp(4) }
     private fun createCard() = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16)).also { cardViews.add(this) } }
     private fun text(t: String, size: Float, color: Int, bold: Boolean = false) = TextView(this).apply { text = t; textSize = size; setTextColor(color); if (bold) setTypeface(typeface, Typeface.BOLD) }
