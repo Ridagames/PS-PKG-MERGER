@@ -1,9 +1,9 @@
-name: Build Android APK
+name: Build PS PKG Merger Android
 
 on:
   push:
     branches:
-      - "**"
+      - main
   workflow_dispatch:
 
 permissions:
@@ -15,9 +15,9 @@ concurrency:
 
 jobs:
   build-android:
-    name: Compile Android release from repository sources
+    name: Build signed Lite and Full APKs
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     steps:
       - name: Checkout repository
@@ -34,12 +34,14 @@ jobs:
         with:
           gradle-version: "8.4"
 
-      - name: Verify source files
+      - name: Verify Android project
         run: |
           test -f app/src/main/java/com/venice/pkgmerger/MainActivity.kt
-          test -f app/build.gradle.kts
           test -f app/src/main/AndroidManifest.xml
-          echo "Building the committed Android sources; no source files will be regenerated."
+          test -f app/src/main/res/drawable/logo.png
+          test -f app/src/full/res/raw/fn_bg.mp4
+          test -f app/src/full/res/raw/gow_bg.mp4
+          grep -q 'versionName = "2.1.0"' app/build.gradle.kts
 
       - name: Restore release signing key
         env:
@@ -49,27 +51,33 @@ jobs:
           echo "$SIGNING_KEY" | base64 --decode > app/release.jks
           test -s app/release.jks
 
-      - name: Build signed release APK
+      - name: Build both signed release variants
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           ALIAS: ${{ secrets.ALIAS }}
         run: |
           test -n "$KEYSTORE_PASSWORD" || { echo "Missing KEYSTORE_PASSWORD secret"; exit 1; }
           test -n "$ALIAS" || { echo "Missing ALIAS secret"; exit 1; }
-          gradle :app:assembleRelease --no-daemon --stacktrace
+          gradle clean :app:assembleLiteRelease :app:assembleFullRelease --no-daemon --stacktrace
 
-      - name: Verify APK and calculate SHA-256
+      - name: Verify and package both APKs
         run: |
-          APK="app/build/outputs/apk/release/app-release.apk"
-          test -s "$APK"
+          set -e
+          LITE="app/build/outputs/apk/lite/release/app-lite-release.apk"
+          FULL="app/build/outputs/apk/full/release/app-full-release.apk"
+          test -s "$LITE"
+          test -s "$FULL"
           mkdir -p dist
-          cp "$APK" dist/PS-PKG-MERGER-v2.1.0.apk
-          sha256sum dist/PS-PKG-MERGER-v2.1.0.apk | tee dist/SHA256SUMS.txt
+          cp "$LITE" dist/PS-PKG-MERGER-v2.1.0-Lite.apk
+          cp "$FULL" dist/PS-PKG-MERGER-v2.1.0-Full.apk
+          sha256sum dist/*.apk | tee dist/SHA256SUMS.txt
+          echo "Lite APK: $(du -h dist/PS-PKG-MERGER-v2.1.0-Lite.apk | cut -f1)"
+          echo "Full APK: $(du -h dist/PS-PKG-MERGER-v2.1.0-Full.apk | cut -f1)"
 
-      - name: Upload release APK
+      - name: Upload Lite and Full APKs
         uses: actions/upload-artifact@v4
         with:
-          name: PS-PKG-MERGER-v2.1.0-Android
+          name: PS-PKG-MERGER-v2.1.0-Lite-Full
           path: dist/*
           if-no-files-found: error
           retention-days: 30
