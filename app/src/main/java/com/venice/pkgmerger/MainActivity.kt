@@ -229,7 +229,7 @@ class MainActivity : Activity() {
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         prefs = getSharedPreferences("pkg_prefs", Context.MODE_PRIVATE)
-        currentTheme = prefs.getString("theme", "CLASSIC") ?: "CLASSIC"
+        currentTheme = if (BuildConfig.IS_FULL_EDITION) prefs.getString("theme", "CLASSIC") ?: "CLASSIC" else "CLASSIC"
         currentLang = prefs.getString("lang", "fr") ?: "fr"
         
         createNotificationChannel()
@@ -324,7 +324,54 @@ class MainActivity : Activity() {
         }
 
         rebuildButtons()
+        applyUniverseMedia()
         refresh()
+    }
+
+    private fun stopUniverseMedia() {
+        try { bgVideoView?.stopPlayback() } catch (_: Exception) {}
+        bgVideoView?.visibility = View.GONE
+        try { musicPlayer?.stop() } catch (_: Exception) {}
+        try { musicPlayer?.release() } catch (_: Exception) {}
+        musicPlayer = null
+    }
+
+    private fun applyUniverseMedia() {
+        if (!BuildConfig.IS_FULL_EDITION || currentTheme == "CLASSIC") {
+            stopUniverseMedia()
+            return
+        }
+        stopUniverseMedia()
+        val prefix = if (currentTheme == "FORTNITE") "fn" else "gow"
+        val videoId = resources.getIdentifier("${prefix}_bg", "raw", packageName)
+        val musicId = resources.getIdentifier("${prefix}_music", "raw", packageName)
+        if (videoId != 0) {
+            try {
+                bgVideoView?.apply {
+                    visibility = View.VISIBLE
+                    setVideoURI(Uri.parse("android.resource://$packageName/$videoId"))
+                    setOnPreparedListener { player ->
+                        player.isLooping = true
+                        player.setVolume(0f, 0f)
+                        start()
+                    }
+                    setOnErrorListener { _, _, _ -> visibility = View.GONE; true }
+                }
+            } catch (_: Exception) {
+                bgVideoView?.visibility = View.GONE
+            }
+        }
+        if (musicId != 0) {
+            try {
+                musicPlayer = MediaPlayer.create(this, musicId)?.apply {
+                    isLooping = true
+                    setVolume(0.32f, 0.32f)
+                    start()
+                }
+            } catch (_: Exception) {
+                musicPlayer = null
+            }
+        }
     }
 
     private fun replaceButtonView(oldView: View, newView: View, params: LinearLayout.LayoutParams) {
@@ -535,8 +582,12 @@ class MainActivity : Activity() {
             applyTheme()
         }
         addMenu(if (currentTheme == "CLASSIC") "✓ Sombre classique" else "Sombre classique") { chooseTheme("CLASSIC") }
-        addMenu(if (currentTheme == "FORTNITE") "✓ Fortnite Battle Royale" else "Fortnite Battle Royale") { chooseTheme("FORTNITE") }
-        addMenu(if (currentTheme == "GOW") "✓ God of War Ragnarök" else "God of War Ragnarök") { chooseTheme("GOW") }
+        if (BuildConfig.IS_FULL_EDITION) {
+            addMenu(if (currentTheme == "FORTNITE") "✓ Fortnite Battle Royale" else "Fortnite Battle Royale") { chooseTheme("FORTNITE") }
+            addMenu(if (currentTheme == "GOW") "✓ God of War Ragnarök" else "God of War Ragnarök") { chooseTheme("GOW") }
+        } else {
+            addMenu("🔒 Univers et médias disponibles dans Full") { dialog.dismiss() }
+        }
         addMenu("✖ Fermer") { dialog.dismiss() }
 
         dialog.show()
@@ -900,5 +951,9 @@ class MainActivity : Activity() {
         if (names.isEmpty()) return "merged"
         var base = names[0].substringBeforeLast(".")
         return base.replace(Regex("[._\\- ]?(?:part)?[._\\- ]?\\d+$", RegexOption.IGNORE_CASE), "")
+    }
+    override fun onDestroy() {
+        stopUniverseMedia()
+        super.onDestroy()
     }
 }
