@@ -293,7 +293,7 @@ class MainActivity : Activity() {
         return container
     }
 
-    private fun applyTheme()    private fun applyTheme() {
+    private fun applyTheme() {
         val cfg = getThemeConfig(currentTheme)
         rootFrameLayout.setBackgroundColor(cfg.bg)
         rootLayout.setBackgroundColor(Color.TRANSPARENT)
@@ -412,7 +412,7 @@ class MainActivity : Activity() {
         copyBtnLayout = newCopy
     }
 
-    private fun createNotificationChannel()    private fun createNotificationChannel() {
+    private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel("pkg_channel", "PS PKG Notifications", NotificationManager.IMPORTANCE_LOW)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -594,7 +594,7 @@ class MainActivity : Activity() {
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     }
 
-    private fun lp()    private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) }
+    private fun lp() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) }
     private fun lpCard() = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12); bottomMargin = dp(4) }
     private fun createCard() = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16)).also { cardViews.add(this) } }
     private fun text(t: String, size: Float, color: Int, bold: Boolean = false) = TextView(this).apply { text = t; textSize = size; setTextColor(color); if (bold) setTypeface(typeface, Typeface.BOLD) }
