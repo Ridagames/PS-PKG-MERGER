@@ -41,15 +41,26 @@ jobs:
           test -f app/src/main/AndroidManifest.xml
           echo "Building the committed Android sources; no source files will be regenerated."
 
-      - name: Build release APK
-        run: gradle :app:assembleRelease --no-daemon --stacktrace
+      - name: Restore release signing key
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          test -n "$SIGNING_KEY" || { echo "Missing SIGNING_KEY secret"; exit 1; }
+          echo "$SIGNING_KEY" | base64 --decode > app/release.jks
+          test -s app/release.jks
+
+      - name: Build signed release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          ALIAS: ${{ secrets.ALIAS }}
+        run: |
+          test -n "$KEYSTORE_PASSWORD" || { echo "Missing KEYSTORE_PASSWORD secret"; exit 1; }
+          test -n "$ALIAS" || { echo "Missing ALIAS secret"; exit 1; }
+          gradle :app:assembleRelease --no-daemon --stacktrace
 
       - name: Verify APK and calculate SHA-256
         run: |
-          APK="app/build/outputs/apk/release/app-release-unsigned.apk"
-          if [ ! -f "$APK" ]; then
-            APK="app/build/outputs/apk/release/app-release.apk"
-          fi
+          APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           mkdir -p dist
           cp "$APK" dist/PS-PKG-MERGER-v3.2.apk
