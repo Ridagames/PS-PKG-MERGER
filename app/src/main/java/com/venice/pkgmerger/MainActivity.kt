@@ -761,7 +761,7 @@ class MainActivity : Activity() {
         // MODE FUSION AVEC CONTRÔLE SHA-256
     private fun mergePkg() {
         val out = output ?: return
-        val orderedUris = uris.toList()
+        val orderedUris = if (reversed) uris.asReversed().toList() else uris.toList()
         if (orderedUris.isEmpty()) return
         processing = true; cancelled = false
         goBtnLayout.isEnabled = false; cancelBtnLayout.isEnabled = true
